@@ -1513,7 +1513,8 @@ async function uploadRes() {
   const fichier = $('up-fichier').files[0]
   if (!titre || !fichier) { toast('Titre et fichier requis', 'err'); return }
   const btn = $('btn-up'); btn.disabled=true; btn.innerHTML='<i class="ti ti-loader spin"></i> Upload...'
-  const path = `module_${modId}/${Date.now()}_${fichier.name}`
+  const nomPropre = fichier.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+  const path = `module_${modId}/${Date.now()}_${nomPropre}`
   const { error } = await db.storage.from('ressources').upload(path, fichier)
   if (error) { toast('Erreur upload : '+error.message, 'err'); btn.disabled=false; btn.innerHTML='<i class="ti ti-upload"></i> Publier'; return }
   const { data:{user} } = await db.auth.getUser()
