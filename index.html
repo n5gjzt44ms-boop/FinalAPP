@@ -879,69 +879,97 @@ button, input, select, textarea { font-family: var(--ff); }
     <div class="vue" id="v-quiz-admin">
       <div style="max-width:660px">
         <div style="margin-bottom:1.2rem"><h2>Gérer les quiz</h2></div>
-        <div class="card">
+        <div class="card" style="margin-bottom:1rem">
           <div class="card-head">
             <div style="display:flex;align-items:center;gap:8px">
-              <i class="ti ti-sparkles" style="color:var(--r);font-size:1rem"></i>
+              <i class="ti ti-pencil" style="color:var(--r);font-size:1rem"></i>
               <div>
-                <div class="card-title">Générer un quiz avec l'IA</div>
-                <div style="font-size:.7rem;color:var(--t3)">Référentiel bac pro maintenance · noté sur 20 pts</div>
+                <div class="card-title">Créer un quiz</div>
+                <div style="font-size:.7rem;color:var(--t3)">Ajoutez vos questions manuellement · seuil 14/20</div>
               </div>
             </div>
-            <span class="badge badge-a">IA · Claude</span>
           </div>
           <div class="card-body">
-            <div class="alert alert-info"><i class="ti ti-info-circle"></i> L'IA génère les questions selon le référentiel bac pro maintenance engins TP/agricoles/industriels. Relisez avant de publier.</div>
             <div class="field-row" style="margin-bottom:.9rem">
               <div>
                 <label class="field-label">Titre du quiz</label>
-                <input class="finput" id="aq-titre" placeholder="Ex : Quiz Hydraulique niveau 3"/>
+                <input class="finput" id="mq-titre" placeholder="Ex : Quiz Hydraulique niveau 1"/>
               </div>
               <div>
                 <label class="field-label">Module</label>
-                <select class="fselect" id="aq-mod">
+                <select class="fselect" id="mq-mod">
                   <option value="1">Module 1 — Thermique</option>
                   <option value="2">Module 2 — Hydraulique</option>
                   <option value="3">Module 3 — Conception</option>
-                  <option value="4">Module 4 — Électrique</option>
+                  <option value="4">Module 4 — Electrique</option>
                 </select>
               </div>
             </div>
-            <div class="field-row" style="margin-bottom:.9rem">
+            <div class="field-row" style="margin-bottom:1rem">
               <div>
-                <label class="field-label">Filière</label>
-                <select class="fselect" id="aq-fil">
+                <label class="field-label">Filiere</label>
+                <select class="fselect" id="mq-fil">
                   <option value="tp">Engins TP</option>
                   <option value="agr">Engins agricoles</option>
                   <option value="ind">Maintenance industrielle</option>
-                  <option value="com">Toutes filières</option>
+                  <option value="com">Toutes filieres</option>
                 </select>
               </div>
               <div>
-                <label class="field-label">Difficulté</label>
-                <select class="fselect" id="aq-diff">
-                  <option>Débutant</option><option selected>Intermédiaire</option><option>Avancé</option>
+                <label class="field-label">Points par question</label>
+                <select class="fselect" id="mq-pts">
+                  <option value="2">2 pts (10 questions = 20 pts)</option>
+                  <option value="1">1 pt (20 questions = 20 pts)</option>
+                  <option value="4">4 pts (5 questions = 20 pts)</option>
                 </select>
               </div>
             </div>
-            <div style="margin-bottom:.9rem">
-              <label class="field-label">Consignes (optionnel)</label>
-              <textarea class="ftextarea" id="aq-cons" rows="2" placeholder="Ex : Insister sur les normes, situations terrain concrètes..."></textarea>
+            <div id="mq-questions-list"></div>
+            <button class="btn btn-ghost" style="width:100%;margin-bottom:1rem;border-style:dashed" onclick="ajouterQuestion()">
+              <i class="ti ti-plus"></i> Ajouter une question
+            </button>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:.8rem;background:var(--bg);border-radius:8px;margin-bottom:1rem">
+              <span style="font-size:.82rem;color:var(--t2)">Total : <strong id="mq-total">0 question, 0 pt</strong></span>
+              <span style="font-size:.78rem;color:var(--t3)">Seuil de validation : 14/20</span>
             </div>
-            <button class="btn btn-r" id="btn-gen" onclick="genIA()"><i class="ti ti-sparkles"></i> Générer le questionnaire sur 20 pts</button>
-          </div>
-        </div>
-        <div class="hidden" id="aq-result">
-          <div class="card">
-            <div class="card-head">
-              <div><div class="card-title">Quiz généré — relisez avant publication</div><div style="font-size:.7rem;color:var(--t3)" id="aq-meta">10 questions · 20 pts</div></div>
-              <button class="btn btn-ghost btn-sm" onclick="genIA()"><i class="ti ti-refresh"></i> Regénérer</button>
+            <div style="margin-bottom:1rem">
+              <label class="field-label">Type de quiz</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+                <label id="lbl-entrainement" style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1.5px solid var(--r);border-radius:8px;cursor:pointer;background:var(--rl)">
+                  <input type="radio" name="mq-mode" value="entrainement" checked onchange="changerMode()" style="accent-color:var(--r);margin-top:2px;flex-shrink:0"/>
+                  <div>
+                    <div style="font-size:.82rem;font-weight:500;color:var(--r2)">Entrainement</div>
+                    <div style="font-size:.72rem;color:var(--t2);margin-top:1px">Toujours disponible, sans limite de temps</div>
+                  </div>
+                </label>
+                <label id="lbl-examen" style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1.5px solid var(--bord2);border-radius:8px;cursor:pointer">
+                  <input type="radio" name="mq-mode" value="examen" onchange="changerMode()" style="accent-color:var(--r);margin-top:2px;flex-shrink:0"/>
+                  <div>
+                    <div style="font-size:.82rem;font-weight:500">Examen final</div>
+                    <div style="font-size:.72rem;color:var(--t2);margin-top:1px">Creneau horaire fixe, passage unique</div>
+                  </div>
+                </label>
+              </div>
             </div>
-            <div class="card-body" id="aq-body"></div>
-            <div class="card-foot">
-              <button class="btn btn-ghost" onclick="document.getElementById('aq-result').classList.add('hidden')">Annuler</button>
-              <button class="btn btn-r" id="btn-pub" onclick="pubQuiz()"><i class="ti ti-check"></i> Publier</button>
+            <div id="creneau-wrap" style="display:none;margin-bottom:1rem;background:var(--bg);border-radius:8px;padding:.9rem;border:.5px solid var(--bord2)">
+              <div class="field-row" style="margin-bottom:.7rem">
+                <div>
+                  <label class="field-label">Date et heure de debut</label>
+                  <input type="datetime-local" class="finput" id="mq-debut"/>
+                </div>
+                <div>
+                  <label class="field-label">Date et heure de fin</label>
+                  <input type="datetime-local" class="finput" id="mq-fin"/>
+                </div>
+              </div>
+              <div style="font-size:.72rem;color:var(--t2);display:flex;align-items:center;gap:5px">
+                <i class="ti ti-info-circle" style="color:var(--r)"></i>
+                En dehors de ce creneau, le quiz sera verrouille pour tous les aspirants.
+              </div>
             </div>
+            <button class="btn btn-r" style="width:100%" onclick="pubQuizManuel()">
+              <i class="ti ti-check"></i> Publier le quiz
+            </button>
           </div>
         </div>
         <div class="card">
@@ -1279,8 +1307,12 @@ async function renderEval(modId, quiz, tents) {
   let h = '<div class="slbl">Questionnaires théoriques</div>'
   quiz.forEach((q, idx) => {
     const t     = tents.find(x => x.quiz_id === q.id)
+    const maintenant = new Date()
+    const debut = q.date_debut ? new Date(q.date_debut) : null
+    const fin   = q.date_fin   ? new Date(q.date_fin)   : null
+    const horsCreneaux = q.mode_examen && (debut && maintenant < debut || fin && maintenant > fin)
     const prevOk= idx === 0 || tents.find(x => x.quiz_id === quiz[idx-1]?.id && x.valide)
-    const libre  = !!prevOk && !t
+    const libre  = !!prevOk && !t && !horsCreneaux
     const bloque = !libre && !t
     const bc    = t?.valide ? 'var(--v)' : t ? 'var(--r)' : 'var(--bord2)'
     const is    = t?.valide ? 'background:var(--vl);color:var(--v)' : t ? 'background:var(--rl);color:var(--r)' : 'background:var(--bg);color:var(--t3)'
@@ -1290,7 +1322,7 @@ async function renderEval(modId, quiz, tents) {
         <div class="quiz-row-ico" style="${is}"><i class="ti ${ic}"></i></div>
         <div class="quiz-row-info">
           <div class="quiz-row-name">${q.titre}</div>
-          <div class="quiz-row-meta">${q.total_points} pts · Seuil ${q.seuil}/${q.total_points} · ${FILIERES[q.filiere]||q.filiere||''}</div>
+          <div class="quiz-row-meta">${q.total_points} pts · Seuil ${q.seuil}/${q.total_points}${q.mode_examen && q.date_debut ? ' · <i class="ti ti-calendar-event" style="font-size:.8rem"></i> Examen : ' + new Date(q.date_debut).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) + ' → ' + new Date(q.date_fin).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">`
     if (t) h += `<span style="font-size:.875rem;font-weight:500;color:${t.valide?'var(--v)':'var(--r)'}">${t.score}/${t.total_points}</span>`
@@ -1711,6 +1743,164 @@ window.addEventListener('load', async () => {
   const { data:{ session } } = await db.auth.getSession()
   if (session) await initApp()
 })
+
+// ============================================================
+// MODE EXAMEN
+// ============================================================
+function changerMode() {
+  const mode = document.querySelector('input[name="mq-mode"]:checked')?.value
+  const isExamen = mode === 'examen'
+  $('creneau-wrap').style.display = isExamen ? '' : 'none'
+  $('lbl-examen').style.border = isExamen ? '1.5px solid var(--r)' : '1.5px solid var(--bord2)'
+  $('lbl-examen').style.background = isExamen ? 'var(--rl)' : ''
+  $('lbl-entrainement').style.border = !isExamen ? '1.5px solid var(--r)' : '1.5px solid var(--bord2)'
+  $('lbl-entrainement').style.background = !isExamen ? 'var(--rl)' : ''
+}
+
+// ============================================================
+// MODE EXAMEN
+// ============================================================
+function changerMode() {
+  const mode = document.querySelector('input[name="mq-mode"]:checked')?.value
+  const isExamen = mode === 'examen'
+  $('creneau-wrap').style.display = isExamen ? '' : 'none'
+  const le = $('lbl-examen'), lt = $('lbl-entrainement')
+  if(le) { le.style.border = isExamen ? '1.5px solid var(--r)' : '1.5px solid var(--bord2)'; le.style.background = isExamen ? 'var(--rl)' : '' }
+  if(lt) { lt.style.border = !isExamen ? '1.5px solid var(--r)' : '1.5px solid var(--bord2)'; lt.style.background = !isExamen ? 'var(--rl)' : '' }
+}
+
+// ============================================================
+// EDITEUR DE QUIZ MANUEL
+// ============================================================
+let mqQuestions = []
+
+// MODE EXAMEN
+function changerMode() {
+  const mode = document.querySelector('input[name="mq-mode"]:checked')?.value
+  const isExamen = mode === 'examen'
+  const cw = $('creneau-wrap'); if(cw) cw.style.display = isExamen ? '' : 'none'
+  const le = $('lbl-examen'), lt = $('lbl-entrainement')
+  if(le) { le.style.border = isExamen ? '1.5px solid var(--r)' : '1.5px solid var(--bord2)'; le.style.background = isExamen ? 'var(--rl)' : '' }
+  if(lt) { lt.style.border = !isExamen ? '1.5px solid var(--r)' : '1.5px solid var(--bord2)'; lt.style.background = !isExamen ? 'var(--rl)' : '' }
+}
+
+function ajouterQuestion() {
+  const idx = mqQuestions.length
+  mqQuestions.push({ enonce:'', options:['','','',''], bonne:0, competence:'' })
+  renderQuestions()
+}
+
+function supprimerQuestion(idx) {
+  mqQuestions.splice(idx, 1)
+  renderQuestions()
+}
+
+function renderQuestions() {
+  const pts = parseInt($('mq-pts')?.value || 2)
+  const total = mqQuestions.length
+  $('mq-total').textContent = total + ' question' + (total > 1 ? 's' : '') + ' · ' + (total * pts) + ' pts'
+  $('mq-questions-list').innerHTML = mqQuestions.map((q, i) => `
+    <div style="background:var(--bg);border:.5px solid var(--bord2);border-radius:10px;padding:.9rem;margin-bottom:.8rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem">
+        <span style="font-size:.72rem;color:var(--r);font-weight:500;text-transform:uppercase;letter-spacing:.5px">Question ${i+1} · ${pts} pt${pts>1?'s':''}</span>
+        <button onclick="supprimerQuestion(${i})" style="background:none;border:none;cursor:pointer;font-size:.82rem;color:var(--t3);padding:2px 6px;border-radius:4px">
+          <i class="ti ti-trash"></i>
+        </button>
+      </div>
+      <div style="margin-bottom:.7rem">
+        <label class="field-label">Enonce de la question</label>
+        <textarea class="ftextarea" rows="2" placeholder="Ecrivez votre question ici..."
+          onchange="mqQuestions[${i}].enonce=this.value">${q.enonce}</textarea>
+      </div>
+      <div style="margin-bottom:.5rem">
+        <label class="field-label">Options de reponse — cochez la bonne</label>
+      </div>
+      ${q.options.map((opt, j) => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <input type="radio" name="bonne_${i}" ${q.bonne===j?'checked':''} onchange="mqQuestions[${i}].bonne=${j};renderQuestions()"
+            style="flex-shrink:0;accent-color:var(--r)"/>
+          <input class="finput" value="${opt}" placeholder="Option ${j+1}"
+            onchange="mqQuestions[${i}].options[${j}]=this.value"
+            style="border-color:${q.bonne===j?'var(--r)':'var(--bord2)'}"/>
+        </div>
+      `).join('')}
+      <div style="margin-top:.6rem">
+        <label class="field-label">Competence referentiel (optionnel)</label>
+        <input class="finput" value="${q.competence}" placeholder="Ex: C2, S3, S4..."
+          onchange="mqQuestions[${i}].competence=this.value" style="max-width:160px"/>
+      </div>
+    </div>
+  `).join('')
+}
+
+function changerMode() {
+  const mode = document.querySelector('input[name="mq-mode"]:checked')?.value
+  const isExamen = mode === 'examen'
+  const cw = document.getElementById('creneau-wrap'); if(cw) cw.style.display = isExamen ? '' : 'none'
+  const le = document.getElementById('lbl-examen'), lt = document.getElementById('lbl-entrainement')
+  if(le) { le.style.border = isExamen ? '1.5px solid #E24B4A' : '1.5px solid rgba(0,0,0,.13)'; le.style.background = isExamen ? '#FCEBEB' : '' }
+  if(lt) { lt.style.border = !isExamen ? '1.5px solid #E24B4A' : '1.5px solid rgba(0,0,0,.13)'; lt.style.background = !isExamen ? '#FCEBEB' : '' }
+}
+
+async function pubQuizManuel() {
+  const titre = $('mq-titre').value.trim()
+  const modId = parseInt($('mq-mod').value)
+  const fil = $('mq-fil').value
+  const pts = parseInt($('mq-pts').value)
+
+  if (!titre) { toast('Donnez un titre au quiz', 'err'); return }
+  if (mqQuestions.length === 0) { toast('Ajoutez au moins une question', 'err'); return }
+
+  for (let i = 0; i < mqQuestions.length; i++) {
+    const q = mqQuestions[i]
+    if (!q.enonce.trim()) { toast('Question ' + (i+1) + ' : enonce vide', 'err'); return }
+    if (q.options.some(o => !o.trim())) { toast('Question ' + (i+1) + ' : toutes les options doivent etre remplies', 'err'); return }
+  }
+
+  const btn = document.querySelector('[onclick="pubQuizManuel()"]')
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader spin"></i> Publication...'
+
+  const { data:{user} } = await db.auth.getUser()
+  const { data: ex } = await db.from('quiz').select('niveau').eq('module_id', modId).order('niveau', {ascending:false}).limit(1)
+  const niveau = ex?.length ? ex[0].niveau + 1 : 1
+  const totalPts = mqQuestions.length * pts
+
+  const mode = document.querySelector('input[name="mq-mode"]:checked')?.value || 'entrainement'
+  let dateDebut = null, dateFin = null
+  if (mode === 'examen') {
+    dateDebut = $('mq-debut').value
+    dateFin = $('mq-fin').value
+    if (!dateDebut || !dateFin) { toast('Definissez le creneau de l'examen', 'err'); btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Publier le quiz'; return }
+    if (new Date(dateFin) <= new Date(dateDebut)) { toast('La fin doit etre apres le debut', 'err'); btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Publier le quiz'; return }
+  }
+  const { data: quizCree, error } = await db.from('quiz').insert({
+    module_id: modId, titre, filiere: fil,
+    niveau, total_points: totalPts, seuil: SEUIL, actif: true, created_by: user.id,
+    mode_examen: mode === 'examen',
+    date_debut: dateDebut ? new Date(dateDebut).toISOString() : null,
+    date_fin: dateFin ? new Date(dateFin).toISOString() : null
+  }).select().single()
+
+  if (error) { toast('Erreur : ' + error.message, 'err'); btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Publier le quiz'; return }
+
+  await db.from('questions').insert(mqQuestions.map((q, i) => ({
+    quiz_id: quizCree.id,
+    enonce: q.enonce,
+    options: q.options,
+    bonne_reponse: q.bonne,
+    points: pts,
+    competence: q.competence || null,
+    ordre: i
+  })))
+
+  toast('Quiz publie avec succes !', 'ok')
+  mqQuestions = []
+  $('mq-titre').value = ''
+  renderQuestions()
+  loadQuizAdmin()
+  btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Publier le quiz'
+}
+
 </script>
 </body>
 </html>
