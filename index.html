@@ -1322,7 +1322,7 @@ async function renderEval(modId, quiz, tents) {
         <div class="quiz-row-ico" style="${is}"><i class="ti ${ic}"></i></div>
         <div class="quiz-row-info">
           <div class="quiz-row-name">${q.titre}</div>
-          <div class="quiz-row-meta">${q.total_points} pts · Seuil ${q.seuil}/${q.total_points}${q.mode_examen && q.date_debut ? ' · <i class="ti ti-calendar-event" style="font-size:.8rem"></i> Examen : ' + new Date(q.date_debut).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) + ' → ' + new Date(q.date_fin).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</div>
+          <div class="quiz-row-meta">${q.total_points} pts · Seuil ${q.seuil}/${q.total_points} · ${FILIERES[q.filiere]||''} ${q.mode_examen ? '· Examen' : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">`
     if (t) h += `<span style="font-size:.875rem;font-weight:500;color:${t.valide?'var(--v)':'var(--r)'}">${t.score}/${t.total_points}</span>`
@@ -1870,7 +1870,7 @@ async function pubQuizManuel() {
   if (mode === 'examen') {
     dateDebut = $('mq-debut').value
     dateFin = $('mq-fin').value
-    if (!dateDebut || !dateFin) { toast('Definissez le creneau de l'examen', 'err'); btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Publier le quiz'; return }
+    if (!dateDebut || !dateFin) { toast('Definissez le creneau examen', 'err'); btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Publier le quiz'; return }
     if (new Date(dateFin) <= new Date(dateDebut)) { toast('La fin doit etre apres le debut', 'err'); btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Publier le quiz'; return }
   }
   const { data: quizCree, error } = await db.from('quiz').insert({
