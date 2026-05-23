@@ -980,7 +980,27 @@ button, input, select, textarea { font-family: var(--ff); }
             </button>
           </div>
         </div>
-                <div class="card">
+
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Quiz existants</span>
+            <select class="fselect" style="width:auto;padding:4px 8px;font-size:.78rem" id="fil-mod-quiz" onchange="loadQuizAdmin()">
+              <option value="1">Module 1</option>
+              <option value="2">Module 2</option>
+              <option value="3">Module 3</option>
+              <option value="4">Module 4</option>
+            </select>
+          </div>
+          <div class="card-body" id="quiz-admin-body"><p style="font-size:.78rem;color:var(--t3)">Chargement...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVOIRS ADMIN -->
+    <div class="vue" id="v-devoirs-admin">
+      <div style="max-width:660px">
+        <div style="margin-bottom:1.2rem"><h2>Gérer les travaux pratiques</h2></div>
+        <div class="card">
           <div class="card-head"><span class="card-title">Rendus des aspirants</span></div>
           <div class="card-body" id="rendus-admin-body"><p style="font-size:.78rem;color:var(--t3)">Sélectionnez un devoir pour voir les rendus.</p></div>
         </div>
