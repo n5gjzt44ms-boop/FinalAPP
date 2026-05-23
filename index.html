@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 /* ====================================================
    CONFIGURATION RAPIDE — modifiez ici si besoin
@@ -986,7 +987,73 @@ button, input, select, textarea { font-family: var(--ff); }
             </button>
           </div>
         </div>
-        <div class="card">
+        <!-- IMPORT EXCEL -->
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-head">
+            <div style="display:flex;align-items:center;gap:8px">
+              <i class="ti ti-table-import" style="color:var(--r);font-size:1rem"></i>
+              <div>
+                <div class="card-title">Importer un quiz depuis Excel</div>
+                <div style="font-size:.7rem;color:var(--t3)">Remplissez le modèle et uploadez-le ici</div>
+              </div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="telechargerModele()">
+              <i class="ti ti-download"></i> Télécharger le modèle
+            </button>
+          </div>
+          <div class="card-body">
+            <div style="border:1.5px dashed var(--bord2);border-radius:8px;padding:1rem;text-align:center;cursor:pointer;background:var(--bg)" onclick="document.getElementById('import-excel-input').click()">
+              <i class="ti ti-file-spreadsheet" style="font-size:1.5rem;color:var(--r);display:block;margin-bottom:6px"></i>
+              <p style="font-size:.82rem;color:var(--t2);font-weight:500">Cliquez pour sélectionner le fichier Excel</p>
+              <p style="font-size:.72rem;color:var(--t3);margin-top:3px">Format .xlsx uniquement — utilisez le modèle fourni</p>
+            </div>
+            <input type="file" id="import-excel-input" accept=".xlsx" style="display:none" onchange="importerExcel(this)"/>
+            <div id="import-preview" style="display:none;margin-top:1rem"></div>
+          </div>
+        </div>
+
+        <!-- IMPORT EXCEL -->
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-head">
+            <div style="display:flex;align-items:center;gap:8px">
+              <i class="ti ti-table-import" style="color:var(--r);font-size:1rem"></i>
+              <div><div class="card-title">Importer depuis Excel</div>
+              <div style="font-size:.7rem;color:var(--t3)">Remplissez le modele et uploadez-le ici</div></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="telechargerModele()"><i class="ti ti-download"></i> Modele Excel</button>
+          </div>
+          <div class="card-body">
+            <div style="border:1.5px dashed var(--bord2);border-radius:8px;padding:1rem;text-align:center;cursor:pointer;background:var(--bg)" onclick="document.getElementById('import-xl').click()">
+              <i class="ti ti-file-spreadsheet" style="font-size:1.5rem;color:var(--r);display:block;margin-bottom:6px"></i>
+              <p style="font-size:.82rem;color:var(--t2);font-weight:500">Cliquez pour selectionner le fichier Excel</p>
+              <p style="font-size:.72rem;color:var(--t3);margin-top:3px">Format .xlsx — utilisez le modele fourni</p>
+            </div>
+            <input type="file" id="import-xl" accept=".xlsx" style="display:none" onchange="importerExcel(this)"/>
+            <div id="import-preview" style="display:none;margin-top:1rem"></div>
+          </div>
+        </div>
+
+                <!-- IMPORT EXCEL -->
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-head">
+            <div style="display:flex;align-items:center;gap:8px">
+              <i class="ti ti-table-import" style="color:var(--r);font-size:1rem"></i>
+              <div><div class="card-title">Importer depuis Excel</div>
+              <div style="font-size:.7rem;color:var(--t3)">Remplissez le modele et uploadez-le ici</div></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="telechargerModele()"><i class="ti ti-download"></i> Modele Excel</button>
+          </div>
+          <div class="card-body">
+            <div style="border:1.5px dashed var(--bord2);border-radius:8px;padding:1rem;text-align:center;cursor:pointer;background:var(--bg)" onclick="document.getElementById('import-xl').click()">
+              <i class="ti ti-file-spreadsheet" style="font-size:1.5rem;color:var(--r);display:block;margin-bottom:6px"></i>
+              <p style="font-size:.82rem;color:var(--t2);font-weight:500">Cliquez pour selectionner le fichier Excel</p>
+              <p style="font-size:.72rem;color:var(--t3);margin-top:3px">Format .xlsx — utilisez le modele fourni</p>
+            </div>
+            <input type="file" id="import-xl" accept=".xlsx" style="display:none" onchange="importerExcel(this)"/>
+            <div id="import-preview" style="display:none;margin-top:1rem"></div>
+          </div>
+        </div>
+<div class="card">
           <div class="card-head">
             <span class="card-title">Quiz existants</span>
             <select class="fselect" style="width:auto;padding:4px 8px;font-size:.78rem" id="fil-mod-quiz" onchange="loadQuizAdmin()">
@@ -2628,6 +2695,138 @@ async function deplacerRessource(resId, nouveauDossierId) {
   await db.from('ressources').update({ dossier_id: nouveauDossierId || null }).eq('id', resId)
   toast('Ressource déplacée', 'ok')
   loadResAdmin()
+}
+
+// ============================================================
+// IMPORT EXCEL
+// ============================================================
+async function importerExcel(input) {
+  const fichier = input.files[0]
+  if (!fichier) return
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const data = new Uint8Array(e.target.result)
+      const wb = XLSX.read(data, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+
+      // Lire les infos du quiz (ligne 3, colonnes C et I et L)
+      const titre  = rows[2]?.[2] || ''
+      const modId  = parseInt(rows[2]?.[8]) || 1
+      const filiere = String(rows[2]?.[11] || 'tp').toLowerCase()
+
+      if (!titre) { toast('Titre du quiz manquant (cellule C3)', 'err'); return }
+
+      // Lire les questions (à partir de la ligne 6 = index 5)
+      const questions = []
+      for (let i = 5; i < rows.length; i++) {
+        const r = rows[i]
+        const enonce = String(r[2] || '').trim()
+        if (!enonce) continue
+
+        const type = String(r[1] || 'qcm').toLowerCase().trim()
+        const optA = String(r[3] || '').trim()
+        const optB = String(r[4] || '').trim()
+        const optC = String(r[5] || '').trim()
+        const optD = String(r[6] || '').trim()
+        const bonneRep = String(r[7] || '').toLowerCase().trim()
+        const pts = parseInt(r[8]) || 2
+        const comp = String(r[9] || '').trim()
+        const imgUrl = String(r[10] || '').trim()
+        const justif = String(r[11] || '').trim()
+
+        let options = [], bonne = 0
+
+        if (type === 'vf') {
+          options = ['Vrai', 'Faux']
+          bonne = bonneRep === 'vrai' ? 0 : 1
+        } else if (type === 'libre') {
+          options = [bonneRep]
+          bonne = 0
+        } else {
+          // QCM
+          options = [optA, optB, optC, optD].filter(o => o)
+          const map = { a:0, b:1, c:2, d:3 }
+          bonne = map[bonneRep] ?? 0
+        }
+
+        questions.push({ type, enonce, options, bonne, pts, comp, imgUrl, justif })
+      }
+
+      if (!questions.length) { toast('Aucune question trouvee dans le fichier', 'err'); return }
+
+      // Afficher la prévisualisation
+      const preview = document.getElementById('import-preview')
+      preview.style.display = ''
+      preview.innerHTML = `
+        <div style="background:var(--vl);border:.5px solid var(--v);border-radius:8px;padding:.9rem;margin-bottom:.8rem">
+          <div style="font-size:.82rem;font-weight:500;color:var(--v);margin-bottom:4px">
+            <i class="ti ti-check"></i> ${questions.length} question(s) detectee(s) — "${titre}"
+          </div>
+          <div style="font-size:.75rem;color:var(--v)">
+            Module ${modId} · Filiere : ${filiere} · Total : ${questions.reduce((a,q)=>a+q.pts,0)} pts
+          </div>
+        </div>
+        ${questions.slice(0,3).map((q,i) => `
+          <div style="font-size:.78rem;padding:5px 0;border-bottom:.5px solid var(--bord);color:var(--t2)">
+            <strong>Q${i+1} [${q.type.toUpperCase()}]</strong> ${q.enonce.substring(0,80)}${q.enonce.length>80?'...':''}
+          </div>`).join('')}
+        ${questions.length > 3 ? `<div style="font-size:.72rem;color:var(--t3);padding:4px 0">... et ${questions.length-3} autre(s) question(s)</div>` : ''}
+        <button class="btn btn-r" style="width:100%;margin-top:.8rem" onclick="publierImportExcel(${modId}, '${titre.replace(/'/g,"\'")}', '${filiere}', ${JSON.stringify(questions).replace(/'/g,"\'")})">
+          <i class="ti ti-check"></i> Importer et publier ce quiz
+        </button>
+      `
+
+    } catch(err) {
+      toast('Erreur lecture fichier : ' + err.message, 'err')
+    }
+  }
+  reader.readAsArrayBuffer(fichier)
+}
+
+async function publierImportExcel(modId, titre, filiere, questions) {
+  const { data:{user} } = await db.auth.getUser()
+  const { data: ex } = await db.from('quiz').select('niveau').eq('module_id', modId).order('niveau',{ascending:false}).limit(1)
+  const niveau = ex?.length ? ex[0].niveau + 1 : 1
+  const totalPts = questions.reduce((a,q) => a + (q.pts||2), 0)
+
+  const { data: quizCree, error } = await db.from('quiz').insert({
+    module_id: modId, titre, filiere, niveau,
+    total_points: totalPts, seuil: SEUIL, actif: true, created_by: user.id
+  }).select().single()
+
+  if (error) { toast('Erreur : ' + error.message, 'err'); return }
+
+  await db.from('questions').insert(questions.map((q,i) => ({
+    quiz_id: quizCree.id,
+    enonce: q.enonce,
+    options: q.options,
+    bonne_reponse: q.bonne,
+    points: q.pts || 2,
+    competence: q.comp || null,
+    type_question: q.type || 'qcm',
+    reponse_type: q.type === 'libre' ? q.options[0] : null,
+    image_url: q.imgUrl || null,
+    justification: q.justif || null,
+    ordre: i
+  })))
+
+  toast('Quiz importe et publie !', 'ok')
+  document.getElementById('import-preview').style.display = 'none'
+  document.getElementById('import-xl').value = ''
+  loadQuizAdmin()
+}
+
+function telechargerModele() {
+  // Lien vers le modele Excel hébergé sur GitHub
+  const url = 'modele_quiz_progmeca.xlsx'
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'modele_quiz_progmeca.xlsx'
+  a.click()
+  toast('Telechargement du modele...', 'ok')
 }
 </script>
 </body>
