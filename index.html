@@ -925,7 +925,7 @@ async function renderEval(modId,quiz,tents) {
         <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">`
     if(t) h+=`<span style="font-size:.875rem;font-weight:500;color:${t.valide?'var(--v)':'var(--r)'}">${t.score}/20</span>`
     if(t) h+=`<button class="btn btn-ghost btn-sm" onclick="voirRes('${t.id}')">Résultats</button>`
-    if(peutCommencer) h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> ${t&&!isExamen?'Repasser':'Commencer'}</button>`
+    if(peutCommencer||(!isExamen&&t)) h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> ${t?'Repasser':'Commencer'}</button>`
     h+=`</div></div>`
     if(isExamen&&t) h+=`<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide?'Examen validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR'):'Score définitif : '+t.score+'/20'}</div>`
     if(horsCreneaux&&!t){
@@ -1063,7 +1063,7 @@ async function terminer() {
   })
   const totalPts=qr.reduce((a,q)=>a+(parseFloat(q.points)||2),0)
   const sur20=calculerScore20(score,totalPts)
-  const aDesLibres=qr.some(q=>q.type_question==='libre')
+  const aDesLibres=qr.some(q=>q.type_question==='libre'||q.type_question==='Réponse libre')
   const valide=!aDesLibres&&sur20>=SEUIL
   const {data:tent}=await db.from('tentatives').insert({
     aspirant_id:G.profil.id, quiz_id:G.quizActif.id,
@@ -1091,7 +1091,7 @@ async function voirRes(tentId) {
 function afficheRes() {
   const {tent,questions,parComp,score,valide,modId,reps}=G.tentResult
   const aDesLibres=questions.some(q=>q.type_question==='libre')
-  const enAttente=aDesLibres&&!tent?.note_admin
+  const enAttente=(aDesLibres||(!tent?.valide&&tent?.score<SEUIL))&&!tent?.note_admin&&tent?.notes_libres!==undefined
   const c=$('r-circle')
   c.style.borderColor=enAttente?'var(--amber)':valide?'var(--v)':'var(--r)'
   c.style.background=enAttente?'var(--amber-l)':valide?'var(--vl)':'var(--rl)'
@@ -1828,7 +1828,7 @@ async function loadAspirants() {
                 <div style="display:flex;align-items:center;gap:4px">
                   <span style="font-weight:500;color:${t2?.valide?'var(--v)':t2?'var(--r)':'var(--t3)'}">${t2?t2.score+'/20':'—'}</span>
                   ${t2&&!t2.valide?`<button title="Débloquer" onclick="debloquer('${t2.id}','${p.prenom||''} ${p.nom||''}')" style="background:none;border:none;cursor:pointer;font-size:.72rem;color:var(--t3);padding:1px 2px"><i class="ti ti-lock-open"></i></button>`:''}
-                  ${t2&&t2.notes_libres&&!t2.note_admin?`<button title="Corriger" onclick="ouvrirCorrectionAdmin('${t2.id}')" style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--r);padding:1px 4px;border:.5px solid var(--r);border-radius:4px"><i class="ti ti-pencil"></i></button>`:''}
+                  ${t2&&!t2.valide&&!t2.note_admin?`<button title="Corriger" onclick="ouvrirCorrectionAdmin('${t2.id}')" style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--r);padding:1px 4px;border:.5px solid var(--r);border-radius:4px"><i class="ti ti-pencil"></i></button>`:''}
                 </div>
               </div>`
             }).join('')}
