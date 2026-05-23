@@ -863,6 +863,12 @@ button, input, select, textarea { font-family: var(--ff); }
               <input class="finput" id="up-titre" placeholder="Ex : Hydraulique — principes fondamentaux"/>
             </div>
             <div style="margin-bottom:.9rem">
+              <label class="field-label">Dossier (optionnel)</label>
+              <select class="fselect" id="up-dossier">
+                <option value="">— Aucun dossier —</option>
+              </select>
+            </div>
+            <div style="margin-bottom:.9rem">
               <label class="field-label">Fichier</label>
               <input type="file" id="up-fichier" accept=".pdf,.doc,.docx,.sldprt,.sldasm,.hyd,.cwk,.dwg,.step,.iges"/>
               <p class="field-hint">PDF, Word, SolidWorks, HydroSim, CadWorks, DWG — max 50 Mo</p>
@@ -1752,10 +1758,11 @@ async function loadSuivi() {
 // ADMIN — RESSOURCES
 // ============================================================
 async function uploadRes() {
-  const titre   = $('up-titre').value.trim()
-  const modId   = $('up-mod').value
-  const type    = $('up-type').value
-  const fichier = $('up-fichier').files[0]
+  const titre    = $('up-titre').value.trim()
+  const modId    = $('up-mod').value
+  const type     = $('up-type').value
+  const fichier  = $('up-fichier').files[0]
+  const dossierId = $('up-dossier').value || null
   if (!titre || !fichier) { toast('Titre et fichier requis', 'err'); return }
   const btn = $('btn-up'); btn.disabled=true; btn.innerHTML='<i class="ti ti-loader spin"></i> Upload...'
   const nomPropre = fichier.name.replace(/[^a-zA-Z0-9._-]/g, '-')
@@ -1763,7 +1770,7 @@ async function uploadRes() {
   const { error } = await db.storage.from('ressources').upload(path, fichier)
   if (error) { toast('Erreur upload : '+error.message, 'err'); btn.disabled=false; btn.innerHTML='<i class="ti ti-upload"></i> Publier'; return }
   const { data:{user} } = await db.auth.getUser()
-  await db.from('ressources').insert({ module_id:parseInt(modId), titre, type, taille:(fichier.size/1024/1024).toFixed(1)+' Mo', storage_path:path, created_by:user.id })
+  await db.from('ressources').insert({ module_id:parseInt(modId), titre, type, taille:(fichier.size/1024/1024).toFixed(1)+' Mo', storage_path:path, created_by:user.id, dossier_id: dossierId })
   toast('Ressource publiée !', 'ok')
   $('up-titre').value=''; $('up-fichier').value=''
   btn.disabled=false; btn.innerHTML='<i class="ti ti-upload"></i> Publier'
@@ -1772,14 +1779,71 @@ async function uploadRes() {
 
 async function loadResAdmin() {
   const m = $('fil-mod-res').value
-  const { data } = await db.from('ressources').select('*').eq('module_id', m).order('ordre')
-  $('res-liste-body').innerHTML = (data||[]).length ? (data||[]).map(x =>
-    `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid var(--bord)">
-      <i class="ti ti-file" style="color:var(--t3);font-size:.95rem;flex-shrink:0"></i>
-      <div style="flex:1"><div style="font-size:.82rem;font-weight:500">${x.titre}</div><div style="font-size:.7rem;color:var(--t3)">${x.type?.toUpperCase()} · ${x.taille||'—'}</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="delRes('${x.id}','${x.storage_path||''}')"><i class="ti ti-trash"></i></button>
-    </div>`
-  ).join('') : '<p style="font-size:.78rem;color:var(--t3)">Aucune ressource.</p>'
+  // Charger dossiers et ressources
+  const [{ data: dossiers }, { data: ressources }] = await Promise.all([
+    db.from('dossiers').select('*').eq('module_id', m).order('nom'),
+    db.from('ressources').select('*').eq('module_id', m).order('ordre')
+  ])
+  const d = dossiers || [], r = ressources || []
+  // Construire l'affichage avec dossiers
+  let html = ''
+  // Dossiers racine
+  const racines = d.filter(x => !x.parent_id)
+  // Ressources sans dossier
+  const sansDossier = r.filter(x => !x.dossier_id)
+  racines.forEach(dos => {
+    const sousDossiers = d.filter(x => x.parent_id === dos.id)
+    const ressDossier = r.filter(x => x.dossier_id === dos.id)
+    html += `<div style="margin-bottom:.5rem">
+      <div style="display:flex;align-items:center;gap:7px;padding:6px 0;font-size:.82rem;font-weight:500;color:var(--t2)">
+        <i class="ti ti-folder" style="color:var(--amber);font-size:.95rem"></i> ${dos.nom}
+        <button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:auto" onclick="supprimerDossier('${dos.id}')"><i class="ti ti-trash"></i></button>
+      </div>`
+    sousDossiers.forEach(sd => {
+      const ressSd = r.filter(x => x.dossier_id === sd.id)
+      html += `<div style="margin-left:16px;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:7px;padding:4px 0;font-size:.78rem;color:var(--t2)">
+          <i class="ti ti-folder" style="color:var(--amber);font-size:.85rem;opacity:.7"></i> ${sd.nom}
+          <button class="btn btn-ghost btn-sm" style="padding:1px 5px;font-size:.7rem;margin-left:auto" onclick="supprimerDossier('${sd.id}')"><i class="ti ti-trash"></i></button>
+        </div>
+        ${ressSd.map(x => resRow(x, d)).join('')}
+      </div>`
+    })
+    html += ressDossier.map(x => '<div style="margin-left:16px">' + resRow(x, d) + '</div>').join('')
+    html += '</div>'
+  })
+  if (sansDossier.length) {
+    if (racines.length) html += '<div style="font-size:.72rem;color:var(--t3);padding:4px 0;margin-top:4px">Sans dossier</div>'
+    html += sansDossier.map(x => resRow(x, d)).join('')
+  }
+  if (!d.length && !r.length) html = '<p style="font-size:.78rem;color:var(--t3)">Aucune ressource.</p>'
+  $('res-liste-body').innerHTML = html
+  // Mettre à jour les selects de dossiers
+  const selUp = $('up-dossier')
+  if (selUp) {
+    selUp.innerHTML = '<option value="">— Aucun dossier —</option>' +
+      d.map(dos => `<option value="${dos.id}">${dos.parent_id ? '↳ ' : ''}${dos.nom}</option>`).join('')
+  }
+}
+
+function resRow(x, dossiers) {
+  const dosNom = x.dossier_id ? (dossiers.find(d => d.id === x.dossier_id)?.nom || '') : ''
+  const dosOptions = '<option value="">— Sans dossier —</option>' + dossiers.map(d => `<option value="${d.id}" ${d.id===x.dossier_id?'selected':''}>${d.nom}</option>`).join('')
+  return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:.5px solid var(--bord)">
+    <i class="ti ti-file" style="color:var(--t3);font-size:.9rem;flex-shrink:0"></i>
+    <div style="flex:1;min-width:0"><div style="font-size:.82rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.titre}</div>
+    <div style="font-size:.7rem;color:var(--t3)">${x.type?.toUpperCase()} · ${x.taille||'—'}</div></div>
+    <select class="fselect" style="width:auto;padding:3px 6px;font-size:.7rem" onchange="deplacerRessource('${x.id}',this.value)">${dosOptions}</select>
+    <button class="btn btn-ghost btn-sm" onclick="delRes('${x.id}','${x.storage_path||''}')"><i class="ti ti-trash"></i></button>
+  </div>`
+}
+
+async function supprimerDossier(id) {
+  if (!confirm('Supprimer ce dossier ? Les ressources seront déplacées hors du dossier.')) return
+  await db.from('ressources').update({ dossier_id: null }).eq('dossier_id', id)
+  await db.from('dossiers').delete().eq('id', id)
+  toast('Dossier supprimé')
+  loadResAdmin()
 }
 
 async function delRes(id, path) {
@@ -2515,6 +2579,55 @@ async function chargerRendusAdmin() {
       <hr style="border:none;border-top:.5px solid var(--bord);margin:8px 0"/>
     </div>`
   }).join('')
+}
+
+// ============================================================
+// GESTION DES DOSSIERS
+// ============================================================
+async function afficherCreerDossier() {
+  const form = document.getElementById('creer-dossier-form')
+  form.style.display = form.style.display === 'none' ? '' : 'none'
+  if (form.style.display !== 'none') {
+    await chargerDossiersSelect()
+  }
+}
+
+async function chargerDossiersSelect() {
+  const modId = $('fil-mod-res').value
+  const { data } = await db.from('dossiers').select('*').eq('module_id', modId).is('parent_id', null).order('nom')
+  const sel = $('nouveau-dossier-parent')
+  if (sel) {
+    sel.innerHTML = '<option value="">Aucun (dossier racine)</option>' +
+      (data||[]).map(d => `<option value="${d.id}">${d.nom}</option>`).join('')
+  }
+  // Aussi mettre à jour le select upload
+  const selUp = $('up-dossier')
+  if (selUp) {
+    const modUp = $('up-mod').value
+    const { data: tous } = await db.from('dossiers').select('*, parent:parent_id(nom)').eq('module_id', parseInt(modUp)).order('nom')
+    selUp.innerHTML = '<option value="">— Aucun dossier —</option>' +
+      (tous||[]).map(d => `<option value="${d.id}">${d.parent?.nom ? d.parent.nom + ' / ' : ''}${d.nom}</option>`).join('')
+  }
+}
+
+async function creerDossier() {
+  const nom = $('nouveau-dossier-nom').value.trim()
+  const modId = parseInt($('fil-mod-res').value)
+  const parentId = $('nouveau-dossier-parent').value || null
+  if (!nom) { toast('Nom requis', 'err'); return }
+  const { data:{user} } = await db.auth.getUser()
+  const { error } = await db.from('dossiers').insert({ module_id: modId, nom, parent_id: parentId, created_by: user.id })
+  if (error) { toast('Erreur : ' + error.message, 'err'); return }
+  toast('Dossier créé !', 'ok')
+  $('nouveau-dossier-nom').value = ''
+  document.getElementById('creer-dossier-form').style.display = 'none'
+  loadResAdmin()
+}
+
+async function deplacerRessource(resId, nouveauDossierId) {
+  await db.from('ressources').update({ dossier_id: nouveauDossierId || null }).eq('id', resId)
+  toast('Ressource déplacée', 'ok')
+  loadResAdmin()
 }
 </script>
 </body>
