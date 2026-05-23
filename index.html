@@ -690,7 +690,7 @@ button, input, select, textarea { font-family: var(--ff); }
     <div class="nav-item" id="n-modules" onclick="nav('modules')"><i class="ti ti-books"></i> Modules</div>
     <div class="nav-item" id="n-suivi" onclick="nav('suivi')"><i class="ti ti-chart-bar"></i> Suivi</div>
     <div class="nav-item" id="n-revision" onclick="nav('revision')"><i class="ti ti-cards"></i> Révision</div>
-    <div class="nav-item" id="n-devoirs" onclick="nav('devoirs')"><i class="ti ti-file-upload"></i> Devoirs</div>
+    <div class="nav-item" id="n-devoirs" onclick="nav('devoirs')"><i class="ti ti-file-upload"></i> Travaux pratiques</div>
     
     <div id="nav-admin" class="hidden">
       <div class="nav-section">Administration</div>
@@ -930,14 +930,7 @@ button, input, select, textarea { font-family: var(--ff); }
                   <option value="com">Toutes filieres</option>
                 </select>
               </div>
-              <div>
-                <label class="field-label">Points par question</label>
-                <select class="fselect" id="mq-pts">
-                  <option value="2">2 pts (10 questions = 20 pts)</option>
-                  <option value="1">1 pt (20 questions = 20 pts)</option>
-                  <option value="4">4 pts (5 questions = 20 pts)</option>
-                </select>
-              </div>
+
             </div>
             <div id="mq-questions-list"></div>
             <button class="btn btn-ghost" style="width:100%;margin-bottom:1rem;border-style:dashed" onclick="ajouterQuestion()">
@@ -1036,6 +1029,87 @@ button, input, select, textarea { font-family: var(--ff); }
           <div class="card-body" id="annonces-liste"><p style="font-size:.78rem;color:var(--t3)">Chargement...</p></div>
         </div>
       </div>
+    </div>
+
+
+    <!-- RÉVISION -->
+    <div class="vue" id="v-revision">
+      <div style="max-width:540px;margin:0 auto">
+        <div style="margin-bottom:1.2rem">
+          <h2>Mode révision</h2>
+          <p style="font-size:.78rem;color:var(--t2);margin-top:3px">Retournez les cartes pour voir les réponses. Sans note, sans pression.</p>
+        </div>
+        <div id="rev-selecteur">
+          <div class="card">
+            <div class="card-head"><span class="card-title">Choisir les cartes</span></div>
+            <div class="card-body">
+              <div style="margin-bottom:.9rem">
+                <label class="field-label">Module</label>
+                <select class="fselect" id="rev-module">
+                  <option value="0">Tous les modules mélangés</option>
+                  <option value="1">Module 1 — Thermique</option>
+                  <option value="2">Module 2 — Hydraulique</option>
+                  <option value="3">Module 3 — Conception & Construction</option>
+                  <option value="4">Module 4 — Électrique</option>
+                </select>
+              </div>
+              <button class="btn btn-r btn-full" onclick="demarrerRevision()">
+                <i class="ti ti-cards"></i> Commencer la révision
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="rev-session" class="hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+            <button class="btn btn-ghost btn-sm" onclick="arreterRevision()"><i class="ti ti-arrow-left"></i> Arrêter</button>
+            <span style="font-size:.78rem;color:var(--t2)" id="rev-compteur">Carte 1/10</span>
+            <span style="font-size:.78rem;color:var(--t2)" id="rev-score-lbl">0 sus / 0 vus</span>
+          </div>
+          <div class="pbar" style="margin-bottom:1.2rem"><div class="pfill" id="rev-pbar" style="width:0%"></div></div>
+          <div style="perspective:1000px;margin-bottom:1rem;cursor:pointer" onclick="retournerCarte()">
+            <div id="rev-carte" style="position:relative;width:100%;min-height:220px;transition:transform .5s;transform-style:preserve-3d">
+              <div id="rev-face" style="position:absolute;width:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden">
+                <div class="card" style="min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center">
+                  <span style="font-size:.68rem;color:var(--r);font-weight:500;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem">Question</span>
+                  <div id="rev-img-wrap" style="margin-bottom:.8rem;display:none"><img id="rev-img" src="" style="max-height:120px;max-width:100%;border-radius:8px;object-fit:contain"/></div>
+                  <p style="font-size:1rem;line-height:1.6;font-weight:500" id="rev-question-txt">—</p>
+                  <p style="font-size:.72rem;color:var(--t3);margin-top:1rem"><i class="ti ti-hand-click"></i> Cliquez pour voir la réponse</p>
+                </div>
+              </div>
+              <div id="rev-dos" style="position:absolute;width:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg)">
+                <div class="card" style="min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center;background:var(--vl);border-color:var(--v)">
+                  <span style="font-size:.68rem;color:var(--v);font-weight:500;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem">Réponse</span>
+                  <p style="font-size:1rem;line-height:1.6;color:var(--v);font-weight:500" id="rev-reponse-txt">—</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="rev-btns" class="hidden" style="display:flex;gap:8px">
+            <button class="btn" style="flex:1;background:var(--rl);color:var(--r2);border:.5px solid var(--r)" onclick="carteSuivante(false)"><i class="ti ti-x"></i> Je ne savais pas</button>
+            <button class="btn" style="flex:1;background:var(--vl);color:var(--v);border:.5px solid var(--v)" onclick="carteSuivante(true)"><i class="ti ti-check"></i> Je savais !</button>
+          </div>
+        </div>
+        <div id="rev-fin" class="hidden">
+          <div class="card" style="text-align:center;padding:2rem">
+            <i class="ti ti-trophy" style="font-size:2.5rem;color:var(--r);display:block;margin-bottom:1rem"></i>
+            <h2 style="margin-bottom:.5rem">Session terminée !</h2>
+            <p style="font-size:.82rem;color:var(--t2);margin-bottom:1rem" id="rev-fin-msg">—</p>
+            <div style="display:flex;gap:8px;justify-content:center">
+              <button class="btn btn-ghost" onclick="arreterRevision()">Changer de module</button>
+              <button class="btn btn-r" onclick="demarrerRevision()"><i class="ti ti-refresh"></i> Recommencer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVOIRS ASPIRANT -->
+    <div class="vue" id="v-devoirs">
+      <div style="margin-bottom:1.2rem">
+        <h2>Travaux pratiques</h2>
+        <p style="font-size:.78rem;color:var(--t2);margin-top:3px">Déposez vos fichiers SolidWorks, HydroSim, PDF... avant la date limite fixée par le formateur.</p>
+      </div>
+      <div id="devoirs-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
     </div>
 
   </main>
@@ -1874,8 +1948,15 @@ async function dupliquerQuiz(id) {
 
 async function delQuiz(id) {
   if (!confirm('Supprimer ce quiz ?')) return
-  await db.from('quiz').update({actif:false}).eq('id',id)
-  toast('Quiz supprimé'); loadQuizAdmin()
+  // Supprimer d'abord les questions puis le quiz
+  await db.from('questions').delete().eq('quiz_id', id)
+  const { error } = await db.from('quiz').delete().eq('id', id)
+  if (error) {
+    // Fallback : marquer inactif
+    await db.from('quiz').update({ actif: false }).eq('id', id)
+  }
+  toast('Quiz supprimé !', 'ok')
+  loadQuizAdmin()
 }
 
 // ============================================================
@@ -2154,26 +2235,19 @@ let revSus = 0
 
 async function demarrerRevision() {
   const modId = parseInt(document.getElementById('rev-module').value)
-  const srcQuiz = document.getElementById('rev-src-quiz').checked
-  const srcFlash = document.getElementById('rev-src-flash').checked
 
-  if (!srcQuiz && !srcFlash) { toast('Selectionnez au moins une source', 'err'); return }
-
-  // Charger les questions — simple et robuste
-  let queryBase = db.from('questions').select('*, quiz(module_id, titre)')
+  // Charger les questions
+  let queryBase = db.from('questions').select('*, quiz(module_id, titre, actif)')
   if (modId > 0) {
     const { data: quizMod } = await db.from('quiz').select('id').eq('module_id', modId).eq('actif', true)
     const ids = (quizMod || []).map(q => q.id)
-    if (!ids.length) { toast('Aucune question pour ce module', 'err'); return }
+    if (!ids.length) { toast('Aucun quiz disponible pour ce module', 'err'); return }
     queryBase = queryBase.in('quiz_id', ids)
   }
   const { data: questions, error: qErr } = await queryBase.limit(50)
-  if (qErr) { toast('Erreur chargement : ' + qErr.message, 'err'); return }
-  let cartes = (questions || [])
-  // Filtrer selon source
-  if (srcQuiz && !srcFlash) cartes = cartes.filter(q => !q.est_flashcard)
-  if (!srcQuiz && srcFlash) cartes = cartes.filter(q => q.est_flashcard === true)
-  if (!cartes.length) { toast('Aucune carte disponible pour cette selection', 'err'); return }
+  if (qErr) { toast('Erreur : ' + qErr.message, 'err'); return }
+  const cartes = (questions || []).filter(q => q.enonce && q.enonce.trim())
+  if (!cartes.length) { toast('Aucune carte disponible. Creez d\'abord des quiz !', 'err'); return }
 
   // Mélanger les cartes
   revCartes = cartes.sort(() => Math.random() - 0.5)
@@ -2190,10 +2264,15 @@ function afficherCarte() {
   revRetourne = false
   const carte = document.getElementById('rev-carte')
   carte.style.transform = 'rotateY(0deg)'
-
   document.getElementById('rev-question-txt').textContent = c.enonce || '—'
-
-  // Construire la réponse selon le type
+  // Image
+  const imgWrapR = document.getElementById('rev-img-wrap')
+  const imgR = document.getElementById('rev-img')
+  if (imgWrapR && imgR) {
+    if (c.image_url) { imgR.src = c.image_url; imgWrapR.style.display = ''; }
+    else { imgWrapR.style.display = 'none'; imgR.src = ''; }
+  }
+  // Réponse
   let rep = ''
   if (c.type_question === 'vf') {
     rep = c.bonne_reponse === 0 ? 'VRAI' : 'FAUX'
