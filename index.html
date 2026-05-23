@@ -785,6 +785,7 @@ button, input, select, textarea { font-family: var(--ff); }
               <span style="font-size:.7rem;color:var(--r);font-weight:500;text-transform:uppercase;letter-spacing:.5px" id="q-num">Question 1</span>
               <span class="badge badge-rl" id="q-pts">2 pts</span>
             </div>
+            <div id="q-image-wrap" style="display:none"></div>
             <p class="quiz-q" id="q-enonce">—</p>
             <div id="q-opts"></div>
           </div>
@@ -1411,6 +1412,17 @@ function showQ() {
   $('q-num').textContent        = `Question ${G.etape+1}`
   $('q-pts').textContent        = `${q.points} pt${q.points>1?'s':''}`
   $('q-enonce').textContent     = q.enonce
+  // Afficher l'image si présente
+  const imgWrap = document.getElementById('q-image-wrap')
+  if (imgWrap) {
+    if (q.image_url) {
+      imgWrap.style.display = ''
+      imgWrap.innerHTML = `<img src="${q.image_url}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:.5px solid var(--bord2);margin-bottom:.8rem"/>`
+    } else {
+      imgWrap.style.display = 'none'
+      imgWrap.innerHTML = ''
+    }
+  }
   const typeQ = q.type_question || 'qcm'
   if (typeQ === 'libre') {
     $('q-opts').innerHTML = `
@@ -1560,15 +1572,30 @@ async function afficheRes() {
   } else { hi('r-revisions') }
   // Détail
   $('r-detail').innerHTML = questions.map((q, i) => {
-    const rep = reps[q.id]; const ok = rep === q.bonne_reponse
+    const rep = reps[q.id]
+    const typeQ = q.type_question || 'qcm'
+    const isLibre = typeQ === 'libre'
+    const ok = isLibre ? false : rep === q.bonne_reponse
+    // Construire l'affichage selon le type
+    let repTexte = '—', bonneTexte = '—'
+    if (isLibre) {
+      repTexte = typeof rep === 'string' ? rep : '—'
+      bonneTexte = q.reponse_type || 'Voir correction admin'
+    } else {
+      repTexte = q.options?.[rep] ?? '—'
+      bonneTexte = q.options?.[q.bonne_reponse] ?? '—'
+    }
+    const noteQ = isLibre ? (G.tentResult?.tent?.notes_libres?.[q.id] ?? '?') : (ok ? q.points : 0)
     return `<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:${i<questions.length-1?'.5px solid var(--bord)':'none'}">
-      <i class="ti ${ok?'ti-circle-check':'ti-circle-x'}" style="color:${ok?'var(--v)':'var(--r)'};font-size:.95rem;flex-shrink:0;margin-top:2px"></i>
+      <i class="ti ${isLibre?'ti-pencil':ok?'ti-circle-check':'ti-circle-x'}" style="color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--r)'};font-size:.95rem;flex-shrink:0;margin-top:2px"></i>
       <div style="flex:1">
+        ${q.image_url ? `<img src="${q.image_url}" style="width:100%;max-height:100px;object-fit:contain;border-radius:6px;border:.5px solid var(--bord2);margin-bottom:4px"/>` : ''}
         <div style="font-size:.82rem;line-height:1.4;margin-bottom:2px">${q.enonce}</div>
-        ${!ok ? `<div style="font-size:.72rem;color:var(--r)">Votre réponse : ${q.options?.[rep]||'—'}</div><div style="font-size:.72rem;color:var(--v);font-weight:500">Bonne réponse : ${q.options?.[q.bonne_reponse]} ✓</div>` : ''}
-        ${q.justification&&!ok ? `<div style="font-size:.7rem;color:var(--t3);margin-top:3px;font-style:italic">${q.justification}</div>` : ''}
+        ${isLibre ? `<div style="font-size:.72rem;color:var(--bleu);margin-top:2px">Votre réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--amber);font-style:italic">En attente de correction admin</div>` :
+          !ok ? `<div style="font-size:.72rem;color:var(--r)">Votre réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--v);font-weight:500">Bonne réponse : ${bonneTexte} ✓</div>` : ''}
+        ${q.justification&&!ok&&!isLibre ? `<div style="font-size:.7rem;color:var(--t3);margin-top:3px;font-style:italic">${q.justification}</div>` : ''}
       </div>
-      <span style="font-size:.72rem;font-weight:500;color:${ok?'var(--v)':'var(--t3)'};flex-shrink:0">${ok?'+'+q.points:'0'} pt${q.points>1?'s':''}</span>
+      <span style="font-size:.72rem;font-weight:500;color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--t3)'};flex-shrink:0">${isLibre?noteQ+'?':ok?'+'+q.points:'0'} pt${q.points>1?'s':''}</span>
     </div>`
   }).join('')
 }
@@ -2067,7 +2094,7 @@ async function pubQuizManuel() {
   for (let i = 0; i < mqQuestions.length; i++) {
     const q = mqQuestions[i]
     if (!q.enonce.trim()) { toast('Question ' + (i+1) + ' : enonce vide', 'err'); return }
-    if (q.options.some(o => !o.trim())) { toast('Question ' + (i+1) + ' : toutes les options doivent etre remplies', 'err'); return }
+    if (q.type !== 'vf' && q.type !== 'libre' && q.options.some(o => !o.trim())) { toast('Question ' + (i+1) + ' : toutes les options doivent etre remplies', 'err'); return }
   }
 
   const btn = document.querySelector('[onclick="pubQuizManuel()"]')
@@ -2132,26 +2159,21 @@ async function demarrerRevision() {
 
   if (!srcQuiz && !srcFlash) { toast('Selectionnez au moins une source', 'err'); return }
 
-  // Charger les questions
-  let query = db.from('questions').select('*, quiz(module_id, titre)')
+  // Charger les questions — simple et robuste
+  let queryBase = db.from('questions').select('*, quiz(module_id, titre)')
   if (modId > 0) {
-    // Filtrer par module via quiz
     const { data: quizMod } = await db.from('quiz').select('id').eq('module_id', modId).eq('actif', true)
     const ids = (quizMod || []).map(q => q.id)
     if (!ids.length) { toast('Aucune question pour ce module', 'err'); return }
-    query = query.in('quiz_id', ids)
+    queryBase = queryBase.in('quiz_id', ids)
   }
-
-  const conditions = []
-  if (srcQuiz && !srcFlash) conditions.push('est_flashcard.is.false,est_flashcard.is.null')
-  if (!srcQuiz && srcFlash) conditions.push('est_flashcard.eq.true')
-
-  const { data: questions } = await query.limit(30)
+  const { data: questions, error: qErr } = await queryBase.limit(50)
+  if (qErr) { toast('Erreur chargement : ' + qErr.message, 'err'); return }
   let cartes = (questions || [])
+  // Filtrer selon source
   if (srcQuiz && !srcFlash) cartes = cartes.filter(q => !q.est_flashcard)
-  if (!srcQuiz && srcFlash) cartes = cartes.filter(q => q.est_flashcard)
-
-  if (!cartes.length) { toast('Aucune carte disponible', 'err'); return }
+  if (!srcQuiz && srcFlash) cartes = cartes.filter(q => q.est_flashcard === true)
+  if (!cartes.length) { toast('Aucune carte disponible pour cette selection', 'err'); return }
 
   // Mélanger les cartes
   revCartes = cartes.sort(() => Math.random() - 0.5)
