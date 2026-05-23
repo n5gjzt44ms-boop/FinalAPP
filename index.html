@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 /* ====================================================
    CONFIGURATION RAPIDE — modifiez ici si besoin
@@ -987,255 +986,7 @@ button, input, select, textarea { font-family: var(--ff); }
             </button>
           </div>
         </div>
-        <!-- IMPORT EXCEL -->
-        <div class="card" style="margin-bottom:1rem">
-          <div class="card-head">
-            <div style="display:flex;align-items:center;gap:8px">
-              <i class="ti ti-table-import" style="color:var(--r);font-size:1rem"></i>
-              <div>
-                <div class="card-title">Importer un quiz depuis Excel</div>
-                <div style="font-size:.7rem;color:var(--t3)">Remplissez le modèle et uploadez-le ici</div>
-              </div>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="telechargerModele()">
-              <i class="ti ti-download"></i> Télécharger le modèle
-            </button>
-          </div>
-          <div class="card-body">
-            <div style="border:1.5px dashed var(--bord2);border-radius:8px;padding:1rem;text-align:center;cursor:pointer;background:var(--bg)" onclick="document.getElementById('import-excel-input').click()">
-              <i class="ti ti-file-spreadsheet" style="font-size:1.5rem;color:var(--r);display:block;margin-bottom:6px"></i>
-              <p style="font-size:.82rem;color:var(--t2);font-weight:500">Cliquez pour sélectionner le fichier Excel</p>
-              <p style="font-size:.72rem;color:var(--t3);margin-top:3px">Format .xlsx uniquement — utilisez le modèle fourni</p>
-            </div>
-            <input type="file" id="import-excel-input" accept=".xlsx" style="display:none" onchange="importerExcel(this)"/>
-            <div id="import-preview" style="display:none;margin-top:1rem"></div>
-          </div>
-        </div>
-
-        <!-- IMPORT EXCEL -->
-        <div class="card" style="margin-bottom:1rem">
-          <div class="card-head">
-            <div style="display:flex;align-items:center;gap:8px">
-              <i class="ti ti-table-import" style="color:var(--r);font-size:1rem"></i>
-              <div><div class="card-title">Importer depuis Excel</div>
-              <div style="font-size:.7rem;color:var(--t3)">Remplissez le modele et uploadez-le ici</div></div>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="telechargerModele()"><i class="ti ti-download"></i> Modele Excel</button>
-          </div>
-          <div class="card-body">
-            <div style="border:1.5px dashed var(--bord2);border-radius:8px;padding:1rem;text-align:center;cursor:pointer;background:var(--bg)" onclick="document.getElementById('import-xl').click()">
-              <i class="ti ti-file-spreadsheet" style="font-size:1.5rem;color:var(--r);display:block;margin-bottom:6px"></i>
-              <p style="font-size:.82rem;color:var(--t2);font-weight:500">Cliquez pour selectionner le fichier Excel</p>
-              <p style="font-size:.72rem;color:var(--t3);margin-top:3px">Format .xlsx — utilisez le modele fourni</p>
-            </div>
-            <input type="file" id="import-xl" accept=".xlsx" style="display:none" onchange="importerExcel(this)"/>
-            <div id="import-preview" style="display:none;margin-top:1rem"></div>
-          </div>
-        </div>
-
-                <!-- IMPORT EXCEL -->
-        <div class="card" style="margin-bottom:1rem">
-          <div class="card-head">
-            <div style="display:flex;align-items:center;gap:8px">
-              <i class="ti ti-table-import" style="color:var(--r);font-size:1rem"></i>
-              <div><div class="card-title">Importer depuis Excel</div>
-              <div style="font-size:.7rem;color:var(--t3)">Remplissez le modele et uploadez-le ici</div></div>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="telechargerModele()"><i class="ti ti-download"></i> Modele Excel</button>
-          </div>
-          <div class="card-body">
-            <div style="border:1.5px dashed var(--bord2);border-radius:8px;padding:1rem;text-align:center;cursor:pointer;background:var(--bg)" onclick="document.getElementById('import-xl').click()">
-              <i class="ti ti-file-spreadsheet" style="font-size:1.5rem;color:var(--r);display:block;margin-bottom:6px"></i>
-              <p style="font-size:.82rem;color:var(--t2);font-weight:500">Cliquez pour selectionner le fichier Excel</p>
-              <p style="font-size:.72rem;color:var(--t3);margin-top:3px">Format .xlsx — utilisez le modele fourni</p>
-            </div>
-            <input type="file" id="import-xl" accept=".xlsx" style="display:none" onchange="importerExcel(this)"/>
-            <div id="import-preview" style="display:none;margin-top:1rem"></div>
-          </div>
-        </div>
-<div class="card">
-          <div class="card-head">
-            <span class="card-title">Quiz existants</span>
-            <select class="fselect" style="width:auto;padding:4px 8px;font-size:.78rem" id="fil-mod-quiz" onchange="loadQuizAdmin()">
-              <option value="1">Module 1</option><option value="2">Module 2</option>
-              <option value="3">Module 3</option><option value="4">Module 4</option>
-            </select>
-          </div>
-          <div class="card-body" id="quiz-admin-body"><p style="font-size:.78rem;color:var(--t3)">Chargement...</p></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ASPIRANTS -->
-    <div class="vue" id="v-aspirants">
-      <div style="margin-bottom:1.2rem"><h2>Gestion des aspirants</h2></div>
-      <div class="card" style="margin-bottom:1rem">
-        <div class="card-head"><div style="display:flex;align-items:center;gap:7px"><i class="ti ti-shield" style="color:var(--r)"></i><span class="card-title">Inviter un administrateur</span></div></div>
-        <div class="card-body">
-          <p style="font-size:.82rem;color:var(--t2);margin-bottom:.8rem">Générez un lien à usage unique (7 jours) à envoyer au futur admin.</p>
-          <button class="btn btn-ghost" onclick="genLienAdmin()"><i class="ti ti-link"></i> Générer un lien admin</button>
-          <div class="hidden" id="lien-result" style="margin-top:.8rem">
-            <div style="background:var(--rl);border-radius:8px;padding:.8rem">
-              <div style="font-size:.7rem;color:var(--t3);margin-bottom:3px">Lien valable 7 jours</div>
-              <code style="font-size:.72rem;color:var(--r2);word-break:break-all" id="lien-code"></code>
-            </div>
-            <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="copierLien()"><i class="ti ti-copy"></i> Copier</button>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-head"><span class="card-title">Tous les aspirants</span></div>
-        <div class="card-body" id="asp-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
-      </div>
-    </div>
-
-    <!-- RÉVISION -->
-    <div class="vue" id="v-revision">
-      <div style="max-width:580px;margin:0 auto">
-        <div style="margin-bottom:1.2rem">
-          <h2>Mode révision</h2>
-          <p style="font-size:.78rem;color:var(--t2);margin-top:3px">Retournez les cartes pour voir les réponses. Sans note, sans pression.</p>
-        </div>
-
-        <!-- SÉLECTEUR -->
-        <div id="rev-selecteur">
-          <div class="card" style="margin-bottom:1rem">
-            <div class="card-head"><span class="card-title">Choisir les cartes à réviser</span></div>
-            <div class="card-body">
-              <div style="margin-bottom:.9rem">
-                <label class="field-label">Module</label>
-                <select class="fselect" id="rev-module">
-                  <option value="0">Tous les modules mélangés</option>
-                  <option value="1">Module 1 — Thermique</option>
-                  <option value="2">Module 2 — Hydraulique</option>
-                  <option value="3">Module 3 — Conception & Construction</option>
-                  <option value="4">Module 4 — Électrique</option>
-                </select>
-              </div>
-              <div style="margin-bottom:1rem">
-                <label class="field-label">Source des questions</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                  <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:.5px solid var(--bord2);border-radius:8px;cursor:pointer;font-size:.82rem">
-                    <input type="checkbox" id="rev-src-quiz" checked style="accent-color:var(--r)"/> Questions des quiz
-                  </label>
-                  <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:.5px solid var(--bord2);border-radius:8px;cursor:pointer;font-size:.82rem">
-                    <input type="checkbox" id="rev-src-flash" checked style="accent-color:var(--r)"/> Flashcards admin
-                  </label>
-                </div>
-              </div>
-              <button class="btn btn-r btn-full" onclick="demarrerRevision()">
-                <i class="ti ti-cards"></i> Commencer la révision
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- SESSION DE RÉVISION -->
-        <div id="rev-session" class="hidden">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-            <button class="btn btn-ghost btn-sm" onclick="arreterRevision()"><i class="ti ti-arrow-left"></i> Arrêter</button>
-            <span style="font-size:.78rem;color:var(--t2)" id="rev-compteur">Carte 1 / 10</span>
-            <span style="font-size:.78rem;color:var(--t2)" id="rev-score-lbl">0 sus / 0 vus</span>
-          </div>
-          <div class="pbar" style="margin-bottom:1.2rem"><div class="pfill" id="rev-pbar" style="width:0%"></div></div>
-
-          <!-- CARTE -->
-          <div id="rev-carte-wrap" style="perspective:1000px;margin-bottom:1rem;cursor:pointer" onclick="retournerCarte()">
-            <div id="rev-carte" style="position:relative;width:100%;min-height:240px;transition:transform .5s;transform-style:preserve-3d">
-              <!-- FACE -->
-              <div id="rev-face" style="position:absolute;width:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden">
-                <div class="card" style="min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center">
-                  <span style="font-size:.68rem;color:var(--r);font-weight:500;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem">Question</span>
-                  <p style="font-size:1rem;line-height:1.6;font-weight:500" id="rev-question-txt">—</p>
-                  <p style="font-size:.75rem;color:var(--t3);margin-top:1.2rem"><i class="ti ti-hand-click"></i> Cliquez pour voir la réponse</p>
-                </div>
-              </div>
-              <!-- DOS -->
-              <div id="rev-dos" style="position:absolute;width:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg)">
-                <div class="card" style="min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center;background:var(--vl);border-color:var(--v)">
-                  <span style="font-size:.68rem;color:var(--v);font-weight:500;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem">Réponse</span>
-                  <p style="font-size:1rem;line-height:1.6;color:var(--v);font-weight:500" id="rev-reponse-txt">—</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- BOUTONS APRÈS RETOURNEMENT -->
-          <div id="rev-btns" class="hidden" style="display:flex;gap:8px">
-            <button class="btn" style="flex:1;background:var(--rl);color:var(--r2);border:.5px solid var(--r)" onclick="carteSuivante(false)">
-              <i class="ti ti-x"></i> Je ne savais pas
-            </button>
-            <button class="btn" style="flex:1;background:var(--vl);color:var(--v);border:.5px solid var(--v)" onclick="carteSuivante(true)">
-              <i class="ti ti-check"></i> Je savais !
-            </button>
-          </div>
-        </div>
-
-        <!-- FIN DE SESSION -->
-        <div id="rev-fin" class="hidden">
-          <div class="card" style="text-align:center;padding:2rem">
-            <i class="ti ti-trophy" style="font-size:2.5rem;color:var(--r);display:block;margin-bottom:1rem"></i>
-            <h2 style="margin-bottom:.5rem">Session terminée !</h2>
-            <p style="font-size:.82rem;color:var(--t2);margin-bottom:1rem" id="rev-fin-msg">—</p>
-            <div style="display:flex;gap:8px;justify-content:center">
-              <button class="btn btn-ghost" onclick="arreterRevision()">Changer de sélection</button>
-              <button class="btn btn-r" onclick="demarrerRevision()"><i class="ti ti-refresh"></i> Recommencer</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- DEVOIRS ASPIRANT -->
-    <div class="vue" id="v-devoirs">
-      <div style="margin-bottom:1.2rem">
-        <h2>Devoirs à rendre</h2>
-        <p style="font-size:.78rem;color:var(--t2);margin-top:3px">Déposez vos fichiers avant la date limite.</p>
-      </div>
-      <div id="devoirs-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
-    </div>
-
-    <!-- DEVOIRS ADMIN -->
-    <div class="vue" id="v-devoirs-admin">
-      <div style="max-width:660px">
-        <div style="margin-bottom:1.2rem"><h2>Gérer les devoirs</h2></div>
-        <div class="card" style="margin-bottom:1rem">
-          <div class="card-head"><span class="card-title">Créer un devoir</span></div>
-          <div class="card-body">
-            <div class="field-row" style="margin-bottom:.9rem">
-              <div>
-                <label class="field-label">Titre</label>
-                <input class="finput" id="dv-titre" placeholder="Ex : Schéma hydraulique HydroSim"/>
-              </div>
-              <div>
-                <label class="field-label">Module</label>
-                <select class="fselect" id="dv-mod">
-                  <option value="1">Module 1 — Thermique</option>
-                  <option value="2">Module 2 — Hydraulique</option>
-                  <option value="3">Module 3 — Conception</option>
-                  <option value="4">Module 4 — Électrique</option>
-                </select>
-              </div>
-            </div>
-            <div style="margin-bottom:.9rem">
-              <label class="field-label">Consigne</label>
-              <textarea class="ftextarea" id="dv-consigne" rows="3" placeholder="Décrivez le travail attendu..."></textarea>
-            </div>
-            <div class="field-row" style="margin-bottom:.9rem">
-              <div>
-                <label class="field-label">Date limite de rendu</label>
-                <input type="datetime-local" class="finput" id="dv-limite"/>
-              </div>
-              <div>
-                <label class="field-label">Sujet (PDF optionnel)</label>
-                <input type="file" id="dv-sujet" accept=".pdf" style="font-size:.82rem;margin-top:4px"/>
-              </div>
-            </div>
-            <button class="btn btn-r" onclick="creerDevoir()"><i class="ti ti-plus"></i> Créer le devoir</button>
-          </div>
-        </div>
-        <div class="card">
+                <div class="card">
           <div class="card-head"><span class="card-title">Rendus des aspirants</span></div>
           <div class="card-body" id="rendus-admin-body"><p style="font-size:.78rem;color:var(--t3)">Sélectionnez un devoir pour voir les rendus.</p></div>
         </div>
@@ -1646,7 +1397,7 @@ async function commencer(qid) {
     db.from('questions').select('id,enonce,options,points,competence,ordre').eq('quiz_id', qid).order('ordre')
   ])
   G.quizActif = q; G.questions = qs||[]; G.reponses = {}
-  G.etape = 0; G.choix = null; G.confirme = false
+  G.etape = 0; G.choix = null; G.confirme = false; G.fichiersLibres = {}
   nav('quiz')
   showQ()
 }
@@ -1660,9 +1411,27 @@ function showQ() {
   $('q-num').textContent        = `Question ${G.etape+1}`
   $('q-pts').textContent        = `${q.points} pt${q.points>1?'s':''}`
   $('q-enonce').textContent     = q.enonce
-  $('q-opts').innerHTML         = (q.options||[]).map((o,i) =>
-    `<button class="quiz-opt" id="o${i}" onclick="choisir(${i})"><div class="opt-dot" id="d${i}"></div>${o}</button>`
-  ).join('')
+  const typeQ = q.type_question || 'qcm'
+  if (typeQ === 'libre') {
+    $('q-opts').innerHTML = `
+      <textarea id="rep-libre" class="ftextarea" rows="4" placeholder="Redigez votre reponse ici..."
+        style="width:100%;margin-bottom:.7rem"
+        onchange="G.reponses[G.questions[G.etape].id]=this.value"></textarea>
+      <div id="fichier-joint-wrap">
+        <label style="display:flex;align-items:center;gap:7px;padding:8px 12px;border:.5px dashed var(--bord2);border-radius:8px;cursor:pointer;font-size:.78rem;color:var(--t2);background:var(--bg)">
+          <i class="ti ti-paperclip" style="font-size:.95rem;color:var(--r)"></i>
+          Joindre un fichier (photo, plan, schéma...) — optionnel
+          <input type="file" id="fichier-libre" accept="image/*,.pdf,.doc,.docx,.sldprt,.dwg,.step"
+            style="display:none" onchange="uploaderFichierLibre(this)"/>
+        </label>
+        <div id="fichier-statut" style="font-size:.72rem;color:var(--v);margin-top:4px"></div>
+      </div>`
+    $('btn-valider').disabled = false
+  } else {
+    $('q-opts').innerHTML = (q.options||[]).map((o,i) =>
+      `<button class="quiz-opt" id="o${i}" onclick="choisir(${i})"><div class="opt-dot" id="d${i}"></div>${o}</button>`
+    ).join('')
+  }
   $('btn-valider').disabled = true
   sh('btn-valider'); hi('btn-suivant'); hi('btn-terminer')
   G.choix = null; G.confirme = false
@@ -1681,6 +1450,15 @@ function choisir(i) {
 }
 
 async function valider() {
+  const typeQ = G.questions[G.etape].type_question || 'qcm'
+  if (typeQ === 'libre') {
+    const rep = document.getElementById('rep-libre')?.value?.trim() || ''
+    G.reponses[G.questions[G.etape].id] = rep
+    G.confirme = true
+    hi('btn-valider'); sh('btn-suivant')
+    if (G.etape === G.questions.length - 1) { hi('btn-suivant'); sh('btn-terminer') }
+    return
+  }
   if (G.choix === null) return
   G.confirme = true
   G.reponses[G.questions[G.etape].id] = G.choix
@@ -1713,11 +1491,16 @@ async function terminer() {
       if (ok) parComp[q.competence].score += q.points
     }
   })
-  const valide = score >= (G.quizActif.seuil || SEUIL)
+  const totalPtsQuiz = qAvecRep.reduce((a,q) => a + (parseFloat(q.points)||2), 0)
+  const sur20 = calculerScore20(score, totalPtsQuiz)
+  const aDesLibres = qAvecRep.some(q => q.type_question === 'libre')
+  const valide = !aDesLibres && sur20 >= SEUIL
   const { data: tent } = await db.from('tentatives').insert({
     aspirant_id: G.profil.id, quiz_id: G.quizActif.id,
-    score, total_points: G.quizActif.total_points, valide,
-    reponses: G.reponses, resultats_par_competence: parComp
+    score: Math.round(sur20 * 10) / 10, total_points: 20, valide,
+    reponses: G.reponses, resultats_par_competence: parComp,
+    notes_libres: aDesLibres ? {} : null,
+    fichiers_libres: G.fichiersLibres || null
   }).select().single()
   G.tentResult = { tent, questions: qr, parComp, score, valide, modId: G.quizActif.module_id, reps: G.reponses }
   afficheRes()
@@ -1737,14 +1520,16 @@ async function afficheRes() {
   const { tent, questions, parComp, score, valide, modId, reps } = G.tentResult
   const total = tent?.total_points || 20
   // Circle
+  const aDesLibres2 = questions.some(q => q.type_question === 'libre')
+  const enAttente2 = aDesLibres2 && !tent?.note_admin
   const c = $('r-circle')
-  c.style.borderColor = valide ? 'var(--v)' : 'var(--r)'
-  c.style.background  = valide ? 'var(--vl)' : 'var(--rl)'
-  $('r-score').textContent = score
-  $('r-score').style.color  = valide ? 'var(--v)' : 'var(--r)'
-  $('r-total').textContent  = '/ ' + total
-  $('r-verdict').textContent = valide ? '✓ Quiz validé' : '✗ Non validé'
-  $('r-verdict').style.color = valide ? 'var(--v)' : 'var(--r2)'
+  c.style.borderColor = enAttente2 ? 'var(--amber)' : valide ? 'var(--v)' : 'var(--r)'
+  c.style.background  = enAttente2 ? 'var(--amber-l)' : valide ? 'var(--vl)' : 'var(--rl)'
+  $('r-score').textContent = enAttente2 ? '?' : score
+  $('r-score').style.color  = enAttente2 ? 'var(--amber)' : valide ? 'var(--v)' : 'var(--r)'
+  $('r-total').textContent  = enAttente2 ? 'En attente' : '/ 20'
+  $('r-verdict').textContent = enAttente2 ? 'En attente de correction' : valide ? 'Quiz valide' : 'Non valide'
+  $('r-verdict').style.color = enAttente2 ? 'var(--amber)' : valide ? 'var(--v)' : 'var(--r2)'
   $('r-msg').textContent = valide ? 'Félicitations ! Vous avez atteint le seuil de validation.' : 'Votre score est en dessous du seuil. Révisez les cours conseillés ci-dessous.'
   // Compétences
   const comps = Object.entries(parComp)
@@ -2195,33 +1980,68 @@ function renderQuestions() {
   $('mq-questions-list').innerHTML = mqQuestions.map((q, i) => `
     <div style="background:var(--bg);border:.5px solid var(--bord2);border-radius:10px;padding:.9rem;margin-bottom:.8rem">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem">
-        <span style="font-size:.72rem;color:var(--r);font-weight:500;text-transform:uppercase;letter-spacing:.5px">Question ${i+1} · ${pts} pt${pts>1?'s':''}</span>
-        <button onclick="supprimerQuestion(${i})" style="background:none;border:none;cursor:pointer;font-size:.82rem;color:var(--t3);padding:2px 6px;border-radius:4px">
-          <i class="ti ti-trash"></i>
-        </button>
+        <span style="font-size:.72rem;color:var(--r);font-weight:500;text-transform:uppercase;letter-spacing:.5px">Question ${i+1}</span>
+        <button onclick="supprimerQuestion(${i})" style="background:none;border:none;cursor:pointer;font-size:.82rem;color:var(--t3);padding:2px 6px;border-radius:4px"><i class="ti ti-trash"></i></button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;margin-bottom:.8rem">
+        <div>
+          <label class="field-label">Type</label>
+          <select class="fselect" onchange="mqQuestions[${i}].type=this.value;renderQuestions()">
+            <option value="qcm" ${q.type==='qcm'?'selected':''}>QCM</option>
+            <option value="vf" ${q.type==='vf'?'selected':''}>Vrai / Faux</option>
+            <option value="libre" ${q.type==='libre'?'selected':''}>Reponse libre</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Competence</label>
+          <input class="finput" value="${q.competence}" placeholder="C2, S3..." onchange="mqQuestions[${i}].competence=this.value"/>
+        </div>
+        <div>
+          <label class="field-label">Points</label>
+          <input class="finput" type="number" min="0.5" max="20" step="0.5" value="${q.points||2}" onchange="mqQuestions[${i}].points=parseFloat(this.value)||2;renderQuestions()" style="text-align:center"/>
+        </div>
       </div>
       <div style="margin-bottom:.7rem">
-        <label class="field-label">Enonce de la question</label>
-        <textarea class="ftextarea" rows="2" placeholder="Ecrivez votre question ici..."
-          onchange="mqQuestions[${i}].enonce=this.value">${q.enonce}</textarea>
+        <label class="field-label">Enonce</label>
+        <textarea class="ftextarea" rows="2" placeholder="Ecrivez votre question..." onchange="mqQuestions[${i}].enonce=this.value">${q.enonce}</textarea>
       </div>
-      <div style="margin-bottom:.5rem">
-        <label class="field-label">Options de reponse — cochez la bonne</label>
-      </div>
-      ${q.options.map((opt, j) => `
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <input type="radio" name="bonne_${i}" ${q.bonne===j?'checked':''} onchange="mqQuestions[${i}].bonne=${j};renderQuestions()"
-            style="flex-shrink:0;accent-color:var(--r)"/>
-          <input class="finput" value="${opt}" placeholder="Option ${j+1}"
-            onchange="mqQuestions[${i}].options[${j}]=this.value"
-            style="border-color:${q.bonne===j?'var(--r)':'var(--bord2)'}"/>
+      <div style="margin-bottom:.7rem">
+        <label class="field-label">Image (optionnel)</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input class="finput" value="${q.imageUrl||''}" placeholder="URL image ou glissez une photo..." onchange="mqQuestions[${i}].imageUrl=this.value;renderQuestions()" style="flex:1"/>
+          <label style="padding:6px 10px;background:var(--rl);color:var(--r2);border:.5px solid var(--r);border-radius:var(--r);font-size:.75rem;cursor:pointer;white-space:nowrap;flex-shrink:0">
+            <i class="ti ti-photo"></i> Photo
+            <input type="file" accept="image/*" style="display:none" onchange="uploadImageQuestion(${i}, this)"/>
+          </label>
         </div>
-      `).join('')}
-      <div style="margin-top:.6rem">
-        <label class="field-label">Competence referentiel (optionnel)</label>
-        <input class="finput" value="${q.competence}" placeholder="Ex: C2, S3, S4..."
-          onchange="mqQuestions[${i}].competence=this.value" style="max-width:160px"/>
+        ${q.imageUrl ? `<div style="margin-top:6px;border-radius:8px;overflow:hidden;max-height:120px;border:.5px solid var(--bord2)"><img src="${q.imageUrl}" style="width:100%;max-height:120px;object-fit:cover"/></div>` : ''}
       </div>
+      ${q.type==='vf' ? `
+        <div style="margin-bottom:.7rem">
+          <label class="field-label">Bonne reponse</label>
+          <div style="display:flex;gap:8px">
+            <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:.5px solid var(--bord2);border-radius:8px;cursor:pointer;font-size:.875rem;${q.bonne===0?'background:var(--vl);border-color:var(--v);color:var(--v)':''}">
+              <input type="radio" name="vf_${i}" ${q.bonne===0?'checked':''} onchange="mqQuestions[${i}].bonne=0;renderQuestions()" style="accent-color:var(--v)"/> VRAI
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:.5px solid var(--bord2);border-radius:8px;cursor:pointer;font-size:.875rem;${q.bonne===1?'background:var(--rl);border-color:var(--r);color:var(--r)':''}">
+              <input type="radio" name="vf_${i}" ${q.bonne===1?'checked':''} onchange="mqQuestions[${i}].bonne=1;renderQuestions()" style="accent-color:var(--r)"/> FAUX
+            </label>
+          </div>
+        </div>` : q.type==='libre' ? `
+        <div style="margin-bottom:.7rem">
+          <label class="field-label">Reponse type (visible apres correction)</label>
+          <textarea class="ftextarea" rows="2" placeholder="Reponse attendue..." onchange="mqQuestions[${i}].reponse_type=this.value">${q.reponse_type||''}</textarea>
+          <p class="field-hint">L'admin notera cette question manuellement apres soumission</p>
+        </div>` : `
+        <div style="margin-bottom:.5rem">
+          <label class="field-label">Options — cochez la bonne reponse</label>
+        </div>
+        ${q.options.map((opt, j) => `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <input type="radio" name="bonne_${i}" ${q.bonne===j?'checked':''} onchange="mqQuestions[${i}].bonne=${j};renderQuestions()" style="flex-shrink:0;accent-color:var(--r)"/>
+            <input class="finput" value="${opt}" placeholder="Option ${j+1}" onchange="mqQuestions[${i}].options[${j}]=this.value" style="border-color:${q.bonne===j?'var(--r)':'var(--bord2)'}"/>
+          </div>`).join('')}
+      `}
     </div>
   `).join('')
 }
@@ -2634,7 +2454,10 @@ async function chargerRendusAdmin() {
         const p = r.profils || {}
         const fichiers = r.fichiers || []
         return `<div style="background:var(--bg);border:.5px solid var(--bord2);border-radius:8px;padding:8px 10px;margin-bottom:5px">
-          <div style="font-size:.82rem;font-weight:500;margin-bottom:4px">${p.prenom||''} ${p.nom||''}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="font-size:.82rem;font-weight:500">${p.prenom||''} ${p.nom||''}</div>
+            <button class="btn btn-ghost btn-sm" onclick="ouvrirCorrectionAdmin('${r.id}')"><i class="ti ti-pencil"></i> Corriger</button>
+          </div>
           ${fichiers.map(f => `<div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--t2);padding:2px 0">
             <i class="ti ti-file" style="font-size:.85rem;color:var(--r)"></i>
             <span style="flex:1">${f.nom}</span>
@@ -2700,90 +2523,14 @@ async function deplacerRessource(resId, nouveauDossierId) {
 // ============================================================
 // IMPORT EXCEL
 // ============================================================
-async function importerExcel(input) {
-  const fichier = input.files[0]
-  if (!fichier) return
 
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    try {
-      const data = new Uint8Array(e.target.result)
-      const wb = XLSX.read(data, { type: 'array' })
-      const ws = wb.Sheets[wb.SheetNames[0]]
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
 
-      // Lire les infos du quiz (ligne 3, colonnes C et I et L)
-      const titre  = rows[2]?.[2] || ''
-      const modId  = parseInt(rows[2]?.[8]) || 1
-      const filiere = String(rows[2]?.[11] || 'tp').toLowerCase()
 
-      if (!titre) { toast('Titre du quiz manquant (cellule C3)', 'err'); return }
 
-      // Lire les questions (à partir de la ligne 6 = index 5)
-      const questions = []
-      for (let i = 5; i < rows.length; i++) {
-        const r = rows[i]
-        const enonce = String(r[2] || '').trim()
-        if (!enonce) continue
-
-        const type = String(r[1] || 'qcm').toLowerCase().trim()
-        const optA = String(r[3] || '').trim()
-        const optB = String(r[4] || '').trim()
-        const optC = String(r[5] || '').trim()
-        const optD = String(r[6] || '').trim()
-        const bonneRep = String(r[7] || '').toLowerCase().trim()
-        const pts = parseInt(r[8]) || 2
-        const comp = String(r[9] || '').trim()
-        const imgUrl = String(r[10] || '').trim()
-        const justif = String(r[11] || '').trim()
-
-        let options = [], bonne = 0
-
-        if (type === 'vf') {
-          options = ['Vrai', 'Faux']
-          bonne = bonneRep === 'vrai' ? 0 : 1
-        } else if (type === 'libre') {
-          options = [bonneRep]
-          bonne = 0
-        } else {
-          // QCM
-          options = [optA, optB, optC, optD].filter(o => o)
-          const map = { a:0, b:1, c:2, d:3 }
-          bonne = map[bonneRep] ?? 0
-        }
-
-        questions.push({ type, enonce, options, bonne, pts, comp, imgUrl, justif })
-      }
-
-      if (!questions.length) { toast('Aucune question trouvee dans le fichier', 'err'); return }
-
-      // Afficher la prévisualisation
-      const preview = document.getElementById('import-preview')
-      preview.style.display = ''
-      preview.innerHTML = `
-        <div style="background:var(--vl);border:.5px solid var(--v);border-radius:8px;padding:.9rem;margin-bottom:.8rem">
-          <div style="font-size:.82rem;font-weight:500;color:var(--v);margin-bottom:4px">
-            <i class="ti ti-check"></i> ${questions.length} question(s) detectee(s) — "${titre}"
-          </div>
-          <div style="font-size:.75rem;color:var(--v)">
-            Module ${modId} · Filiere : ${filiere} · Total : ${questions.reduce((a,q)=>a+q.pts,0)} pts
-          </div>
-        </div>
-        ${questions.slice(0,3).map((q,i) => `
-          <div style="font-size:.78rem;padding:5px 0;border-bottom:.5px solid var(--bord);color:var(--t2)">
-            <strong>Q${i+1} [${q.type.toUpperCase()}]</strong> ${q.enonce.substring(0,80)}${q.enonce.length>80?'...':''}
-          </div>`).join('')}
-        ${questions.length > 3 ? `<div style="font-size:.72rem;color:var(--t3);padding:4px 0">... et ${questions.length-3} autre(s) question(s)</div>` : ''}
-        <button class="btn btn-r" style="width:100%;margin-top:.8rem" onclick="publierImportExcel(${modId}, '${titre.replace(/'/g,"\'")}', '${filiere}', ${JSON.stringify(questions).replace(/'/g,"\'")})">
-          <i class="ti ti-check"></i> Importer et publier ce quiz
-        </button>
-      `
-
-    } catch(err) {
-      toast('Erreur lecture fichier : ' + err.message, 'err')
-    }
-  }
-  reader.readAsArrayBuffer(fichier)
+async function publierImportExcelStored() {
+  if (!importData) { toast('Aucun fichier charge', 'err'); return }
+  const { modId, titre, filiere, questions } = importData
+  await publierImportExcel(modId, titre, filiere, questions)
 }
 
 async function publierImportExcel(modId, titre, filiere, questions) {
@@ -2819,14 +2566,200 @@ async function publierImportExcel(modId, titre, filiere, questions) {
   loadQuizAdmin()
 }
 
-function telechargerModele() {
-  // Lien vers le modele Excel hébergé sur GitHub
-  const url = 'modele_quiz_progmeca.xlsx'
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'modele_quiz_progmeca.xlsx'
-  a.click()
-  toast('Telechargement du modele...', 'ok')
+
+async function uploadImageQuestion(idx, input) {
+  const fichier = input.files[0]
+  if (!fichier) return
+  toast('Upload image en cours...', 'def')
+  const nomPropre = fichier.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+  const path = 'quiz-images/' + Date.now() + '_' + nomPropre
+  const { error, data } = await db.storage.from('ressources').upload(path, fichier)
+  if (error) { toast('Erreur upload : ' + error.message, 'err'); return }
+  const { data: urlData } = await db.storage.from('ressources').createSignedUrl(path, 60 * 60 * 24 * 365)
+  if (urlData?.signedUrl) {
+    mqQuestions[idx].imageUrl = urlData.signedUrl
+    mqQuestions[idx].imagePath = path
+    renderQuestions()
+    toast('Image ajoutee !', 'ok')
+  }
+}
+
+// ============================================================
+// SCORE RAMENE SUR 20
+// ============================================================
+function calculerScore20(scoreObtenu, totalPts) {
+  if (!totalPts || totalPts === 0) return 0
+  return Math.round((scoreObtenu / totalPts) * 20 * 10) / 10
+}
+
+// ============================================================
+// INTERFACE CORRECTION ADMIN — REPONSES LIBRES
+// ============================================================
+async function ouvrirCorrectionAdmin(tentId) {
+  const { data: tent } = await db.from('tentatives')
+    .select('*, quiz(titre, module_id, total_points)')
+    .eq('id', tentId).single()
+  const { data: questions } = await db.from('questions')
+    .select('*').eq('quiz_id', tent.quiz_id).order('ordre')
+  const { data: profil } = await db.from('profils')
+    .select('prenom, nom').eq('id', tent.aspirant_id).single()
+
+  const reponses = tent.reponses || {}
+  const notesExistantes = tent.notes_libres || {}
+  const totalPts = questions.reduce((a,q) => a + (parseFloat(q.points)||2), 0)
+
+  // Créer la modale de correction
+  const modal = document.createElement('div')
+  modal.id = 'modal-correction'
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto'
+
+  let notesTemp = { ...notesExistantes }
+
+  const questionsHTML = questions.map((q, i) => {
+    const repAsp = reponses[q.id]
+    const isLibre = q.type_question === 'libre'
+    const isAuto = !isLibre
+    const noteAuto = isAuto && repAsp === q.bonne_reponse ? parseFloat(q.points)||2 : 0
+    const noteExist = notesTemp[q.id] ?? (isAuto ? noteAuto : '')
+
+    return `<div style="background:var(--bg);border:.5px solid var(--bord2);border-radius:10px;padding:.9rem;margin-bottom:.8rem" id="corr-q-${q.id}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.6rem">
+        <span style="font-size:.7rem;color:var(--r);font-weight:500;text-transform:uppercase">Q${i+1} · ${q.type_question?.toUpperCase()||'QCM'}</span>
+        <span style="font-size:.7rem;padding:1px 7px;border-radius:20px;background:var(--rouge-l);color:var(--r2)">${q.points} pt${q.points>1?'s':''}</span>
+        ${isAuto ? '<span style="font-size:.7rem;padding:1px 7px;border-radius:20px;background:var(--fond3);color:var(--t3)">Correction auto</span>' : '<span style="font-size:.7rem;padding:1px 7px;border-radius:20px;background:var(--amber-l);color:var(--amber)">A corriger</span>'}
+      </div>
+      ${q.image_url ? `<img src="${q.image_url}" style="width:100%;max-height:150px;object-fit:contain;border-radius:6px;margin-bottom:6px;border:.5px solid var(--bord2)"/>` : ''}
+      <p style="font-size:.82rem;font-weight:500;margin-bottom:.5rem">${q.enonce}</p>
+      ${isLibre ? `
+        <div style="background:var(--bleu-l);border-radius:6px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--bleu)">
+          <strong>Reponse de l'aspirant :</strong><br>${repAsp || '<em>Aucune reponse</em>'}
+        </div>
+        ${tent.fichiers_libres?.[q.id] ? `<div style="display:flex;align-items:center;gap:7px;padding:6px 9px;background:var(--vl);border-radius:6px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)">
+          <i class="ti ti-paperclip"></i> Fichier joint : ${tent.fichiers_libres[q.id].nom}
+          <button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${tent.fichiers_libres?.[q.id]?.path||''}')"><i class="ti ti-download"></i></button>
+        </div>` : ''}
+        ${q.reponse_type ? `<div style="background:var(--vert-l);border-radius:6px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--vert)"><strong>Reponse attendue :</strong><br>${q.reponse_type}</div>` : ''}
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:.78rem;color:var(--t2);white-space:nowrap">Points accordes :</label>
+          <input type="number" min="0" max="${q.points}" step="0.5" value="${noteExist}"
+            style="width:70px;padding:5px 8px;border:.5px solid var(--bord2);border-radius:6px;font-size:.9rem;text-align:center"
+            onchange="mettreAJourNoteCorr('${q.id}', parseFloat(this.value)||0, ${totalPts})"/>
+          <span style="font-size:.78rem;color:var(--t3)">/ ${q.points}</span>
+        </div>
+      ` : `
+        <div style="display:flex;align-items:center;gap:8px;font-size:.82rem">
+          <i class="ti ${repAsp === q.bonne_reponse ? 'ti-circle-check' : 'ti-circle-x'}" style="color:${repAsp === q.bonne_reponse ? 'var(--v)' : 'var(--r)'}"></i>
+          <span style="color:var(--t2)">Reponse : ${q.options?.[repAsp] ?? '—'}</span>
+          ${repAsp !== q.bonne_reponse ? `<span style="color:var(--v);font-size:.75rem">→ Attendu : ${q.options?.[q.bonne_reponse]}</span>` : ''}
+          <span style="margin-left:auto;font-weight:500;color:${repAsp === q.bonne_reponse ? 'var(--v)' : 'var(--t3)'}">
+            ${repAsp === q.bonne_reponse ? '+'+q.points : '0'} pt${q.points>1?'s':''}
+          </span>
+        </div>
+      `}
+    </div>`
+  }).join('')
+
+  modal.innerHTML = `
+    <div style="background:var(--fond);border-radius:12px;width:100%;max-width:620px;overflow:hidden;margin:auto">
+      <div style="background:var(--r);color:#fff;padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-weight:500">${tent.quiz?.titre || 'Correction'}</div>
+          <div style="font-size:.75rem;opacity:.85">${profil?.prenom||''} ${profil?.nom||''}</div>
+        </div>
+        <button onclick="document.getElementById('modal-correction').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2rem"><i class="ti ti-x"></i></button>
+      </div>
+      <div style="padding:1.1rem;max-height:70vh;overflow-y:auto">
+        <div style="background:var(--rouge-l);border-radius:8px;padding:.8rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:.82rem;color:var(--r2);font-weight:500">Score en cours</span>
+          <span style="font-size:1.3rem;font-weight:500;color:var(--r)" id="score-live-corr">—/20</span>
+        </div>
+        ${questionsHTML}
+      </div>
+      <div style="padding:.9rem 1.2rem;border-top:.5px solid var(--bord);display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('modal-correction').remove()">Annuler</button>
+        <button class="btn btn-r" onclick="validerCorrection('${tentId}', ${totalPts})">
+          <i class="ti ti-check"></i> Valider la correction
+        </button>
+      </div>
+    </div>
+  `
+
+  document.body.appendChild(modal)
+
+  // Initialiser les notes et le score
+  questions.forEach(q => {
+    const isAuto = q.type_question !== 'libre'
+    const repAsp = reponses[q.id]
+    if (isAuto) notesTemp[q.id] = repAsp === q.bonne_reponse ? parseFloat(q.points)||2 : 0
+    else if (!(q.id in notesTemp)) notesTemp[q.id] = 0
+  })
+  window._notesTemp = notesTemp
+  window._totalPts = totalPts
+  mettreAJourScoreLive()
+}
+
+function mettreAJourNoteCorr(qId, valeur, totalPts) {
+  if (!window._notesTemp) window._notesTemp = {}
+  window._notesTemp[qId] = valeur
+  mettreAJourScoreLive()
+}
+
+function mettreAJourScoreLive() {
+  const notes = window._notesTemp || {}
+  const totalObtenu = Object.values(notes).reduce((a,v) => a + (parseFloat(v)||0), 0)
+  const sur20 = calculerScore20(totalObtenu, window._totalPts)
+  const el = document.getElementById('score-live-corr')
+  if (el) {
+    el.textContent = sur20 + '/20'
+    el.style.color = sur20 >= 14 ? 'var(--v)' : 'var(--r)'
+  }
+}
+
+async function validerCorrection(tentId, totalPts) {
+  const notes = window._notesTemp || {}
+  const totalObtenu = Object.values(notes).reduce((a,v) => a + (parseFloat(v)||0), 0)
+  const sur20 = calculerScore20(totalObtenu, totalPts)
+  const valide = sur20 >= SEUIL
+
+  await db.from('tentatives').update({
+    notes_libres: notes,
+    note_admin: sur20,
+    score: Math.round(sur20),
+    total_points: 20,
+    valide
+  }).eq('id', tentId)
+
+  toast('Correction validee ! Score : ' + sur20 + '/20', 'ok')
+  document.getElementById('modal-correction')?.remove()
+  chargerRendusAdmin()
+}
+
+// ============================================================
+// UPLOAD FICHIER RÉPONSE LIBRE
+// ============================================================
+async function uploaderFichierLibre(input) {
+  const fichier = input.files[0]
+  if (!fichier) return
+  const statut = document.getElementById('fichier-statut')
+  if (statut) statut.textContent = 'Upload en cours...'
+  const nomPropre = fichier.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+  const path = 'reponses-libres/' + G.profil.id + '/' + Date.now() + '_' + nomPropre
+  const { error } = await db.storage.from('ressources').upload(path, fichier)
+  if (error) {
+    if (statut) statut.textContent = 'Erreur : ' + error.message
+    statut.style.color = 'var(--r)'
+    return
+  }
+  // Stocker le path dans les réponses
+  const qId = G.questions[G.etape].id
+  const repActuelle = G.reponses[qId] || ''
+  G.reponses[qId] = repActuelle
+  if (!G.fichiersLibres) G.fichiersLibres = {}
+  G.fichiersLibres[qId] = { nom: fichier.name, path, taille: (fichier.size/1024/1024).toFixed(1)+' Mo' }
+  if (statut) {
+    statut.textContent = '✓ Fichier joint : ' + fichier.name
+    statut.style.color = 'var(--v)'
+  }
 }
 </script>
 </body>
