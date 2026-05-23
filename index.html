@@ -1126,7 +1126,7 @@ button, input, select, textarea { font-family: var(--ff); }
 //     Supabase → Settings → API
 // ============================================================
 const SB_URL = 'https://mdlbegawivlaolmqakra.supabase.co'
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kbGJlZ2F3aXZsYW9sbXFha3JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MzExMzEsImV4cCI6MjA5NTAwNzEzMX0.BJX3zvY9qdCkq2dKRPFVzgyT92OXrSLvCCaL6dzas3I	'
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kbGJlZ2F3aXZsYW9sbXFha3JhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MzExMzEsImV4cCI6MjA5NTAwNzEzMX0.BJX3zvY9qdCkq2dKRPFVzgyT92OXrSLvCCaL6dzas3I'
 // ============================================================
 
 const SEUIL   = 14
@@ -1735,7 +1735,8 @@ async function uploadRes() {
 }
 
 async function loadResAdmin() {
-  const m = parseInt($('fil-mod-res').value)
+  const sel2 = $('fil-mod-res')
+  const m = sel2 ? parseInt(sel2.value) : 1
   // Charger dossiers et ressources
   const [{ data: dossiers }, { data: ressources }] = await Promise.all([
     db.from('dossiers').select('*').eq('module_id', m).order('nom'),
@@ -1889,9 +1890,10 @@ async function pubQuiz() {
 }
 
 async function loadQuizAdmin() {
-  const m = parseInt($('fil-mod-quiz').value)
+  const sel = $('fil-mod-quiz')
+  const m = sel ? parseInt(sel.value) : 1
   const { data, error } = await db.from('quiz').select('*').eq('module_id', m).eq('actif', true).order('niveau')
-  if (error) { console.error('loadQuizAdmin error:', error); }
+  if (error) { console.error('loadQuizAdmin error:', error); return }
   $('quiz-admin-body').innerHTML = (data||[]).length ? (data||[]).map(x=>
     `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:.5px solid var(--bord)">
       <i class="ti ti-help" style="color:var(--a);font-size:.95rem;flex-shrink:0"></i>
