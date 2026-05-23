@@ -1419,9 +1419,11 @@ async function renderEval(modId, quiz, tents) {
     const debut = q.date_debut ? new Date(q.date_debut) : null
     const fin   = q.date_fin   ? new Date(q.date_fin)   : null
     const horsCreneaux = q.mode_examen && (debut && maintenant < debut || fin && maintenant > fin)
-    const prevOk= idx === 0 || tents.find(x => x.quiz_id === quiz[idx-1]?.id && x.valide)
-    const libre  = !!prevOk && !t && !horsCreneaux
-    const bloque = !libre && !t
+    // Tous les quiz exercice sont accessibles librement
+    const isExamen = !!q.mode_examen
+    const dejaPasse = !!t
+    const libre  = !horsCreneaux && (!isExamen || !dejaPasse)
+    const bloque = horsCreneaux && !dejaPasse
     const bc    = t?.valide ? 'var(--v)' : t ? 'var(--r)' : 'var(--bord2)'
     const is    = t?.valide ? 'background:var(--vl);color:var(--v)' : t ? 'background:var(--rl);color:var(--r)' : 'background:var(--bg);color:var(--t3)'
     const ic    = t?.valide ? 'ti-check' : t ? 'ti-x' : 'ti-help'
@@ -1433,9 +1435,9 @@ async function renderEval(modId, quiz, tents) {
           <div class="quiz-row-meta">${q.total_points} pts · Seuil ${q.seuil}/${q.total_points} · ${FILIERES[q.filiere]||''} ${q.mode_examen ? '· ' + compteARebours(q.date_debut, q.date_fin) : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">`
-    if (t) h += `<span style="font-size:.875rem;font-weight:500;color:${t.valide?'var(--v)':'var(--r)'}">${t.score}/${t.total_points}</span>`
+    if (t) h += `<span style="font-size:.875rem;font-weight:500;color:${t.valide?'var(--v)':'var(--r)'}">${t.score}/20</span>`
     if (t) h += `<button class="btn btn-ghost btn-sm" onclick="voirRes('${t.id}')">Résultats</button>`
-    if (libre) h += `<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> Commencer</button>`
+    if (libre || (t && !q.mode_examen)) h += `<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> ${t && !q.mode_examen ? 'Repasser' : 'Commencer'}</button>`
     h += `</div></div>`
     if (t)     h += `<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide ? 'Validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR') : 'Score définitif — révisez les cours. Un formateur peut débloquer une 2e tentative.'}</div>`
     if (bloque) h += `<div class="quiz-lock"><i class="ti ti-lock"></i> Accessible après validation du quiz précédent.</div>`
@@ -1463,9 +1465,11 @@ async function renderEval(modId, quiz, tents) {
 async function commencer(qid) {
   const { data: qinfo } = await db.from('quiz').select('mode_examen').eq('id', qid).single()
   const isExamen = qinfo?.mode_examen
-  if (isExamen) {
-    const { data: exist } = await db.from('tentatives').select('id').eq('aspirant_id', G.profil.id).eq('quiz_id', qid).single()
-    if (exist) { toast('Vous avez déjà passé cet examen. Score définitif.', 'err'); return }
+  const { data: exist } = await db.from('tentatives').select('id').eq('aspirant_id', G.profil.id).eq('quiz_id', qid).maybeSingle()
+  if (isExamen && exist) { toast('Examen deja passe. Score definitif.', 'err'); return }
+  // Pour un exercice, supprimer l'ancienne tentative pour permettre de recommencer
+  if (!isExamen && exist) {
+    await db.from('tentatives').delete().eq('id', exist.id)
   }
   const [{ data: q }, { data: qs }] = await Promise.all([
     db.from('quiz').select('*').eq('id', qid).single(),
@@ -2167,7 +2171,6 @@ async function pubQuizManuel() {
   const titre = $('mq-titre').value.trim()
   const modId = parseInt($('mq-mod').value)
   const fil = $('mq-fil').value
-  const pts = parseInt($('mq-pts').value)
 
   if (!titre) { toast('Donnez un titre au quiz', 'err'); return }
   if (mqQuestions.length === 0) { toast('Ajoutez au moins une question', 'err'); return }
@@ -2209,10 +2212,11 @@ async function pubQuizManuel() {
     enonce: q.enonce,
     options: q.type === 'vf' ? ['Vrai', 'Faux'] : (q.options || ['','','','']),
     bonne_reponse: q.bonne || 0,
-    points: parseInt(q.points) || 2,
+    points: parseFloat(q.points) || 2,
     competence: q.competence || null,
     type_question: q.type || 'qcm',
     reponse_type: q.reponse_type || null,
+    image_url: q.imageUrl || null,
     ordre: i
   })))
 
