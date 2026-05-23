@@ -1050,9 +1050,11 @@ async function terminer() {
   nav('resultats')
   $('r-detail').innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
   const {data:qr}=await db.from('questions').select('*').eq('quiz_id',G.quizActif.id)
+  if(!qr||!qr.length){toast('Erreur chargement questions','err');return}
+  const aDesLibres=qr.some(q=>q.type_question==='libre')
   let score=0; const parComp={}
   qr.forEach(q=>{
-    if(q.type_question==='libre') return // Les questions libres sont notées par l'admin
+    if(q.type_question==='libre') return
     const ok=G.reponses[q.id]===q.bonne_reponse
     if(ok) score+=parseFloat(q.points)||2
     if(q.competence){
@@ -1063,16 +1065,26 @@ async function terminer() {
   })
   const totalPts=qr.reduce((a,q)=>a+(parseFloat(q.points)||2),0)
   const sur20=calculerScore20(score,totalPts)
-  const aDesLibres=qr.some(q=>q.type_question==='libre'||q.type_question==='Réponse libre')
+  // Valide seulement si pas de questions libres ET score >= seuil
   const valide=!aDesLibres&&sur20>=SEUIL
-  const {data:tent}=await db.from('tentatives').insert({
-    aspirant_id:G.profil.id, quiz_id:G.quizActif.id,
-    score:Math.round(sur20*10)/10, total_points:20, valide,
-    reponses:G.reponses, resultats_par_competence:parComp,
+  const payload={
+    aspirant_id:G.profil.id,
+    quiz_id:G.quizActif.id,
+    score:Math.round(sur20*10)/10,
+    total_points:20,
+    valide,
+    reponses:G.reponses,
+    resultats_par_competence:parComp,
     notes_libres:aDesLibres?{}:null,
     fichiers_libres:Object.keys(G.fichiersLibres).length?G.fichiersLibres:null
-  }).select().single()
-  G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20*10)/10,valide,modId:G.quizActif.module_id,reps:G.reponses}
+  }
+  const {data:tent,error:tentErr}=await db.from('tentatives').insert(payload).select().single()
+  if(tentErr){
+    toast('Erreur sauvegarde : '+tentErr.message,'err')
+    console.error('Erreur tentative:',tentErr)
+    return
+  }
+  G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20*10)/10,valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
   afficheRes()
 }
 
@@ -1090,8 +1102,8 @@ async function voirRes(tentId) {
 
 function afficheRes() {
   const {tent,questions,parComp,score,valide,modId,reps}=G.tentResult
-  const aDesLibres=questions.some(q=>q.type_question==='libre')
-  const enAttente=(aDesLibres||(!tent?.valide&&tent?.score<SEUIL))&&!tent?.note_admin&&tent?.notes_libres!==undefined
+  const aDesLibres=G.tentResult?.aDesLibres||questions.some(q=>q.type_question==='libre')
+  const enAttente=aDesLibres&&!tent?.note_admin
   const c=$('r-circle')
   c.style.borderColor=enAttente?'var(--amber)':valide?'var(--v)':'var(--r)'
   c.style.background=enAttente?'var(--amber-l)':valide?'var(--vl)':'var(--rl)'
@@ -1807,7 +1819,30 @@ async function loadAspirants() {
   ])
   const a=asp||[],t=tents||[],q=allQ||[]
   if(!a.length){$('asp-body').innerHTML='<p style="font-size:.78rem;color:var(--t3)">Aucun aspirant inscrit.</p>';return}
-  $('asp-body').innerHTML=a.map(p=>{
+  // Afficher d'abord les copies en attente
+  const enAttenteTout=t.filter(x=>x.notes_libres!==null&&!x.note_admin)
+  let htmlAttente=''
+  if(enAttenteTout.length){
+    const profilsMap=a.reduce((m,p)=>{m[p.id]=p;return m},{})
+    const quizMap=q.reduce((m,qz)=>{m[qz.id]=qz;return m},{})
+    htmlAttente=`<div class="card" style="margin-bottom:1rem;border-color:var(--r)">
+      <div class="card-head" style="background:var(--rl)">
+        <div style="display:flex;align-items:center;gap:8px"><i class="ti ti-clock" style="color:var(--r)"></i>
+        <span class="card-title" style="color:var(--r2)">${enAttenteTout.length} copie(s) en attente de correction</span></div>
+      </div>
+      <div class="card-body">${enAttenteTout.map(tent=>{
+        const p2=profilsMap[tent.aspirant_id]||{}
+        const qz=quizMap[tent.quiz_id]||{}
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:.5px solid var(--bord)">
+          <div class="avatar" style="flex-shrink:0">${[(p2.prenom||'')[0],(p2.nom||'')[0]].join('').toUpperCase()||'?'}</div>
+          <div style="flex:1"><div style="font-size:.82rem;font-weight:500">${p2.prenom||''} ${p2.nom||''}</div>
+          <div style="font-size:.72rem;color:var(--t3)">${qz.titre||'—'} · ${new Date(tent.completed_at).toLocaleDateString('fr-FR')}</div></div>
+          <button class="btn btn-r btn-sm" onclick="ouvrirCorrectionAdmin('${tent.id}')"><i class="ti ti-pencil"></i> Corriger</button>
+        </div>`
+      }).join('')}</div>
+    </div>`
+  }
+  $('asp-body').innerHTML=htmlAttente+a.map(p=>{
     const tp=t.filter(x=>x.aspirant_id===p.id)
     const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
     return `<div style="border-bottom:.5px solid var(--bord);padding:.9rem 0">
@@ -1828,7 +1863,7 @@ async function loadAspirants() {
                 <div style="display:flex;align-items:center;gap:4px">
                   <span style="font-weight:500;color:${t2?.valide?'var(--v)':t2?'var(--r)':'var(--t3)'}">${t2?t2.score+'/20':'—'}</span>
                   ${t2&&!t2.valide?`<button title="Débloquer" onclick="debloquer('${t2.id}','${p.prenom||''} ${p.nom||''}')" style="background:none;border:none;cursor:pointer;font-size:.72rem;color:var(--t3);padding:1px 2px"><i class="ti ti-lock-open"></i></button>`:''}
-                  ${t2&&!t2.valide&&!t2.note_admin?`<button title="Corriger" onclick="ouvrirCorrectionAdmin('${t2.id}')" style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--r);padding:1px 4px;border:.5px solid var(--r);border-radius:4px"><i class="ti ti-pencil"></i></button>`:''}
+                  ${t2&&t2.notes_libres!==null&&!t2.note_admin?`<button title="Corriger" onclick="ouvrirCorrectionAdmin('${t2.id}')" style="background:var(--rl);border:.5px solid var(--r);border-radius:4px;cursor:pointer;font-size:.72rem;color:var(--r2);padding:2px 6px"><i class="ti ti-pencil"></i> Corriger</button>`:''}
                 </div>
               </div>`
             }).join('')}
