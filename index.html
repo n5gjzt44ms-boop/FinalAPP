@@ -690,11 +690,14 @@ button, input, select, textarea { font-family: var(--ff); }
     <div class="nav-item" id="n-modules" onclick="nav('modules')"><i class="ti ti-books"></i> Modules</div>
     <div class="nav-item" id="n-suivi" onclick="nav('suivi')"><i class="ti ti-chart-bar"></i> Suivi</div>
     <div class="nav-item" id="n-revision" onclick="nav('revision')"><i class="ti ti-cards"></i> Révision</div>
-    <div class="nav-item" id="n-revision" onclick="nav('revision')"><i class="ti ti-cards"></i> Revision</div>
+    <div class="nav-item" id="n-devoirs" onclick="nav('devoirs')"><i class="ti ti-file-upload"></i> Devoirs</div>
+    
     <div id="nav-admin" class="hidden">
       <div class="nav-section">Administration</div>
       <div class="nav-item" id="n-ressources" onclick="nav('ressources')"><i class="ti ti-upload"></i> Ajouter ressources</div>
       <div class="nav-item" id="n-quiz-admin" onclick="nav('quiz-admin')"><i class="ti ti-sparkles"></i> Gérer les quiz</div>
+      <div class="nav-item" id="n-devoirs-admin" onclick="nav('devoirs-admin')"><i class="ti ti-file-upload"></i> Devoirs</div>
+      <div class="nav-item" id="n-annonces-admin" onclick="nav('annonces-admin')"><i class="ti ti-speakerphone"></i> Annonces</div>
       <div class="nav-item" id="n-aspirants" onclick="nav('aspirants')"><i class="ti ti-users"></i> Aspirants</div>
     </div>
     <div class="sidebar-foot">
@@ -713,7 +716,7 @@ button, input, select, textarea { font-family: var(--ff); }
       <div class="bnav-item" id="b-modules" onclick="nav('modules')"><i class="ti ti-books"></i>Modules</div>
       <div class="bnav-item" id="b-suivi" onclick="nav('suivi')"><i class="ti ti-chart-bar"></i>Suivi</div>
       <div class="bnav-item" id="b-revision" onclick="nav('revision')"><i class="ti ti-cards"></i>Révision</div>
-      <div class="bnav-item" id="b-revision" onclick="nav('revision')"><i class="ti ti-cards"></i>Revision</div>
+      
     </div>
   </nav>
 
@@ -722,10 +725,11 @@ button, input, select, textarea { font-family: var(--ff); }
 
     <!-- DASHBOARD -->
     <div class="vue on" id="v-dashboard">
-      <div style="margin-bottom:1.3rem">
+      <div style="margin-bottom:1rem">
         <h1 style="font-family:var(--fs);font-size:1.4rem;font-weight:400">Bonjour Pays <span id="d-prenom">—</span></h1>
         <p style="font-size:.78rem;color:var(--t2)" id="d-date"></p>
       </div>
+      <div id="annonces-dashboard" style="margin-bottom:1rem"></div>
       <div class="grid4" id="d-kpis">
         <div class="kpi"><div class="kpi-val" id="k-prog">—</div><div class="kpi-lbl">Progression</div><div class="kpi-sub">tous modules</div></div>
         <div class="kpi"><div class="kpi-val" id="k-val">—</div><div class="kpi-lbl">Quiz validés</div><div class="kpi-sub">≥ 14/20</div></div>
@@ -1109,6 +1113,106 @@ button, input, select, textarea { font-family: var(--ff); }
       </div>
     </div>
 
+
+    <!-- DEVOIRS ASPIRANT -->
+    <div class="vue" id="v-devoirs">
+      <div style="margin-bottom:1.2rem">
+        <h2>Devoirs à rendre</h2>
+        <p style="font-size:.78rem;color:var(--t2);margin-top:3px">Déposez vos fichiers avant la date limite.</p>
+      </div>
+      <div id="devoirs-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+    </div>
+
+    <!-- DEVOIRS ADMIN -->
+    <div class="vue" id="v-devoirs-admin">
+      <div style="max-width:660px">
+        <div style="margin-bottom:1.2rem"><h2>Gérer les devoirs</h2></div>
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-head"><span class="card-title">Créer un devoir</span></div>
+          <div class="card-body">
+            <div class="field-row" style="margin-bottom:.9rem">
+              <div>
+                <label class="field-label">Titre</label>
+                <input class="finput" id="dv-titre" placeholder="Ex : Schéma hydraulique HydroSim"/>
+              </div>
+              <div>
+                <label class="field-label">Module</label>
+                <select class="fselect" id="dv-mod">
+                  <option value="1">Module 1 — Thermique</option>
+                  <option value="2">Module 2 — Hydraulique</option>
+                  <option value="3">Module 3 — Conception</option>
+                  <option value="4">Module 4 — Électrique</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-bottom:.9rem">
+              <label class="field-label">Consigne</label>
+              <textarea class="ftextarea" id="dv-consigne" rows="3" placeholder="Décrivez le travail attendu..."></textarea>
+            </div>
+            <div class="field-row" style="margin-bottom:.9rem">
+              <div>
+                <label class="field-label">Date limite de rendu</label>
+                <input type="datetime-local" class="finput" id="dv-limite"/>
+              </div>
+              <div>
+                <label class="field-label">Sujet (PDF optionnel)</label>
+                <input type="file" id="dv-sujet" accept=".pdf" style="font-size:.82rem;margin-top:4px"/>
+              </div>
+            </div>
+            <button class="btn btn-r" onclick="creerDevoir()"><i class="ti ti-plus"></i> Créer le devoir</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Rendus des aspirants</span></div>
+          <div class="card-body" id="rendus-admin-body"><p style="font-size:.78rem;color:var(--t3)">Sélectionnez un devoir pour voir les rendus.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANNONCES ADMIN -->
+    <div class="vue" id="v-annonces-admin">
+      <div style="max-width:580px">
+        <div style="margin-bottom:1.2rem"><h2>Annonces</h2></div>
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-head"><span class="card-title">Nouvelle annonce</span></div>
+          <div class="card-body">
+            <div style="margin-bottom:.9rem">
+              <label class="field-label">Titre</label>
+              <input class="finput" id="an-titre" placeholder="Ex : Rappel examen demain"/>
+            </div>
+            <div style="margin-bottom:.9rem">
+              <label class="field-label">Message</label>
+              <textarea class="ftextarea" id="an-msg" rows="3" placeholder="Votre message pour les aspirants..."></textarea>
+            </div>
+            <div class="field-row" style="margin-bottom:.9rem">
+              <div>
+                <label class="field-label">Type</label>
+                <select class="fselect" id="an-type">
+                  <option value="info">Information (bleu)</option>
+                  <option value="warn">Avertissement (orange)</option>
+                  <option value="urgent">Urgent (rouge)</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Durée d'affichage</label>
+                <select class="fselect" id="an-duree">
+                  <option value="24">24 heures</option>
+                  <option value="48">48 heures</option>
+                  <option value="168">1 semaine</option>
+                  <option value="0">Sans limite</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-r" onclick="publierAnnonce()"><i class="ti ti-speakerphone"></i> Publier l'annonce</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Annonces actives</span></div>
+          <div class="card-body" id="annonces-liste"><p style="font-size:.78rem;color:var(--t3)">Chargement...</p></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div><!-- fin vue-app -->
 
@@ -1129,9 +1233,9 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SEUIL   = 14
 const DOMAINE = '@compagnons-du-devoir.fr'
 const MODULES = [
-  {id:1, num:'Module 1', nom:'Thermique',              icon:'ti-flame',    bg:'#FCEBEB', ic:'#E24B4A', desc:'Thermodynamique, ponts thermiques, installations de chauffage'},
+  {id:1, num:'Module 1', nom:'Thermique',              icon:'ti-engine',   bg:'#FCEBEB', ic:'#E24B4A', desc:'Thermodynamique, ponts thermiques, installations de chauffage'},
   {id:2, num:'Module 2', nom:'Hydraulique',            icon:'ti-droplets', bg:'#E6F1FB', ic:'#185FA5', desc:'Circuits hydrauliques, composants, diagnostic, maintenance'},
-  {id:3, num:'Module 3', nom:'Conception & Construction', icon:'ti-ruler', bg:'#F1EFE8', ic:'#5F5E5A', desc:'Normes, plans CAO, SolidWorks, CadWorks, assemblages'},
+  {id:3, num:'Module 3', nom:'Conception & Construction', icon:'ti-tools', bg:'#F1EFE8', ic:'#5F5E5A', desc:'Normes, plans CAO, SolidWorks, CadWorks, assemblages'},
   {id:4, num:'Module 4', nom:'Électrique',             icon:'ti-bolt',     bg:'#FAEEDA', ic:'#854F0B', desc:'Électrotechnique, câblage, Automation Studio, normes NF C 15-100'}
 ]
 const FILIERES = {tp:'Engins TP', agr:'Engins agricoles', ind:'Maintenance industrielle', com:'Toutes filières'}
@@ -1247,6 +1351,7 @@ async function initApp() {
   hi('vue-login')
   $('vue-app').classList.add('on')
   nav('dashboard')
+  chargerAnnonces()
 }
 
 // ============================================================
@@ -1258,12 +1363,15 @@ function nav(page) {
   const v = $('v-' + page); if (v) v.classList.add('on')
   const n = $('n-' + page); if (n) n.classList.add('on')
   const b = $('b-' + page); if (b) b.classList.add('on')
-  if (page === 'dashboard')  loadDashboard()
-  if (page === 'modules')    loadModules()
-  if (page === 'suivi')      loadSuivi()
-  if (page === 'ressources') { loadResAdmin() }
-  if (page === 'quiz-admin') { loadQuizAdmin() }
-  if (page === 'aspirants')  loadAspirants()
+  if (page === 'dashboard')      loadDashboard()
+  if (page === 'modules')        loadModules()
+  if (page === 'suivi')          loadSuivi()
+  if (page === 'ressources')     { loadResAdmin() }
+  if (page === 'quiz-admin')     { loadQuizAdmin() }
+  if (page === 'aspirants')      loadAspirants()
+  if (page === 'devoirs')        chargerDevoirs()
+  if (page === 'devoirs-admin')  { chargerRendusAdmin() }
+  if (page === 'annonces-admin') { chargerAnnoncesAdmin() }
 }
 
 // ============================================================
@@ -1423,7 +1531,7 @@ async function renderEval(modId, quiz, tents) {
         <div class="quiz-row-ico" style="${is}"><i class="ti ${ic}"></i></div>
         <div class="quiz-row-info">
           <div class="quiz-row-name">${q.titre}</div>
-          <div class="quiz-row-meta">${q.total_points} pts · Seuil ${q.seuil}/${q.total_points} · ${FILIERES[q.filiere]||''} ${q.mode_examen ? '· Examen' : ''}</div>
+          <div class="quiz-row-meta">${q.total_points} pts · Seuil ${q.seuil}/${q.total_points} · ${FILIERES[q.filiere]||''} ${q.mode_examen ? '· ' + compteARebours(q.date_debut, q.date_fin) : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">`
     if (t) h += `<span style="font-size:.875rem;font-weight:500;color:${t.valide?'var(--v)':'var(--r)'}">${t.score}/${t.total_points}</span>`
@@ -1454,8 +1562,12 @@ async function renderEval(modId, quiz, tents) {
 // QUIZ PASSATION
 // ============================================================
 async function commencer(qid) {
-  const { data: exist } = await db.from('tentatives').select('id').eq('aspirant_id', G.profil.id).eq('quiz_id', qid).single()
-  if (exist) { toast('Vous avez déjà passé ce quiz.', 'err'); return }
+  const { data: qinfo } = await db.from('quiz').select('mode_examen').eq('id', qid).single()
+  const isExamen = qinfo?.mode_examen
+  if (isExamen) {
+    const { data: exist } = await db.from('tentatives').select('id').eq('aspirant_id', G.profil.id).eq('quiz_id', qid).single()
+    if (exist) { toast('Vous avez déjà passé cet examen. Score définitif.', 'err'); return }
+  }
   const [{ data: q }, { data: qs }] = await Promise.all([
     db.from('quiz').select('*').eq('id', qid).single(),
     db.from('questions').select('id,enonce,options,points,competence,ordre').eq('quiz_id', qid).order('ordre')
@@ -2160,6 +2272,249 @@ function arreterRevision() {
   document.getElementById('rev-session').classList.add('hidden')
   document.getElementById('rev-fin').classList.add('hidden')
   document.getElementById('rev-selecteur').classList.remove('hidden')
+}
+
+// ============================================================
+// COMPTE À REBOURS
+// ============================================================
+function compteARebours(dateDebut, dateFin) {
+  if (!dateDebut) return 'Examen'
+  const now = new Date()
+  const debut = new Date(dateDebut)
+  const fin = dateFin ? new Date(dateFin) : null
+  const diffDebut = debut - now
+  const diffFin = fin ? fin - now : null
+
+  if (diffDebut > 0) {
+    const jours = Math.floor(diffDebut / 86400000)
+    const heures = Math.floor((diffDebut % 86400000) / 3600000)
+    const mins = Math.floor((diffDebut % 3600000) / 60000)
+    if (jours >= 1) return 'J-' + jours
+    if (heures > 0) return 'H-' + heures + 'h' + String(mins).padStart(2,'0') + 'min'
+    return 'M-' + mins + 'min'
+  }
+  if (fin && diffFin > 0) {
+    const heures = Math.floor(diffFin / 3600000)
+    const mins = Math.floor((diffFin % 3600000) / 60000)
+    return 'EN COURS — ' + (heures > 0 ? heures + 'h' : '') + String(mins).padStart(2,'0') + 'min restant'
+  }
+  return 'Terminé'
+}
+
+// Notification 20 min avant la fin de l'examen
+let notifTimer = null
+function demarrerNotifExamen(dateFin, titreQuiz) {
+  if (notifTimer) clearTimeout(notifTimer)
+  if (!dateFin) return
+  const fin = new Date(dateFin)
+  const vingtMin = fin.getTime() - 20 * 60 * 1000
+  const delai = vingtMin - Date.now()
+  if (delai > 0 && delai < 24 * 60 * 60 * 1000) {
+    notifTimer = setTimeout(() => {
+      toast('⏰ Plus que 20 minutes — ' + titreQuiz + ' — Pensez à sauvegarder et déposer vos fichiers !', 'err')
+      // Garder le toast 15 secondes
+      setTimeout(() => {
+        const t = document.getElementById('toast')
+        if (t) t.className = ''
+      }, 15000)
+    }, delai)
+  }
+}
+
+// ============================================================
+// ANNONCES
+// ============================================================
+async function chargerAnnonces() {
+  const { data } = await db.from('annonces').select('*').order('created_at', {ascending:false})
+  const now = new Date()
+  const actives = (data||[]).filter(a => !a.expire_at || new Date(a.expire_at) > now)
+  const el = document.getElementById('annonces-dashboard')
+  if (!el) return
+  if (!actives.length) { el.innerHTML = ''; return }
+  const colors = {
+    info:   {bg:'#E6F1FB', border:'#185FA5', color:'#0C447C', icon:'ti-info-circle'},
+    warn:   {bg:'#FAEEDA', border:'#854F0B', color:'#633806', icon:'ti-alert-triangle'},
+    urgent: {bg:'#FCEBEB', border:'#E24B4A', color:'#A32D2D', icon:'ti-speakerphone'}
+  }
+  el.innerHTML = actives.map(a => {
+    const c = colors[a.type] || colors.info
+    const age = Math.floor((now - new Date(a.created_at)) / 3600000)
+    const ageStr = age < 1 ? "À l'instant" : age < 24 ? 'Il y a ' + age + 'h' : 'Il y a ' + Math.floor(age/24) + 'j'
+    return `<div style="border-radius:10px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;margin-bottom:6px;border:.5px solid ${c.border};background:${c.bg}">
+      <i class="ti ${c.icon}" style="font-size:15px;color:${c.border};flex-shrink:0;margin-top:1px"></i>
+      <div style="flex:1"><div style="font-size:.82rem;font-weight:500;color:${c.color}">${a.titre}</div>
+      <div style="font-size:.75rem;color:${c.color};margin-top:1px;opacity:.9">${a.message}</div></div>
+      <span style="font-size:.68rem;color:${c.color};white-space:nowrap;opacity:.7">${ageStr}</span>
+    </div>`
+  }).join('')
+}
+
+async function publierAnnonce() {
+  const titre = document.getElementById('an-titre').value.trim()
+  const msg = document.getElementById('an-msg').value.trim()
+  const type = document.getElementById('an-type').value
+  const duree = parseInt(document.getElementById('an-duree').value)
+  if (!titre || !msg) { toast('Titre et message requis', 'err'); return }
+  const { data:{user} } = await db.auth.getUser()
+  const expire_at = duree > 0 ? new Date(Date.now() + duree * 3600000).toISOString() : null
+  await db.from('annonces').insert({ titre, message: msg, type, expire_at, created_by: user.id })
+  toast('Annonce publiée !', 'ok')
+  document.getElementById('an-titre').value = ''
+  document.getElementById('an-msg').value = ''
+  chargerAnnoncesAdmin()
+}
+
+async function chargerAnnoncesAdmin() {
+  const { data } = await db.from('annonces').select('*').order('created_at', {ascending:false})
+  const now = new Date()
+  const el = document.getElementById('annonces-liste')
+  if (!el) return
+  if (!data?.length) { el.innerHTML = '<p style="font-size:.78rem;color:var(--t3)">Aucune annonce.</p>'; return }
+  el.innerHTML = data.map(a => {
+    const active = !a.expire_at || new Date(a.expire_at) > now
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:.5px solid var(--bord)">
+      <div style="flex:1"><div style="font-size:.82rem;font-weight:500">${a.titre}</div>
+      <div style="font-size:.72rem;color:var(--t3)">${a.type} · ${active ? 'Active' : 'Expirée'} · ${new Date(a.created_at).toLocaleDateString('fr-FR')}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="supprimerAnnonce('${a.id}')"><i class="ti ti-trash"></i></button>
+    </div>`
+  }).join('')
+}
+
+async function supprimerAnnonce(id) {
+  await db.from('annonces').delete().eq('id', id)
+  toast('Annonce supprimée')
+  chargerAnnoncesAdmin()
+}
+
+// ============================================================
+// DEVOIRS
+// ============================================================
+async function chargerDevoirs() {
+  const { data } = await db.from('devoirs').select('*').eq('actif', true).order('date_limite')
+  const now = new Date()
+  const el = document.getElementById('devoirs-body')
+  if (!el) return
+  if (!data?.length) { el.innerHTML = '<p style="font-size:.82rem;color:var(--t3)">Aucun devoir pour le moment.</p>'; return }
+  const m = MODULES.reduce((a,mod) => { a[mod.id] = mod; return a }, {})
+  el.innerHTML = data.map(d => {
+    const expire = d.date_limite ? new Date(d.date_limite) : null
+    const reste = expire ? expire - now : null
+    const closed = reste !== null && reste <= 0
+    const joursR = reste ? Math.floor(reste / 86400000) : null
+    const heuresR = reste ? Math.floor((reste % 86400000) / 3600000) : null
+    const delaiStr = closed ? 'Clôturé' : !reste ? 'Sans limite' :
+      joursR >= 1 ? 'J-' + joursR : heuresR > 0 ? 'H-' + heuresR + 'h' : 'Moins d\'une heure !'
+    const mod = m[d.module_id] || {}
+    return `<div class="card" style="margin-bottom:.8rem">
+      <div class="card-head">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:32px;height:32px;border-radius:8px;background:${mod.bg||'#eee'};display:flex;align-items:center;justify-content:center">
+            <i class="ti ${mod.icon||'ti-file'}" style="color:${mod.ic||'#555'};font-size:.9rem"></i>
+          </div>
+          <div><div class="card-title">${d.titre}</div>
+          <div style="font-size:.72rem;color:var(--t3)">${mod.nom||''} · Date limite : ${expire ? expire.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Sans limite'}</div></div>
+        </div>
+        <span style="font-size:.72rem;padding:2px 9px;border-radius:20px;font-weight:500;background:${closed?'var(--fond3)':reste&&reste<86400000?'var(--rl)':'var(--vl)'};color:${closed?'var(--t3)':reste&&reste<86400000?'var(--r2)':'var(--v)'}">${delaiStr}</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:.82rem;color:var(--t2);margin-bottom:.8rem">${d.consigne||''}</p>
+        ${d.sujet_path ? `<button class="btn btn-ghost btn-sm" style="margin-bottom:.8rem" onclick="telechargerSujet('${d.sujet_path}')"><i class="ti ti-download"></i> Télécharger le sujet</button>` : ''}
+        ${!closed ? `<div style="border:.5px dashed var(--bord2);border-radius:8px;padding:.8rem;text-align:center;cursor:pointer;background:var(--bg)" onclick="document.getElementById('rendu-${d.id}').click()">
+          <i class="ti ti-upload" style="font-size:1.2rem;color:var(--r);display:block;margin-bottom:4px"></i>
+          <p style="font-size:.78rem;color:var(--t2)">Cliquez pour déposer vos fichiers</p>
+          <p style="font-size:.7rem;color:var(--t3)">SolidWorks, HydroSim, PDF, Word, Excel...</p>
+        </div>
+        <input type="file" id="rendu-${d.id}" multiple style="display:none" onchange="deposerRendu('${d.id}', this)"/>` :
+        `<div style="padding:.8rem;background:var(--fond3);border-radius:8px;text-align:center;font-size:.78rem;color:var(--t3)"><i class="ti ti-lock"></i> Dépôt clôturé</div>`}
+        <div id="rendu-status-${d.id}" style="margin-top:6px;font-size:.75rem;color:var(--v)"></div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+async function telechargerSujet(path) {
+  const { data } = await db.storage.from('ressources').createSignedUrl(path, 3600)
+  if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+}
+
+async function deposerRendu(devoirId, input) {
+  const fichiers = Array.from(input.files)
+  if (!fichiers.length) return
+  const el = document.getElementById('rendu-status-' + devoirId)
+  if (el) el.textContent = 'Upload en cours...'
+  const { data:{user} } = await db.auth.getUser()
+  const urls = []
+  for (const f of fichiers) {
+    const nomPropre = f.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+    const path = 'rendus/' + devoirId + '/' + user.id + '/' + Date.now() + '_' + nomPropre
+    const { error } = await db.storage.from('ressources').upload(path, f, {upsert:true})
+    if (!error) urls.push({ nom: f.name, path, taille: (f.size/1024/1024).toFixed(1)+' Mo' })
+  }
+  // Upsert le rendu
+  const { data: existing } = await db.from('rendus').select('id,fichiers').eq('devoir_id', devoirId).eq('aspirant_id', user.id).single()
+  if (existing) {
+    const anciens = existing.fichiers || []
+    await db.from('rendus').update({ fichiers: [...anciens, ...urls], rendu_at: new Date().toISOString() }).eq('id', existing.id)
+  } else {
+    await db.from('rendus').insert({ devoir_id: devoirId, aspirant_id: user.id, fichiers: urls })
+  }
+  toast(fichiers.length + ' fichier(s) déposé(s) !', 'ok')
+  if (el) el.textContent = '✓ ' + fichiers.length + ' fichier(s) déposé(s) avec succès'
+}
+
+async function creerDevoir() {
+  const titre = document.getElementById('dv-titre').value.trim()
+  const modId = document.getElementById('dv-mod').value
+  const consigne = document.getElementById('dv-consigne').value.trim()
+  const limite = document.getElementById('dv-limite').value
+  const sujet = document.getElementById('dv-sujet').files[0]
+  if (!titre) { toast('Titre requis', 'err'); return }
+  const { data:{user} } = await db.auth.getUser()
+  let sujet_path = null
+  if (sujet) {
+    const path = 'sujets/' + Date.now() + '_' + sujet.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+    await db.storage.from('ressources').upload(path, sujet)
+    sujet_path = path
+  }
+  await db.from('devoirs').insert({
+    module_id: parseInt(modId), titre, consigne,
+    date_limite: limite ? new Date(limite).toISOString() : null,
+    sujet_path, actif: true, created_by: user.id
+  })
+  toast('Devoir créé !', 'ok')
+  document.getElementById('dv-titre').value = ''
+  document.getElementById('dv-consigne').value = ''
+  chargerRendusAdmin()
+}
+
+async function chargerRendusAdmin() {
+  const { data: devoirs } = await db.from('devoirs').select('*, rendus(*, profils(prenom,nom))').eq('actif',true).order('date_limite')
+  const el = document.getElementById('rendus-admin-body')
+  if (!el) return
+  if (!devoirs?.length) { el.innerHTML = '<p style="font-size:.78rem;color:var(--t3)">Aucun devoir créé.</p>'; return }
+  el.innerHTML = devoirs.map(d => {
+    const rendus = d.rendus || []
+    return `<div style="margin-bottom:1rem">
+      <div style="font-size:.875rem;font-weight:500;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
+        ${d.titre}
+        <span style="font-size:.72rem;color:var(--t3)">${rendus.length} rendu(s)</span>
+      </div>
+      ${rendus.length ? rendus.map(r => {
+        const p = r.profils || {}
+        const fichiers = r.fichiers || []
+        return `<div style="background:var(--bg);border:.5px solid var(--bord2);border-radius:8px;padding:8px 10px;margin-bottom:5px">
+          <div style="font-size:.82rem;font-weight:500;margin-bottom:4px">${p.prenom||''} ${p.nom||''}</div>
+          ${fichiers.map(f => `<div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--t2);padding:2px 0">
+            <i class="ti ti-file" style="font-size:.85rem;color:var(--r)"></i>
+            <span style="flex:1">${f.nom}</span>
+            <span style="color:var(--t3)">${f.taille}</span>
+            <button class="btn btn-ghost btn-sm" style="padding:2px 7px" onclick="telechargerSujet('${f.path}')"><i class="ti ti-download"></i></button>
+          </div>`).join('')}
+        </div>`
+      }).join('') : '<p style="font-size:.75rem;color:var(--t3);padding:6px 0">Aucun rendu pour ce devoir.</p>'}
+      <hr style="border:none;border-top:.5px solid var(--bord);margin:8px 0"/>
+    </div>`
+  }).join('')
 }
 </script>
 </body>
