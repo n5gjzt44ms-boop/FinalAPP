@@ -689,6 +689,8 @@ button, input, select, textarea { font-family: var(--ff); }
     <div class="nav-item on" id="n-dashboard" onclick="nav('dashboard')"><i class="ti ti-layout-dashboard"></i> Tableau de bord</div>
     <div class="nav-item" id="n-modules" onclick="nav('modules')"><i class="ti ti-books"></i> Modules</div>
     <div class="nav-item" id="n-suivi" onclick="nav('suivi')"><i class="ti ti-chart-bar"></i> Suivi</div>
+    <div class="nav-item" id="n-revision" onclick="nav('revision')"><i class="ti ti-cards"></i> Révision</div>
+    <div class="nav-item" id="n-revision" onclick="nav('revision')"><i class="ti ti-cards"></i> Revision</div>
     <div id="nav-admin" class="hidden">
       <div class="nav-section">Administration</div>
       <div class="nav-item" id="n-ressources" onclick="nav('ressources')"><i class="ti ti-upload"></i> Ajouter ressources</div>
@@ -710,6 +712,8 @@ button, input, select, textarea { font-family: var(--ff); }
       <div class="bnav-item on" id="b-dashboard" onclick="nav('dashboard')"><i class="ti ti-layout-dashboard"></i>Accueil</div>
       <div class="bnav-item" id="b-modules" onclick="nav('modules')"><i class="ti ti-books"></i>Modules</div>
       <div class="bnav-item" id="b-suivi" onclick="nav('suivi')"><i class="ti ti-chart-bar"></i>Suivi</div>
+      <div class="bnav-item" id="b-revision" onclick="nav('revision')"><i class="ti ti-cards"></i>Révision</div>
+      <div class="bnav-item" id="b-revision" onclick="nav('revision')"><i class="ti ti-cards"></i>Revision</div>
     </div>
   </nav>
 
@@ -1005,6 +1009,103 @@ button, input, select, textarea { font-family: var(--ff); }
       <div class="card">
         <div class="card-head"><span class="card-title">Tous les aspirants</span></div>
         <div class="card-body" id="asp-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+      </div>
+    </div>
+
+    <!-- RÉVISION -->
+    <div class="vue" id="v-revision">
+      <div style="max-width:580px;margin:0 auto">
+        <div style="margin-bottom:1.2rem">
+          <h2>Mode révision</h2>
+          <p style="font-size:.78rem;color:var(--t2);margin-top:3px">Retournez les cartes pour voir les réponses. Sans note, sans pression.</p>
+        </div>
+
+        <!-- SÉLECTEUR -->
+        <div id="rev-selecteur">
+          <div class="card" style="margin-bottom:1rem">
+            <div class="card-head"><span class="card-title">Choisir les cartes à réviser</span></div>
+            <div class="card-body">
+              <div style="margin-bottom:.9rem">
+                <label class="field-label">Module</label>
+                <select class="fselect" id="rev-module">
+                  <option value="0">Tous les modules mélangés</option>
+                  <option value="1">Module 1 — Thermique</option>
+                  <option value="2">Module 2 — Hydraulique</option>
+                  <option value="3">Module 3 — Conception & Construction</option>
+                  <option value="4">Module 4 — Électrique</option>
+                </select>
+              </div>
+              <div style="margin-bottom:1rem">
+                <label class="field-label">Source des questions</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:.5px solid var(--bord2);border-radius:8px;cursor:pointer;font-size:.82rem">
+                    <input type="checkbox" id="rev-src-quiz" checked style="accent-color:var(--r)"/> Questions des quiz
+                  </label>
+                  <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:.5px solid var(--bord2);border-radius:8px;cursor:pointer;font-size:.82rem">
+                    <input type="checkbox" id="rev-src-flash" checked style="accent-color:var(--r)"/> Flashcards admin
+                  </label>
+                </div>
+              </div>
+              <button class="btn btn-r btn-full" onclick="demarrerRevision()">
+                <i class="ti ti-cards"></i> Commencer la révision
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SESSION DE RÉVISION -->
+        <div id="rev-session" class="hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+            <button class="btn btn-ghost btn-sm" onclick="arreterRevision()"><i class="ti ti-arrow-left"></i> Arrêter</button>
+            <span style="font-size:.78rem;color:var(--t2)" id="rev-compteur">Carte 1 / 10</span>
+            <span style="font-size:.78rem;color:var(--t2)" id="rev-score-lbl">0 sus / 0 vus</span>
+          </div>
+          <div class="pbar" style="margin-bottom:1.2rem"><div class="pfill" id="rev-pbar" style="width:0%"></div></div>
+
+          <!-- CARTE -->
+          <div id="rev-carte-wrap" style="perspective:1000px;margin-bottom:1rem;cursor:pointer" onclick="retournerCarte()">
+            <div id="rev-carte" style="position:relative;width:100%;min-height:240px;transition:transform .5s;transform-style:preserve-3d">
+              <!-- FACE -->
+              <div id="rev-face" style="position:absolute;width:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden">
+                <div class="card" style="min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center">
+                  <span style="font-size:.68rem;color:var(--r);font-weight:500;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem">Question</span>
+                  <p style="font-size:1rem;line-height:1.6;font-weight:500" id="rev-question-txt">—</p>
+                  <p style="font-size:.75rem;color:var(--t3);margin-top:1.2rem"><i class="ti ti-hand-click"></i> Cliquez pour voir la réponse</p>
+                </div>
+              </div>
+              <!-- DOS -->
+              <div id="rev-dos" style="position:absolute;width:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg)">
+                <div class="card" style="min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center;background:var(--vl);border-color:var(--v)">
+                  <span style="font-size:.68rem;color:var(--v);font-weight:500;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem">Réponse</span>
+                  <p style="font-size:1rem;line-height:1.6;color:var(--v);font-weight:500" id="rev-reponse-txt">—</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BOUTONS APRÈS RETOURNEMENT -->
+          <div id="rev-btns" class="hidden" style="display:flex;gap:8px">
+            <button class="btn" style="flex:1;background:var(--rl);color:var(--r2);border:.5px solid var(--r)" onclick="carteSuivante(false)">
+              <i class="ti ti-x"></i> Je ne savais pas
+            </button>
+            <button class="btn" style="flex:1;background:var(--vl);color:var(--v);border:.5px solid var(--v)" onclick="carteSuivante(true)">
+              <i class="ti ti-check"></i> Je savais !
+            </button>
+          </div>
+        </div>
+
+        <!-- FIN DE SESSION -->
+        <div id="rev-fin" class="hidden">
+          <div class="card" style="text-align:center;padding:2rem">
+            <i class="ti ti-trophy" style="font-size:2.5rem;color:var(--r);display:block;margin-bottom:1rem"></i>
+            <h2 style="margin-bottom:.5rem">Session terminée !</h2>
+            <p style="font-size:.82rem;color:var(--t2);margin-bottom:1rem" id="rev-fin-msg">—</p>
+            <div style="display:flex;gap:8px;justify-content:center">
+              <button class="btn btn-ghost" onclick="arreterRevision()">Changer de sélection</button>
+              <button class="btn btn-r" onclick="demarrerRevision()"><i class="ti ti-refresh"></i> Recommencer</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1661,9 +1762,59 @@ async function loadQuizAdmin() {
     `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:.5px solid var(--bord)">
       <i class="ti ti-help" style="color:var(--a);font-size:.95rem;flex-shrink:0"></i>
       <div style="flex:1"><div style="font-size:.82rem;font-weight:500">${x.titre}</div><div style="font-size:.7rem;color:var(--t3)">Niveau ${x.niveau} · ${x.total_points} pts · Seuil ${x.seuil}</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="delQuiz('${x.id}')"><i class="ti ti-trash"></i></button>
+      <button class="btn btn-ghost btn-sm" onclick="dupliquerQuiz('${x.id}')" title="Dupliquer"><i class="ti ti-copy"></i></button>
+      <button class="btn btn-ghost btn-sm" onclick="delQuiz('${x.id}')" title="Supprimer"><i class="ti ti-trash"></i></button>
     </div>`
   ).join('') : '<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'
+}
+
+async function dupliquerQuiz(id) {
+  const { data: original } = await db.from('quiz').select('*').eq('id', id).single()
+  const { data: qs } = await db.from('questions').select('*').eq('quiz_id', id).order('ordre')
+  if (!original) return
+  const { data:{user} } = await db.auth.getUser()
+  const { data: ex } = await db.from('quiz').select('niveau').eq('module_id', original.module_id).order('niveau',{ascending:false}).limit(1)
+  const niveau = ex?.length ? ex[0].niveau + 1 : 1
+  const { data: copie } = await db.from('quiz').insert({
+    module_id: original.module_id,
+    titre: original.titre + ' (copie)',
+    filiere: original.filiere,
+    niveau, total_points: original.total_points,
+    seuil: original.seuil, actif: true, created_by: user.id
+  }).select().single()
+  if (copie && qs?.length) {
+    await db.from('questions').insert(qs.map((q,i) => ({
+      quiz_id: copie.id, enonce: q.enonce, options: q.options,
+      bonne_reponse: q.bonne_reponse, points: q.points,
+      competence: q.competence, type_question: q.type_question,
+      reponse_type: q.reponse_type, ordre: i
+    })))
+  }
+  toast('Quiz duplique !', 'ok')
+  loadQuizAdmin()
+}
+
+async function dupliquerQuiz(id) {
+  const { data: original } = await db.from('quiz').select('*').eq('id', id).single()
+  const { data: qs } = await db.from('questions').select('*').eq('quiz_id', id).order('ordre')
+  if (!original) return
+  const { data:{user} } = await db.auth.getUser()
+  const { data: ex } = await db.from('quiz').select('niveau').eq('module_id', original.module_id).order('niveau',{ascending:false}).limit(1)
+  const niveau = ex?.length ? ex[0].niveau + 1 : 1
+  const { data: copie } = await db.from('quiz').insert({
+    module_id: original.module_id, titre: original.titre + ' (copie)',
+    filiere: original.filiere, niveau, total_points: original.total_points,
+    seuil: original.seuil, actif: true, created_by: user.id
+  }).select().single()
+  if (copie && qs?.length) {
+    await db.from('questions').insert(qs.map((q,i) => ({
+      quiz_id: copie.id, enonce: q.enonce, options: q.options,
+      bonne_reponse: q.bonne_reponse, points: q.points,
+      competence: q.competence, type_question: q.type_question,
+      reponse_type: q.reponse_type, ordre: i
+    })))
+  }
+  toast('Quiz duplique !', 'ok'); loadQuizAdmin()
 }
 
 async function delQuiz(id) {
@@ -1785,8 +1936,7 @@ function changerMode() {
 }
 
 function ajouterQuestion() {
-  const idx = mqQuestions.length
-  mqQuestions.push({ enonce:'', options:['','','',''], bonne:0, competence:'' })
+  mqQuestions.push({ type:'qcm', enonce:'', options:['','','',''], bonne:0, competence:'', reponse_type:'', points:2 })
   renderQuestions()
 }
 
@@ -1863,7 +2013,7 @@ async function pubQuizManuel() {
   const { data:{user} } = await db.auth.getUser()
   const { data: ex } = await db.from('quiz').select('niveau').eq('module_id', modId).order('niveau', {ascending:false}).limit(1)
   const niveau = ex?.length ? ex[0].niveau + 1 : 1
-  const totalPts = mqQuestions.length * pts
+  const totalPts = mqQuestions.reduce((a,q) => a + (parseInt(q.points)||2), 0)
 
   const mode = document.querySelector('input[name="mq-mode"]:checked')?.value || 'entrainement'
   let dateDebut = null, dateFin = null
@@ -1886,10 +2036,12 @@ async function pubQuizManuel() {
   await db.from('questions').insert(mqQuestions.map((q, i) => ({
     quiz_id: quizCree.id,
     enonce: q.enonce,
-    options: q.options,
-    bonne_reponse: q.bonne,
-    points: pts,
+    options: q.type === 'vf' ? ['Vrai', 'Faux'] : (q.options || ['','','','']),
+    bonne_reponse: q.bonne || 0,
+    points: parseInt(q.points) || 2,
     competence: q.competence || null,
+    type_question: q.type || 'qcm',
+    reponse_type: q.reponse_type || null,
     ordre: i
   })))
 
@@ -1901,6 +2053,114 @@ async function pubQuizManuel() {
   btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Publier le quiz'
 }
 
+
+// ============================================================
+// MODE RÉVISION — CARTES À RETOURNER
+// ============================================================
+let revCartes = []
+let revIndex = 0
+let revRetourne = false
+let revSus = 0
+
+async function demarrerRevision() {
+  const modId = parseInt(document.getElementById('rev-module').value)
+  const srcQuiz = document.getElementById('rev-src-quiz').checked
+  const srcFlash = document.getElementById('rev-src-flash').checked
+
+  if (!srcQuiz && !srcFlash) { toast('Selectionnez au moins une source', 'err'); return }
+
+  // Charger les questions
+  let query = db.from('questions').select('*, quiz(module_id, titre)')
+  if (modId > 0) {
+    // Filtrer par module via quiz
+    const { data: quizMod } = await db.from('quiz').select('id').eq('module_id', modId).eq('actif', true)
+    const ids = (quizMod || []).map(q => q.id)
+    if (!ids.length) { toast('Aucune question pour ce module', 'err'); return }
+    query = query.in('quiz_id', ids)
+  }
+
+  const conditions = []
+  if (srcQuiz && !srcFlash) conditions.push('est_flashcard.is.false,est_flashcard.is.null')
+  if (!srcQuiz && srcFlash) conditions.push('est_flashcard.eq.true')
+
+  const { data: questions } = await query.limit(30)
+  let cartes = (questions || [])
+  if (srcQuiz && !srcFlash) cartes = cartes.filter(q => !q.est_flashcard)
+  if (!srcQuiz && srcFlash) cartes = cartes.filter(q => q.est_flashcard)
+
+  if (!cartes.length) { toast('Aucune carte disponible', 'err'); return }
+
+  // Mélanger les cartes
+  revCartes = cartes.sort(() => Math.random() - 0.5)
+  revIndex = 0; revSus = 0; revRetourne = false
+
+  document.getElementById('rev-selecteur').classList.add('hidden')
+  document.getElementById('rev-fin').classList.add('hidden')
+  document.getElementById('rev-session').classList.remove('hidden')
+  afficherCarte()
+}
+
+function afficherCarte() {
+  const c = revCartes[revIndex]
+  revRetourne = false
+  const carte = document.getElementById('rev-carte')
+  carte.style.transform = 'rotateY(0deg)'
+
+  document.getElementById('rev-question-txt').textContent = c.enonce || '—'
+
+  // Construire la réponse selon le type
+  let rep = ''
+  if (c.type_question === 'vf') {
+    rep = c.bonne_reponse === 0 ? 'VRAI' : 'FAUX'
+  } else if (c.type_question === 'libre') {
+    rep = c.reponse_type || 'Voir le cours associé'
+  } else {
+    rep = (c.options || [])[c.bonne_reponse] || '—'
+  }
+  document.getElementById('rev-reponse-txt').textContent = rep
+
+  document.getElementById('rev-compteur').textContent = 'Carte ' + (revIndex + 1) + ' / ' + revCartes.length
+  document.getElementById('rev-score-lbl').textContent = revSus + ' sus / ' + revIndex + ' vus'
+  document.getElementById('rev-pbar').style.width = Math.round(revIndex / revCartes.length * 100) + '%'
+  document.getElementById('rev-btns').classList.add('hidden')
+}
+
+function retournerCarte() {
+  if (revRetourne) return
+  revRetourne = true
+  document.getElementById('rev-carte').style.transform = 'rotateY(180deg)'
+  setTimeout(() => {
+    document.getElementById('rev-btns').classList.remove('hidden')
+    document.getElementById('rev-btns').style.display = 'flex'
+  }, 300)
+}
+
+function carteSuivante(suOui) {
+  if (suOui) revSus++
+  revIndex++
+  document.getElementById('rev-btns').classList.add('hidden')
+  if (revIndex >= revCartes.length) {
+    finRevision()
+  } else {
+    afficherCarte()
+  }
+}
+
+function finRevision() {
+  document.getElementById('rev-session').classList.add('hidden')
+  document.getElementById('rev-fin').classList.remove('hidden')
+  const pct = Math.round(revSus / revCartes.length * 100)
+  document.getElementById('rev-fin-msg').textContent =
+    'Vous avez su ' + revSus + ' carte' + (revSus > 1 ? 's' : '') +
+    ' sur ' + revCartes.length + ' (' + pct + '%). ' +
+    (pct >= 80 ? 'Excellent travail !' : pct >= 60 ? 'Bon travail, continuez !' : 'Révisez encore un peu !')
+}
+
+function arreterRevision() {
+  document.getElementById('rev-session').classList.add('hidden')
+  document.getElementById('rev-fin').classList.add('hidden')
+  document.getElementById('rev-selecteur').classList.remove('hidden')
+}
 </script>
 </body>
 </html>
