@@ -439,7 +439,7 @@ button,input,select,textarea{font-family:var(--ff)}
           <div class="card-body">
             <div class="field-row" style="margin-bottom:.9rem">
               <div><label class="field-label">Module</label>
-                <select class="fselect" id="up-mod">
+                <select class="fselect" id="up-mod" onchange="loadResAdmin()">
                   <option value="1">Module 1 — Thermique</option>
                   <option value="2">Module 2 — Hydraulique</option>
                   <option value="3">Module 3 — Conception</option>
@@ -1293,14 +1293,18 @@ async function uploadRes() {
 }
 
 async function loadResAdmin() {
-  const m=parseInt($('fil-mod-res')?.value||1)
+  const filSel=$('fil-mod-res')
+  const upMod=$('up-mod')
+  const m=parseInt(filSel?.value||upMod?.value||1)
+  // Synchroniser fil-mod-res avec up-mod si besoin
+  if(filSel&&upMod&&filSel.value!==upMod.value) filSel.value=upMod.value
   const [{data:dossiers},{data:ressources}]=await Promise.all([
     db.from('dossiers').select('*').eq('module_id',m).order('nom'),
     db.from('ressources').select('*').eq('module_id',m).order('ordre')
   ])
   const d=dossiers||[],r=ressources||[]
   const selUp=$('up-dossier')
-  if(selUp) selUp.innerHTML='<option value="">— Aucun dossier —</option>'+d.map(x=>`<option value="${x.id}">${x.nom}</option>`).join('')
+  if(selUp) selUp.innerHTML='<option value="">— Aucun dossier —</option>'+d.map(x=>`<option value="${x.id}">${x.parent_id?'↳ ':''} ${x.nom}</option>`).join('')
   let html=''
   if(!d.length&&!r.length){html='<p style="font-size:.78rem;color:var(--t3)">Aucune ressource.</p>'}
   else {
@@ -1357,15 +1361,19 @@ async function afficherCreerDossier() {
 
 async function creerDossier() {
   const nom=$('nouveau-dossier-nom').value.trim()
-  const modId=parseInt($('fil-mod-res')?.value||1)
+  const modId=parseInt($('fil-mod-res')?.value||$('up-mod')?.value||1)
   const parentId=$('nouveau-dossier-parent').value||null
   if(!nom){toast('Nom requis','err');return}
   const {data:{user}}=await db.auth.getUser()
-  await db.from('dossiers').insert({module_id:modId,nom,parent_id:parentId,created_by:user.id})
+  const {error}=await db.from('dossiers').insert({module_id:modId,nom,parent_id:parentId,created_by:user.id})
+  if(error){toast('Erreur : '+error.message,'err');return}
   toast('Dossier créé !','ok')
   $('nouveau-dossier-nom').value=''
   document.getElementById('creer-dossier-form').style.display='none'
-  loadResAdmin()
+  // Synchroniser les deux selects de module
+  const filSel=$('fil-mod-res')
+  if(filSel) filSel.value=String(modId)
+  await loadResAdmin()
 }
 
 async function supprimerDossier(id) {
