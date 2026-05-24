@@ -1070,7 +1070,7 @@ async function terminer() {
   const payload={
     aspirant_id:G.profil.id,
     quiz_id:G.quizActif.id,
-    score:Math.round(sur20*10)/10,
+    score:Math.round(sur20),
     total_points:20,
     valide,
     reponses:G.reponses,
@@ -1084,13 +1084,13 @@ async function terminer() {
     console.error('Erreur tentative:',tentErr)
     return
   }
-  G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20*10)/10,valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
+  G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
   afficheRes()
 }
 
 function calculerScore20(scoreObtenu,totalPts) {
   if(!totalPts||totalPts===0) return 0
-  return Math.round((scoreObtenu/totalPts)*20*10)/10
+  return Math.round((scoreObtenu/totalPts)*20)
 }
 
 async function voirRes(tentId) {
