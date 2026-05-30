@@ -226,12 +226,14 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="nav-item" id="n-revision" onclick="nav('revision')"><i class="ti ti-cards"></i> Révision</div>
     <div class="nav-item" id="n-devoirs" onclick="nav('devoirs')"><i class="ti ti-file-upload"></i> Travaux pratiques</div>
     <div class="nav-item" id="n-suivi" onclick="nav('suivi')"><i class="ti ti-chart-bar"></i> Mon suivi</div>
+    <div class="nav-item" id="n-carnet" onclick="nav('carnet')"><i class="ti ti-notebook"></i> Carnet de bord</div>
     <div id="nav-admin" class="hidden">
       <div class="nav-section">Administration</div>
       <div class="nav-item" id="n-ressources" onclick="nav('ressources')"><i class="ti ti-upload"></i> Ressources</div>
       <div class="nav-item" id="n-quiz-admin" onclick="nav('quiz-admin')"><i class="ti ti-help-circle"></i> Gérer les quiz</div>
       <div class="nav-item" id="n-devoirs-admin" onclick="nav('devoirs-admin')"><i class="ti ti-file-check"></i> Travaux pratiques</div>
       <div class="nav-item" id="n-annonces-admin" onclick="nav('annonces-admin')"><i class="ti ti-speakerphone"></i> Annonces</div>
+      <div class="nav-item" id="n-inscriptions-admin" onclick="nav('inscriptions-admin')"><i class="ti ti-calendar-event"></i> Inscriptions</div>
       <div class="nav-item" id="n-aspirants" onclick="nav('aspirants')"><i class="ti ti-users"></i> Aspirants</div>
     </div>
     <div class="sidebar-foot">
@@ -249,6 +251,7 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="bnav-item" id="b-modules" onclick="nav('modules')"><i class="ti ti-books"></i>Modules</div>
       <div class="bnav-item" id="b-revision" onclick="nav('revision')"><i class="ti ti-cards"></i>Révision</div>
       <div class="bnav-item" id="b-suivi" onclick="nav('suivi')"><i class="ti ti-chart-bar"></i>Suivi</div>
+      <div class="bnav-item" id="b-carnet" onclick="nav('carnet')"><i class="ti ti-notebook"></i>Carnet</div>
     </div>
   </nav>
 
@@ -266,6 +269,10 @@ button,input,select,textarea{font-family:var(--ff)}
         <div class="kpi"><div class="kpi-val" id="k-val">—</div><div class="kpi-lbl">Quiz validés</div><div class="kpi-sub">≥ 14/20</div></div>
         <div class="kpi"><div class="kpi-val" id="k-tot">—</div><div class="kpi-lbl">Quiz passés</div><div class="kpi-sub">au total</div></div>
         <div class="kpi"><div class="kpi-val" id="k-mod">0</div><div class="kpi-lbl">Modules terminés</div><div class="kpi-sub">pratique débloquée</div></div>
+        <div class="kpi"><div class="kpi-val" id="k-pts" style="color:var(--amber)">0</div><div class="kpi-lbl">Points</div><div class="kpi-sub">total cumulé</div></div>
+        <div class="kpi"><div class="kpi-val" id="k-streak">🔥 0</div><div class="kpi-lbl">Streak</div><div class="kpi-sub">semaines de révision</div></div>
+        <div class="kpi"><div class="kpi-val" id="k-pts" style="color:var(--amber)">0</div><div class="kpi-lbl">Points</div><div class="kpi-sub">total cumulé</div></div>
+        <div class="kpi"><div class="kpi-val" id="k-streak">🔥 0</div><div class="kpi-lbl">Streak</div><div class="kpi-sub">semaines</div></div>
       </div>
       <div class="grid2">
         <div class="card">
@@ -648,6 +655,46 @@ button,input,select,textarea{font-family:var(--ff)}
       </div>
     </div>
 
+
+    <!-- CARNET DE BORD -->
+    <div class="vue" id="v-carnet">
+      <div style="max-width:580px;margin:0 auto">
+        <div style="margin-bottom:1.2rem;display:flex;align-items:center;justify-content:space-between">
+          <div><h2>Carnet de bord</h2><p style="font-size:.78rem;color:var(--t2);margin-top:3px">Votre parcours sur le Tour de France</p></div>
+          <button class="btn btn-ghost btn-sm" onclick="exportCarnetPDF()"><i class="ti ti-download"></i> PDF</button>
+        </div>
+        <div id="carnet-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+      </div>
+    </div>
+
+    <!-- INSCRIPTIONS ADMIN -->
+    <div class="vue" id="v-inscriptions-admin">
+      <div style="max-width:660px">
+        <div style="margin-bottom:1.2rem"><h2>Gestion des inscriptions</h2></div>
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-head"><span class="card-title">Ouvrir une période d'inscription</span></div>
+          <div class="card-body">
+            <div style="margin-bottom:.9rem"><label class="field-label">Nom de la période</label>
+              <input class="finput" id="pi-nom" placeholder="Ex : Semestre 1 — 2026"/>
+            </div>
+            <div class="field-row" style="margin-bottom:.9rem">
+              <div><label class="field-label">Date d'ouverture</label><input type="datetime-local" class="finput" id="pi-debut"/></div>
+              <div><label class="field-label">Date de fermeture</label><input type="datetime-local" class="finput" id="pi-fin"/></div>
+            </div>
+            <button class="btn btn-r" onclick="creerPeriodeInscription()"><i class="ti ti-plus"></i> Ouvrir les inscriptions</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-head"><span class="card-title">Inscrits par module</span></div>
+          <div class="card-body" id="inscrits-stats"><p style="font-size:.78rem;color:var(--t3)">Chargement...</p></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Périodes d'inscription</span></div>
+          <div class="card-body" id="periodes-liste"><p style="font-size:.78rem;color:var(--t3)">Chargement...</p></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -748,6 +795,7 @@ async function initApp() {
   hi('vue-login'); $('vue-app').classList.add('on')
   nav('dashboard')
   chargerAnnonces()
+  verifierInscription()
 }
 
 // ============================================================
@@ -768,6 +816,10 @@ function nav(page) {
   if(page==='devoirs') chargerDevoirs()
   if(page==='devoirs-admin') chargerRendusAdmin()
   if(page==='annonces-admin') chargerAnnoncesAdmin()
+  if(page==='carnet') chargerCarnet()
+  if(page==='inscriptions-admin') { chargerPeriodes(); chargerInscritsStats() }
+  if(page==='carnet') chargerCarnet()
+  if(page==='inscriptions-admin') { chargerPeriodes(); chargerInscritsStats() }
 }
 
 // ============================================================
@@ -780,6 +832,9 @@ async function loadDashboard() {
   $('k-prog').textContent=tents.length?Math.round(val/tents.length*100)+'%':'0%'
   $('k-val').textContent=val
   $('k-tot').textContent=tents.length
+  const {data:profilData}=await db.from('profils').select('points_total,streak_semaines,streak_pause').eq('id',G.profil.id).single()
+  $('k-pts') && ($('k-pts').textContent=profilData?.points_total||0)
+  if($('k-streak')) $('k-streak').textContent='🔥 '+(profilData?.streak_semaines||0)+(profilData?.streak_pause?' ⏸':'')
   $('k-mod').textContent=MODULES.filter(m=>{
     const tm=tents.filter(x=>x.quiz?.module_id===m.id)
     return tm.length>0&&tm.every(x=>x.valide)
@@ -1085,7 +1140,16 @@ async function terminer() {
     return
   }
   G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
+  // Points et streak
+  if(!aDesLibres) {
+    await calculerEtAttribuerPoints(Math.round(sur20), 20, G.quizActif.id)
+    await mettreAJourStreak()
+  }
   afficheRes()
+  // Classement après quiz (pas examen)
+  if(!G.quizActif.mode_examen && !aDesLibres) {
+    setTimeout(()=>afficherClassementApresQuiz(G.quizActif.id, Math.round(sur20)), 500)
+  }
 }
 
 function calculerScore20(scoreObtenu,totalPts) {
@@ -1650,6 +1714,12 @@ async function validerCorrection(tentId,totalPts) {
   const sur20=calculerScore20(obtenu,totalPts)
   const valide=sur20>=SEUIL
   await db.from('tentatives').update({notes_libres:notes,note_admin:sur20,score:Math.round(sur20*10)/10,total_points:20,valide}).eq('id',tentId)
+  // Mettre à jour le carnet de bord si examen validé
+  if(valide) {
+    const {data:tentInfo}=await db.from('tentatives').select('quiz(module_id)').eq('id',tentId).single()
+    const modId=tentInfo?.quiz?.module_id
+    if(modId) await db.from('carnet_bord').upsert({aspirant_id:tent2?.aspirant_id,module_id:modId,score_final:sur20,valide_at:new Date().toISOString()},{ignoreDuplicates:false})
+  }
   toast('Correction validée ! Score : '+sur20+'/20','ok')
   document.getElementById('modal-correction')?.remove()
   chargerRendusAdmin()
@@ -1912,6 +1982,375 @@ window.addEventListener('load',async()=>{
   const {data:{session}}=await db.auth.getSession()
   if(session) await initApp()
 })
+
+// ============================================================
+// INSCRIPTION SEMESTRIELLE
+// ============================================================
+async function verifierInscription() {
+  // Vérifier si une période d'inscription est active
+  const now = new Date().toISOString()
+  const {data:periode} = await db.from('periodes_inscription')
+    .select('*').eq('actif', true)
+    .lte('date_debut', now).gte('date_fin', now)
+    .maybeSingle()
+  if(!periode) return // Pas de période active
+
+  // Vérifier si l'aspirant est déjà inscrit
+  const {data:inscription} = await db.from('inscriptions')
+    .select('*').eq('aspirant_id', G.profil.id).eq('periode_id', periode.id)
+    .maybeSingle()
+  if(inscription) return // Déjà inscrit
+
+  // Afficher le formulaire d'inscription
+  afficherFormulaireInscription(periode)
+}
+
+function afficherFormulaireInscription(periode) {
+  const modal = document.createElement('div')
+  modal.id = 'modal-inscription'
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.innerHTML = `
+    <div style="background:var(--card);border-radius:16px;width:100%;max-width:480px;overflow:hidden">
+      <div style="background:var(--r);color:#fff;padding:1.2rem 1.4rem">
+        <div style="font-family:var(--fs);font-size:1.2rem;margin-bottom:3px">Inscriptions ouvertes</div>
+        <div style="font-size:.78rem;opacity:.85">${periode.nom} · Fermeture le ${new Date(periode.date_fin).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</div>
+      </div>
+      <div style="padding:1.2rem">
+        <p style="font-size:.82rem;color:var(--t2);margin-bottom:1rem">Choisissez le module que vous souhaitez valider ce semestre. Vous aurez toujours accès aux cours et exercices des autres modules.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem" id="choix-modules"></div>
+        <div style="margin-bottom:1rem">
+          <label class="field-label">Votre ville actuelle</label>
+          <input class="finput" id="insc-ville" placeholder="Ex : Lyon, Paris, Bordeaux..."/>
+        </div>
+        <button class="btn btn-r btn-full" id="btn-inscrire" onclick="confirmerInscription('${periode.id}')">
+          <i class="ti ti-check"></i> Confirmer mon inscription
+        </button>
+      </div>
+    </div>`
+  document.body.appendChild(modal)
+
+  // Remplir les modules avec le nombre d'inscrits
+  db.from('inscriptions').select('module_id').eq('periode_id', periode.id).then(({data}) => {
+    const counts = (data||[]).reduce((a,x) => {a[x.module_id]=(a[x.module_id]||0)+1;return a}, {})
+    document.getElementById('choix-modules').innerHTML = MODULES.map(m => `
+      <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--bord2);border-radius:8px;cursor:pointer" id="lbl-mod-${m.id}" onclick="selectModuleInscription(${m.id})">
+        <input type="radio" name="mod-insc" value="${m.id}" style="accent-color:var(--r);flex-shrink:0"/>
+        <div>
+          <div style="font-size:.82rem;font-weight:500">${m.nom}</div>
+          <div style="font-size:.7rem;color:var(--t3)">${counts[m.id]||0} inscrit(s)</div>
+        </div>
+      </label>`).join('')
+  })
+}
+
+function selectModuleInscription(modId) {
+  MODULES.forEach(m => {
+    const lbl = document.getElementById('lbl-mod-'+m.id)
+    if(lbl) lbl.style.border = m.id === modId ? '1.5px solid var(--r)' : '1.5px solid var(--bord2)'
+  })
+}
+
+async function confirmerInscription(periodeId) {
+  const radio = document.querySelector('input[name="mod-insc"]:checked')
+  if(!radio) {toast('Choisissez un module','err');return}
+  const modId = parseInt(radio.value)
+  const ville = document.getElementById('insc-ville').value.trim()
+  const btn = document.getElementById('btn-inscrire')
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader spin"></i> Inscription...'
+  const {error} = await db.from('inscriptions').insert({
+    aspirant_id: G.profil.id, module_id: modId,
+    periode_id: periodeId, ville: ville||null
+  })
+  if(error){toast('Erreur : '+error.message,'err');btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Confirmer';return}
+  G.profil.module_inscrit = modId
+  document.getElementById('modal-inscription')?.remove()
+  toast('Inscription confirmée — Module '+MODULES.find(m=>m.id===modId)?.nom+' !','ok')
+  loadDashboard()
+}
+
+async function creerPeriodeInscription() {
+  const nom = document.getElementById('pi-nom').value.trim()
+  const debut = document.getElementById('pi-debut').value
+  const fin = document.getElementById('pi-fin').value
+  if(!nom||!debut||!fin){toast('Remplissez tous les champs','err');return}
+  const {data:{user}} = await db.auth.getUser()
+  const {error} = await db.from('periodes_inscription').insert({
+    nom, date_debut: new Date(debut).toISOString(),
+    date_fin: new Date(fin).toISOString(), actif: true, created_by: user.id
+  })
+  if(error){toast('Erreur : '+error.message,'err');return}
+  toast('Période créée !','ok')
+  document.getElementById('pi-nom').value = ''
+  chargerPeriodes(); chargerInscritsStats()
+}
+
+async function chargerPeriodes() {
+  const {data} = await db.from('periodes_inscription').select('*').order('created_at',{ascending:false})
+  const el = document.getElementById('periodes-liste'); if(!el) return
+  if(!data?.length){el.innerHTML='<p style="font-size:.78rem;color:var(--t3)">Aucune période créée.</p>';return}
+  const now = new Date()
+  el.innerHTML = data.map(p => {
+    const active = new Date(p.date_debut) <= now && new Date(p.date_fin) >= now
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:.5px solid var(--bord)">
+      <div style="flex:1">
+        <div style="font-size:.82rem;font-weight:500">${p.nom}</div>
+        <div style="font-size:.72rem;color:var(--t3)">${new Date(p.date_debut).toLocaleDateString('fr-FR')} → ${new Date(p.date_fin).toLocaleDateString('fr-FR')}</div>
+      </div>
+      <span class="badge ${active?'badge-v':'badge-g'}">${active?'En cours':'Terminée'}</span>
+      <button class="btn btn-ghost btn-sm" onclick="supprimerPeriode('${p.id}')"><i class="ti ti-trash"></i></button>
+    </div>`
+  }).join('')
+}
+
+async function supprimerPeriode(id) {
+  if(!confirm('Supprimer cette période ?')) return
+  await db.from('periodes_inscription').delete().eq('id',id)
+  toast('Période supprimée'); chargerPeriodes()
+}
+
+async function chargerInscritsStats() {
+  const {data:periodes} = await db.from('periodes_inscription').select('*').order('created_at',{ascending:false}).limit(1)
+  const el = document.getElementById('inscrits-stats'); if(!el) return
+  if(!periodes?.length){el.innerHTML='<p style="font-size:.78rem;color:var(--t3)">Aucune période.</p>';return}
+  const periode = periodes[0]
+  const {data:inscrits} = await db.from('inscriptions').select('*, profils(prenom,nom)').eq('periode_id',periode.id)
+  const counts = (inscrits||[]).reduce((a,x)=>{a[x.module_id]=(a[x.module_id]||0)+1;return a},{})
+  el.innerHTML = `<div style="font-size:.78rem;font-weight:500;margin-bottom:8px;color:var(--t2)">${periode.nom} — ${(inscrits||[]).length} inscrit(s) au total</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+      ${MODULES.map(m=>`<div style="background:${m.bg};border-radius:8px;padding:8px 10px">
+        <div style="font-size:1.4rem;font-weight:500;color:${m.ic}">${counts[m.id]||0}</div>
+        <div style="font-size:.72rem;color:var(--t2);margin-top:2px">${m.nom}</div>
+      </div>`).join('')}
+    </div>`
+}
+
+// ============================================================
+// CARNET DE BORD
+// ============================================================
+async function chargerCarnet(aspirantId) {
+  const id = aspirantId || G.profil.id
+  const profil = aspirantId ? null : G.profil
+  const {data:p} = aspirantId ? await db.from('profils').select('*').eq('id',aspirantId).single() : {data:profil}
+  const {data:carnet} = await db.from('carnet_bord').select('*').eq('aspirant_id',id).order('valide_at')
+  const {data:tents} = await db.from('tentatives').select('*, quiz(module_id,titre)').eq('aspirant_id',id)
+  const el = document.getElementById('carnet-body'); if(!el) return
+  const modulesValides = (carnet||[])
+  const nb = modulesValides.length
+
+  let html = ''
+
+  // Badge progression
+  html += `<div class="card" style="margin-bottom:1rem">
+    <div class="card-body">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="avatar" style="width:48px;height:48px;font-size:1rem">${[(p?.prenom||'')[0],(p?.nom||'')[0]].join('').toUpperCase()||'?'}</div>
+        <div style="flex:1">
+          <div style="font-size:1rem;font-weight:500">Pays ${p?.nom||''} ${p?.prenom||''}</div>
+          <div style="font-size:.75rem;color:var(--t3)">Tour de France · ${nb}/4 module${nb>1?'s':''} validé${nb>1?'s':''}</div>
+          <div class="pbar" style="margin-top:6px;max-width:200px"><div class="pfill v" style="width:${nb/4*100}%"></div></div>
+        </div>
+        ${nb>=3?`<div style="text-align:center"><div style="font-size:1.5rem">🎉</div><div style="font-size:.7rem;color:var(--v);font-weight:500">Prêt !</div></div>`:''}
+      </div>
+    </div>
+  </div>`
+
+  // Liste des modules
+  html += '<div class="card"><div class="card-head"><span class="card-title">Modules</span></div><div class="card-body">'
+  MODULES.forEach(m => {
+    const c = modulesValides.find(x=>x.module_id===m.id)
+    const enCours = !c && (tents||[]).some(t=>t.quiz?.module_id===m.id)
+    html += `<div class="res-row">
+      <div style="width:38px;height:38px;border-radius:10px;background:${c?'var(--vl)':enCours?m.bg:'var(--bg)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="ti ${c?'ti-circle-check':enCours?m.icon:'ti-circle'}" style="color:${c?'var(--v)':enCours?m.ic:'var(--t3)'};font-size:1rem"></i>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:.875rem;font-weight:500">${m.nom}</div>
+        <div style="font-size:.72rem;color:var(--t3)">${c?'Validé le '+new Date(c.valide_at).toLocaleDateString('fr-FR')+' · '+c.ville:enCours?'En cours':'Non commencé'}</div>
+      </div>
+      ${c?`<span class="badge badge-v">${c.score_final||'—'}/20</span>`:''}
+    </div>`
+  })
+
+  // Champ ville si module en cours non encore dans carnet
+  const tentsValides = (tents||[]).filter(t=>t.valide)
+  const modulesAvecExamen = [...new Set(tentsValides.map(t=>t.quiz?.module_id).filter(Boolean))]
+  const modulesNonCarnet = modulesAvecExamen.filter(mid=>!modulesValides.find(c=>c.module_id===mid))
+  if(modulesNonCarnet.length && !aspirantId) {
+    html += `<div style="margin-top:1rem;padding:.8rem;background:var(--al);border-radius:8px">
+      <div style="font-size:.78rem;font-weight:500;color:var(--a);margin-bottom:6px">Renseignez votre ville pour les modules validés</div>
+      ${modulesNonCarnet.map(mid=>{
+        const m=MODULES.find(x=>x.id===mid)
+        const t=tentsValides.filter(x=>x.quiz?.module_id===mid)
+        const best=t.reduce((a,x)=>x.score>a?x.score:a,0)
+        return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <span style="font-size:.78rem;color:var(--t2);flex-shrink:0">${m?.nom}</span>
+          <input class="finput" id="ville-${mid}" placeholder="Votre ville actuelle" style="flex:1"/>
+          <button class="btn btn-r btn-sm" onclick="ajouterCarnet(${mid},'ville-${mid}',${best})"><i class="ti ti-check"></i></button>
+        </div>`
+      }).join('')}
+    </div>`
+  }
+  html += '</div></div>'
+  el.innerHTML = html
+
+  // Message 3 modules
+  if(nb >= 3 && !aspirantId) lancerConfettis()
+}
+
+async function ajouterCarnet(modId, villeInputId, score) {
+  const ville = document.getElementById(villeInputId)?.value?.trim()
+  if(!ville){toast('Entrez votre ville','err');return}
+  const {error} = await db.from('carnet_bord').upsert({
+    aspirant_id: G.profil.id, module_id: modId,
+    ville, score_final: score, valide_at: new Date().toISOString()
+  })
+  if(error){toast('Erreur : '+error.message,'err');return}
+  toast('Ajouté au carnet !','ok'); chargerCarnet()
+}
+
+function lancerConfettis() {
+  // Animation confettis simple en CSS
+  const existing = document.getElementById('confettis-overlay')
+  if(existing) return
+  const overlay = document.createElement('div')
+  overlay.id = 'confettis-overlay'
+  overlay.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:8888;overflow:hidden'
+  const colors = ['#E24B4A','#3B6D11','#185FA5','#854F0B','#5F5E5A']
+  for(let i=0;i<60;i++){
+    const c = document.createElement('div')
+    const color = colors[Math.floor(Math.random()*colors.length)]
+    const left = Math.random()*100
+    const delay = Math.random()*3
+    const dur = 3+Math.random()*2
+    const size = 6+Math.random()*8
+    c.style.cssText = `position:absolute;top:-20px;left:${left}%;width:${size}px;height:${size}px;background:${color};border-radius:${Math.random()>0.5?'50%':'2px'};animation:confetti-fall ${dur}s ${delay}s ease-in forwards`
+    overlay.appendChild(c)
+  }
+  document.head.insertAdjacentHTML('beforeend',`<style>@keyframes confetti-fall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}</style>`)
+  document.body.appendChild(overlay)
+
+  // Message
+  const msg = document.createElement('div')
+  msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--card);border:.5px solid var(--bord2);border-radius:16px;padding:2rem;text-align:center;z-index:8889;box-shadow:0 20px 60px rgba(0,0,0,.15);max-width:380px;width:90%'
+  msg.innerHTML = `<div style="font-size:2.5rem;margin-bottom:.8rem">🎉</div>
+    <div style="font-family:var(--fs);font-size:1.3rem;color:var(--r);margin-bottom:.5rem">Tu es prêt pour la prochaine étape, mon Pays !</div>
+    <p style="font-size:.82rem;color:var(--t2);margin-bottom:1rem">3 modules validés. Les cours et exercices restent accessibles pour réviser.</p>
+    <button class="btn btn-r" onclick="this.closest('div').remove();document.getElementById('confettis-overlay')?.remove()">Continuer</button>`
+  document.body.appendChild(msg)
+  setTimeout(()=>overlay.remove(), 8000)
+}
+
+async function exportCarnetPDF() {
+  toast('Export PDF bientôt disponible','def')
+}
+
+// ============================================================
+// STREAK DE RÉVISION
+// ============================================================
+async function mettreAJourStreak() {
+  const now = new Date()
+  const annee = now.getFullYear()
+  const semaine = Math.ceil((now - new Date(annee, 0, 1)) / 604800000)
+  const cleActuelle = annee + '-S' + semaine
+
+  const {data:p} = await db.from('profils').select('streak_semaines,streak_derniere_semaine,streak_pause,points_total').eq('id',G.profil.id).single()
+  if(!p) return
+
+  const derniere = p.streak_derniere_semaine
+  const [dAnnee, dSem] = derniere ? derniere.split('-S').map(Number) : [0, 0]
+  const semPrecedente = annee + '-S' + (semaine - 1)
+
+  let newStreak = p.streak_semaines || 0
+  let newPause = p.streak_pause || false
+
+  if(derniere === cleActuelle) return // Déjà compté cette semaine
+
+  if(derniere === semPrecedente || !derniere) {
+    // Semaine consécutive ou première fois
+    newStreak++; newPause = false
+  } else {
+    // Semaine ratée — pause mais pas remise à zéro
+    newPause = true
+    newStreak++ // On reprend mais on indique la pause
+  }
+
+  await db.from('profils').update({
+    streak_semaines: newStreak,
+    streak_derniere_semaine: cleActuelle,
+    streak_pause: newPause
+  }).eq('id', G.profil.id)
+
+  G.profil.streak_semaines = newStreak
+  G.profil.streak_pause = newPause
+}
+
+// ============================================================
+// POINTS
+// ============================================================
+async function calculerEtAttribuerPoints(score, totalPts, quizId) {
+  // Points = score/20 * 100 (max 100 pts par quiz)
+  const pts = Math.round((score / 20) * 100)
+  const {data:profil} = await db.from('profils').select('points_total').eq('id',G.profil.id).single()
+  const nouveauTotal = (profil?.points_total || 0) + pts
+  await db.from('profils').update({points_total: nouveauTotal}).eq('id', G.profil.id)
+  // Mettre à jour la tentative avec les points gagnés
+  await db.from('tentatives').update({points_gagnes: pts}).eq('aspirant_id', G.profil.id).eq('quiz_id', quizId)
+  G.profil.points_total = nouveauTotal
+  return pts
+}
+
+async function chargerClassementExercice(quizId, monScore) {
+  const {data:tents} = await db.from('tentatives')
+    .select('score, aspirant_id, profils(prenom,nom)')
+    .eq('quiz_id', quizId)
+    .order('score', {ascending:false})
+    .limit(50)
+  if(!tents?.length) return ''
+  const monRang = tents.findIndex(t => t.aspirant_id === G.profil.id) + 1
+  const moyenne = Math.round(tents.reduce((a,t)=>a+t.score,0)/tents.length)
+  const meilleur = tents[0]?.score || 0
+  return {tents, monRang, moyenne, meilleur, total: tents.length}
+}
+
+// ============================================================
+// CLASSEMENT APRES EXERCICE
+// ============================================================
+async function afficherClassementApresQuiz(quizId, monScore) {
+  const cl = await chargerClassementExercice(quizId, monScore)
+  if(!cl) return
+  const el = document.getElementById('r-comps')
+  if(!el) return
+  const existing = el.innerHTML
+  el.innerHTML = existing + `
+    <div style="margin-top:1rem">
+      <div class="slbl">Classement du groupe</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+        <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:1.2rem;font-weight:500;color:var(--r)">${monScore}/20</div>
+          <div style="font-size:.7rem;color:var(--t3)">Votre score</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:1.2rem;font-weight:500">${cl.moyenne}/20</div>
+          <div style="font-size:.7rem;color:var(--t3)">Moyenne</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:1.2rem;font-weight:500;color:var(--v)">${cl.meilleur}/20</div>
+          <div style="font-size:.7rem;color:var(--t3)">Meilleur</div>
+        </div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:8px;font-size:.78rem;color:var(--t2);text-align:center;margin-bottom:8px">
+        Vous êtes <strong style="color:var(--r)">${cl.monRang}ème</strong> sur ${cl.total} participant${cl.total>1?'s':''}
+      </div>
+      ${cl.tents.slice(0,5).map((t,i)=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:.5px solid var(--bord);${t.aspirant_id===G.profil.id?'background:var(--rl);border-radius:6px;padding:5px 6px;margin:0 -6px':''}">
+          <span style="font-size:.7rem;color:var(--t3);min-width:16px;text-align:center">${i+1}</span>
+          <span style="flex:1;font-size:.78rem;${t.aspirant_id===G.profil.id?'font-weight:500;color:var(--r2)':''}">
+            Pays ${t.profils?.nom||'—'}${t.aspirant_id===G.profil.id?' (vous)':''}
+          </span>
+          <span style="font-size:.78rem;font-weight:500;color:${t.aspirant_id===G.profil.id?'var(--r)':''}">${t.score}/20</span>
+        </div>`).join('')}
+    </div>`
+}
 </script>
 </body>
 </html>
