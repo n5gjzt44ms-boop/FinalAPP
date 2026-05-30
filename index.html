@@ -215,6 +215,7 @@ button,input,select,textarea{font-family:var(--ff)}
     <span class="topbar-logo" onclick="nav('dashboard')">Prog<em>Méca</em></span>
     <span class="badge badge-rl" id="top-badge">Aspirant</span>
     <div class="topbar-right">
+      <span id="streak-topbar" style="font-size:.75rem;color:var(--t2);display:flex;align-items:center;gap:3px"></span>
       <button class="btn btn-ghost btn-sm" onclick="logout()"><i class="ti ti-logout"></i> <span class="hide-mob">Déconnexion</span></button>
     </div>
   </header>
@@ -271,14 +272,6 @@ button,input,select,textarea{font-family:var(--ff)}
         <div class="kpi"><div class="kpi-val" id="k-mod">0</div><div class="kpi-lbl">Modules terminés</div><div class="kpi-sub">pratique débloquée</div></div>
         <div class="kpi"><div class="kpi-val" id="k-pts" style="color:var(--amber)">0</div><div class="kpi-lbl">Points</div><div class="kpi-sub">total cumulé</div></div>
         <div class="kpi"><div class="kpi-val" id="k-streak">🔥 0</div><div class="kpi-lbl">Streak</div><div class="kpi-sub">semaines de révision</div></div>
-        <div class="kpi"><div class="kpi-val" id="k-pts" style="color:var(--amber)">0</div><div class="kpi-lbl">Points</div><div class="kpi-sub">total cumulé</div></div>
-        <div class="kpi"><div class="kpi-val" id="k-streak">🔥 0</div><div class="kpi-lbl">Streak</div><div class="kpi-sub">semaines</div></div>
-      </div>
-      <div class="grid2">
-        <div class="card">
-          <div class="card-head"><span class="card-title">Progression par module</span><button class="btn btn-ghost btn-sm" onclick="nav('modules')">Voir tout →</button></div>
-          <div class="card-body" id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
-        </div>
         <div class="card">
           <div class="card-head"><span class="card-title">Activité récente</span></div>
           <div class="card-body" id="d-activite"><p style="font-size:.82rem;color:var(--t3)">Aucune activité.</p></div>
@@ -834,7 +827,12 @@ async function loadDashboard() {
   $('k-tot').textContent=tents.length
   const {data:profilData}=await db.from('profils').select('points_total,streak_semaines,streak_pause').eq('id',G.profil.id).single()
   $('k-pts') && ($('k-pts').textContent=profilData?.points_total||0)
-  if($('k-streak')) $('k-streak').textContent='🔥 '+(profilData?.streak_semaines||0)+(profilData?.streak_pause?' ⏸':'')
+  const streakEl = document.getElementById('streak-topbar')
+  if(streakEl) {
+    const s = profilData?.streak_semaines||0
+    const pause = profilData?.streak_pause
+    streakEl.innerHTML = s > 0 ? `<i class="ti ti-flame" style="color:${pause?'var(--t3)':'var(--r)'}"></i>${s}${pause?' <i class="ti ti-player-pause" style="font-size:.7rem"></i>':''}` : ''
+  }
   $('k-mod').textContent=MODULES.filter(m=>{
     const tm=tents.filter(x=>x.quiz?.module_id===m.id)
     return tm.length>0&&tm.every(x=>x.valide)
@@ -873,7 +871,7 @@ async function loadModules() {
           <div style="width:46px;height:46px;border-radius:12px;background:${m.bg};display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic}"></i></div>
           <div style="flex:1"><div style="font-size:.7rem;color:var(--t3);text-transform:uppercase;letter-spacing:1px;font-weight:500">${m.num}</div>
           <div style="font-size:.95rem;font-weight:500">${m.nom}</div></div>
-          <span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}">${termine?'Complété':encours?'En cours':'Non commencé'}</span>
+          <span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}" style="white-space:nowrap;flex-shrink:0">${termine?'Complété':encours?'En cours':'À faire'}</span>
         </div>
         <p style="font-size:.78rem;color:var(--t2);margin-bottom:8px;line-height:1.5">${m.desc}</p>
         <div class="pbar-wrap"><div class="pbar"><div class="pfill ${termine?'v':''}" style="width:${pct}%"></div></div><span class="plbl">${pct}%</span></div>
