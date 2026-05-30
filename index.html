@@ -631,11 +631,11 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="card" style="margin-bottom:1rem">
         <div class="card-head"><div style="display:flex;align-items:center;gap:7px"><i class="ti ti-shield" style="color:var(--r)"></i><span class="card-title">Inviter un administrateur</span></div></div>
         <div class="card-body">
-          <p style="font-size:.82rem;color:var(--t2);margin-bottom:.8rem">Générez un lien à usage unique (7 jours) à envoyer au futur admin.</p>
+          <p style="font-size:.82rem;color:var(--t2);margin-bottom:.8rem">Générez un lien valable 7 jours à partager. Plusieurs admins peuvent l'utiliser avec le même lien.</p>
           <button class="btn btn-ghost" onclick="genLienAdmin()"><i class="ti ti-link"></i> Générer un lien admin</button>
           <div class="hidden" id="lien-result" style="margin-top:.8rem">
             <div style="background:var(--rl);border-radius:8px;padding:.8rem">
-              <div style="font-size:.7rem;color:var(--t3);margin-bottom:3px">Lien valable 7 jours</div>
+              <div style="font-size:.7rem;color:var(--t3);margin-bottom:3px">Lien valable 7 jours · Utilisable par plusieurs admins</div>
               <code style="font-size:.72rem;color:var(--r2);word-break:break-all" id="lien-code"></code>
             </div>
             <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="copierLien()"><i class="ti ti-copy"></i> Copier</button>
@@ -1374,10 +1374,10 @@ async function loadResAdmin() {
     racines.forEach(dos=>{
       const sous=d.filter(x=>x.parent_id===dos.id)
       const resD=r.filter(x=>x.dossier_id===dos.id)
-      html+=`<div style="margin-bottom:.5rem"><div style="display:flex;align-items:center;gap:7px;padding:6px 0;font-size:.82rem;font-weight:500;color:var(--t2)"><i class="ti ti-folder" style="color:var(--amber)"></i> ${dos.nom}<button class="btn btn-ghost btn-sm" style="padding:2px 6px;margin-left:auto" onclick="supprimerDossier('${dos.id}')"><i class="ti ti-trash"></i></button></div>`
+      html+=`<div style="margin-bottom:.5rem"><div style="display:flex;align-items:center;gap:7px;padding:6px 0;font-size:.82rem;font-weight:500;color:var(--t2)"><i class="ti ti-folder" style="color:var(--amber)"></i> <span id="nom-dos-${dos.id}">${dos.nom}</span><div style="margin-left:auto;display:flex;gap:4px"><button class="btn btn-ghost btn-sm" style="padding:2px 6px" onclick="renommerDossier('${dos.id}','${dos.nom}')"><i class="ti ti-pencil"></i></button><button class="btn btn-ghost btn-sm" style="padding:2px 6px" onclick="supprimerDossier('${dos.id}')"><i class="ti ti-trash"></i></button></div></div>`
       sous.forEach(sd=>{
         const resSD=r.filter(x=>x.dossier_id===sd.id)
-        html+=`<div style="margin-left:16px"><div style="display:flex;align-items:center;gap:7px;padding:4px 0;font-size:.78rem;color:var(--t2)"><i class="ti ti-folder" style="color:var(--amber);opacity:.7"></i> ${sd.nom}<button class="btn btn-ghost btn-sm" style="padding:1px 5px;font-size:.7rem;margin-left:auto" onclick="supprimerDossier('${sd.id}')"><i class="ti ti-trash"></i></button></div>${resSD.map(x=>resRow(x,d)).join('')}</div>`
+        html+=`<div style="margin-left:16px"><div style="display:flex;align-items:center;gap:7px;padding:4px 0;font-size:.78rem;color:var(--t2)"><i class="ti ti-folder" style="color:var(--amber);opacity:.7"></i> <span id="nom-dos-${sd.id}">${sd.nom}</span><div style="margin-left:auto;display:flex;gap:3px"><button class="btn btn-ghost btn-sm" style="padding:1px 5px;font-size:.7rem" onclick="renommerDossier('${sd.id}','${sd.nom}')"><i class="ti ti-pencil"></i></button><button class="btn btn-ghost btn-sm" style="padding:1px 5px;font-size:.7rem" onclick="supprimerDossier('${sd.id}')"><i class="ti ti-trash"></i></button></div></div>${resSD.map(x=>resRow(x,d)).join('')}</div>`
       })
       html+=resD.map(x=>'<div style="margin-left:16px">'+resRow(x,d)+'</div>').join('')+'</div>'
     })
@@ -2348,6 +2348,15 @@ async function afficherClassementApresQuiz(quizId, monScore) {
           <span style="font-size:.78rem;font-weight:500;color:${t.aspirant_id===G.profil.id?'var(--r)':''}">${t.score}/20</span>
         </div>`).join('')}
     </div>`
+}
+
+async function renommerDossier(id, nomActuel) {
+  const nouveauNom = prompt('Nouveau nom du dossier :', nomActuel)
+  if(!nouveauNom || nouveauNom.trim() === nomActuel) return
+  const {error} = await db.from('dossiers').update({nom: nouveauNom.trim()}).eq('id', id)
+  if(error){toast('Erreur : '+error.message,'err');return}
+  toast('Dossier renommé !','ok')
+  loadResAdmin()
 }
 </script>
 </body>
