@@ -2383,6 +2383,7 @@ async function voirInscritsModule(periodeId, moduleId, moduleNom) {
   const inscrits = data || []
   const emails = inscrits.map(x => x.profils?.email).filter(Boolean).join('\n')
 
+  window._inscritsModal = inscrits
   const modal = document.createElement('div')
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
   modal.innerHTML = `
@@ -2406,15 +2407,20 @@ async function voirInscritsModule(periodeId, moduleId, moduleNom) {
         : '<p style="font-size:.82rem;color:var(--t3)">Aucun inscrit.</p>'}
       </div>
       <div style="padding:.9rem 1.2rem;border-top:.5px solid var(--bord);display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-ghost" onclick="navigator.clipboard.writeText(\`${emails}\`).then(()=>toast('Emails copiés !','ok'))">
+        <button class="btn btn-ghost" onclick="copierEmails()">
           <i class="ti ti-copy"></i> Copier les emails
         </button>
-        <button class="btn btn-r" onclick="exporterInscritsCSV(${JSON.stringify(inscrits)}, '${moduleNom}')">
+        <button class="btn btn-r" onclick="exporterInscritsCSV(window._inscritsModal, '${moduleNom}')">
           <i class="ti ti-download"></i> Exporter CSV
         </button>
       </div>
     </div>`
   document.body.appendChild(modal)
+}
+
+function copierEmails() {
+  const emails = (window._inscritsModal||[]).map(x=>x.profils?.email).filter(Boolean).join('\n')
+  navigator.clipboard.writeText(emails).then(()=>toast('Emails copiés !','ok'))
 }
 
 function exporterInscritsCSV(inscrits, moduleNom) {
