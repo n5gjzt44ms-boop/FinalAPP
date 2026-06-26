@@ -2454,10 +2454,19 @@ function copierEmails() {
 }
 
 function exporterInscritsCSV(inscrits, moduleNom) {
-  const lignes = ['Nom,Prenom,Email,Ville', ...inscrits.map(x =>
-    `${x.profils?.nom||''},${x.profils?.prenom||''},${x.profils?.email||''},${x.ville||''}`
-  )]
-  const blob = new Blob([lignes.join('\n')], {type:'text/csv;charset=utf-8'})
+  // Séparateur point-virgule pour Excel français + BOM UTF-8
+  const sep = ';'
+  const bom = '\uFEFF'
+  const lignes = [
+    ['Nom', 'Prénom', 'Email', 'Ville'].join(sep),
+    ...inscrits.map(x => [
+      x.profils?.nom||'',
+      x.profils?.prenom||'',
+      x.profils?.email||'',
+      x.ville||''
+    ].join(sep))
+  ]
+  const blob = new Blob([bom + lignes.join('\n')], {type:'text/csv;charset=utf-8'})
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
