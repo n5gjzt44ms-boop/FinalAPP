@@ -2053,6 +2053,7 @@ async function confirmerInscription(periodeId) {
   if(!radio) {toast('Choisissez un module','err');return}
   const modId = parseInt(radio.value)
   const ville = document.getElementById('insc-ville').value.trim()
+  if(!ville){toast('Veuillez renseigner votre ville actuelle','err');return}
   const btn = document.getElementById('btn-inscrire')
   btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader spin"></i> Inscription...'
   const {error} = await db.from('inscriptions').insert({
@@ -2107,24 +2108,32 @@ async function supprimerPeriode(id) {
 }
 
 async function chargerInscritsStats() {
-  const {data:periodes} = await db.from('periodes_inscription').select('*').order('created_at',{ascending:false}).limit(1)
   const el = document.getElementById('inscrits-stats'); if(!el) return
-  if(!periodes?.length){el.innerHTML='<p style="font-size:.78rem;color:var(--t3)">Aucune période.</p>';return}
-  const periode = periodes[0]
-  const {data:inscrits} = await db.from('inscriptions').select('*, profils(prenom,nom)').eq('periode_id',periode.id)
-  const counts = (inscrits||[]).reduce((a,x)=>{a[x.module_id]=(a[x.module_id]||0)+1;return a},{})
-  el.innerHTML = `<div style="font-size:.78rem;font-weight:500;margin-bottom:8px;color:var(--t2)">${periode.nom} — ${(inscrits||[]).length} inscrit(s) au total</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
-      ${MODULES.map(m=>`<div style="background:${m.bg};border-radius:8px;padding:8px 10px">
-        <div style="font-size:1.4rem;font-weight:500;color:${m.ic}">${counts[m.id]||0}</div>
-        <div style="font-size:.72rem;color:var(--t2);margin-top:2px">${m.nom}</div>
-      </div>`).join('')}
+  const {data:periodes} = await db.from('periodes_inscription').select('*').order('created_at',{ascending:false})
+  if(!periodes?.length){el.innerHTML='<p style="font-size:.78rem;color:var(--t3)">Aucune période créée.</p>';return}
+  const {data:tousInscrits} = await db.from('inscriptions').select('*')
+  const allInscrits = tousInscrits||[]
+  const now = new Date()
+  let html = ''
+  periodes.forEach(periode => {
+    const inscrits = allInscrits.filter(x=>x.periode_id===periode.id)
+    const counts = inscrits.reduce((a,x)=>{a[x.module_id]=(a[x.module_id]||0)+1;return a},{})
+    const active = new Date(periode.date_debut)<=now && new Date(periode.date_fin)>=now
+    html += `<div style="margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:.82rem;font-weight:500;color:var(--t2)">${periode.nom}</span>
+        <span class="badge ${active?'badge-v':'badge-g'}" style="font-size:.65rem">${active?'En cours':'Terminée'}</span>
+        <span style="font-size:.75rem;color:var(--t3);margin-left:auto">${inscrits.length} inscrit(s)</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+        ${MODULES.map(m=>'<div style="background:'+m.bg+';border-radius:8px;padding:8px;text-align:center"><div style="font-size:1.3rem;font-weight:500;color:'+m.ic+'">'+(counts[m.id]||0)+'</div><div style="font-size:.68rem;color:var(--t2);margin-top:2px">'+m.nom+'</div></div>').join('')}
+      </div>
     </div>`
+  })
+  el.innerHTML = html
 }
 
-// ============================================================
-// CARNET DE BORD
-// ============================================================
+
 async function chargerCarnet(aspirantId) {
   const id = aspirantId || G.profil.id
   const profil = aspirantId ? null : G.profil
