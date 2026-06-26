@@ -271,21 +271,20 @@ button,input,select,textarea{font-family:var(--ff)}
         <div class="kpi"><div class="kpi-val" id="k-tot">—</div><div class="kpi-lbl">Quiz passés</div><div class="kpi-sub">au total</div></div>
         <div class="kpi"><div class="kpi-val" id="k-mod">0</div><div class="kpi-lbl">Modules terminés</div><div class="kpi-sub">pratique débloquée</div></div>
         <div class="kpi"><div class="kpi-val" id="k-pts" style="color:var(--amber)">0</div><div class="kpi-lbl">Points</div><div class="kpi-sub">total cumulé</div></div>
-        <div class="kpi"><div class="kpi-val" id="k-streak">🔥 0</div><div class="kpi-lbl">Streak</div><div class="kpi-sub">semaines de révision</div></div>
-        <div class="grid2">
-          <div class="card">
-            <div class="card-head"><span class="card-title">Progression par module</span><button class="btn btn-ghost btn-sm" onclick="nav('modules')">Voir tout →</button></div>
-            <div class="card-body" id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
-          </div>
-          <div class="card">
-            <div class="card-head"><span class="card-title">Activité récente</span></div>
-            <div class="card-body" id="d-activite"><p style="font-size:.82rem;color:var(--t3)">Aucune activité.</p></div>
-          </div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-head"><span class="card-title">Progression par module</span><button class="btn btn-ghost btn-sm" onclick="nav('modules')">Voir tout →</button></div>
+          <div class="card-body" id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Activité récente</span></div>
+          <div class="card-body" id="d-activite"><p style="font-size:.82rem;color:var(--t3)">Aucune activité.</p></div>
         </div>
       </div>
     </div>
 
-    <!-- MODULES -->
+        <!-- MODULES -->
     <div class="vue" id="v-modules">
       <div style="margin-bottom:1.2rem"><h2>Modules de formation</h2><p style="font-size:.78rem;color:var(--t2);margin-top:3px">Validez tous les quiz d'un module (≥ 14/20) pour débloquer la partie pratique.</p></div>
       <div class="grid2" id="v-modules-grid"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
@@ -832,12 +831,12 @@ async function loadDashboard() {
   $('k-val').textContent=val
   $('k-tot').textContent=tents.length
   const {data:profilData}=await db.from('profils').select('points_total,streak_semaines,streak_pause').eq('id',G.profil.id).single()
-  $('k-pts') && ($('k-pts').textContent=profilData?.points_total||0)
+  if($('k-pts')) $('k-pts').textContent = profilData?.points_total||0
   const streakEl = document.getElementById('streak-topbar')
   if(streakEl) {
     const s = profilData?.streak_semaines||0
     const pause = profilData?.streak_pause
-    streakEl.innerHTML = s > 0 ? `<i class="ti ti-flame" style="color:${pause?'var(--t3)':'var(--r)'}"></i>${s}${pause?' <i class="ti ti-player-pause" style="font-size:.7rem"></i>':''}` : ''
+    streakEl.innerHTML = s > 0 ? (pause ? '🔥 '+s+' ⏸' : '🔥 '+s) : ''
   }
   $('k-mod').textContent=MODULES.filter(m=>{
     const tm=tents.filter(x=>x.quiz?.module_id===m.id)
@@ -2118,6 +2117,17 @@ async function supprimerPeriode(id) {
   chargerInscritsStats()
 }
 
+// Event delegation pour les clics sur modules inscrits
+document.addEventListener('click', function(e) {
+  const el = e.target.closest('.inscrit-module')
+  if(el) {
+    const pid = el.dataset.pid
+    const mid = parseInt(el.dataset.mid)
+    const mnom = el.dataset.mnom
+    if(pid && mid && mnom) voirInscritsModule(pid, mid, mnom)
+  }
+})
+
 async function chargerInscritsStats() {
   const el = document.getElementById('inscrits-stats'); if(!el) return
   const {data:periodes} = await db.from('periodes_inscription').select('*').order('created_at',{ascending:false})
@@ -2137,7 +2147,7 @@ async function chargerInscritsStats() {
         <span style="font-size:.75rem;color:var(--t3);margin-left:auto">${inscrits.length} inscrit(s)</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
-        ${MODULES.map(m=>'<div style="background:'+m.bg+';border-radius:8px;padding:8px;text-align:center;cursor:'+(counts[m.id]?'pointer':'default')+';transition:opacity .15s" '+(counts[m.id]?'onclick="voirInscritsModule(\''+periode.id+'\','+m.id+',\''+m.nom+'\'"':'')+'><div style="font-size:1.3rem;font-weight:500;color:'+m.ic+';text-decoration:'+(counts[m.id]?'underline':'none')+'">'+(counts[m.id]||0)+'</div><div style="font-size:.68rem;color:var(--t2);margin-top:2px">'+m.nom+'</div></div>').join('')}
+        ${MODULES.map(m=>{const cnt=counts[m.id]||0;return '<div'+(cnt?' class="inscrit-module" data-pid="'+periode.id+'" data-mid="'+m.id+'" data-mnom="'+m.nom+'"':'')+' style="background:'+m.bg+';border-radius:8px;padding:8px;text-align:center;'+(cnt?'cursor:pointer':'')+'">'+'<div style="font-size:1.3rem;font-weight:500;color:'+m.ic+';'+(cnt?'text-decoration:underline':'')+'">'+(cnt||0)+'</div><div style="font-size:.68rem;color:var(--t2);margin-top:2px">'+m.nom+'</div></div>'}).join('')}
       </div>
     </div>`
   })
