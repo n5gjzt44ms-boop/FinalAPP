@@ -272,9 +272,15 @@ button,input,select,textarea{font-family:var(--ff)}
         <div class="kpi"><div class="kpi-val" id="k-mod">0</div><div class="kpi-lbl">Modules terminés</div><div class="kpi-sub">pratique débloquée</div></div>
         <div class="kpi"><div class="kpi-val" id="k-pts" style="color:var(--amber)">0</div><div class="kpi-lbl">Points</div><div class="kpi-sub">total cumulé</div></div>
         <div class="kpi"><div class="kpi-val" id="k-streak">🔥 0</div><div class="kpi-lbl">Streak</div><div class="kpi-sub">semaines de révision</div></div>
-        <div class="card">
-          <div class="card-head"><span class="card-title">Activité récente</span></div>
-          <div class="card-body" id="d-activite"><p style="font-size:.82rem;color:var(--t3)">Aucune activité.</p></div>
+        <div class="grid2">
+          <div class="card">
+            <div class="card-head"><span class="card-title">Progression par module</span><button class="btn btn-ghost btn-sm" onclick="nav('modules')">Voir tout →</button></div>
+            <div class="card-body" id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><span class="card-title">Activité récente</span></div>
+            <div class="card-body" id="d-activite"><p style="font-size:.82rem;color:var(--t3)">Aucune activité.</p></div>
+          </div>
         </div>
       </div>
     </div>
