@@ -2390,13 +2390,27 @@ async function renommerDossier(id, nomActuel) {
 }
 
 async function voirInscritsModule(periodeId, moduleId, moduleNom) {
-  const {data} = await db.from('inscriptions')
-    .select('ville, profils(prenom, nom, email)')
+  // Requête en deux étapes car la FK pointe vers auth.users
+  const {data:inscData} = await db.from('inscriptions')
+    .select('aspirant_id, ville')
     .eq('periode_id', periodeId)
     .eq('module_id', moduleId)
     .order('created_at')
 
-  const inscrits = data || []
+  if(!inscData?.length) {
+    toast('Aucun inscrit pour ce module','def'); return
+  }
+
+  const ids = inscData.map(x => x.aspirant_id)
+  const {data:profilsData} = await db.from('profils')
+    .select('id, prenom, nom, email')
+    .in('id', ids)
+
+  const profilsMap = (profilsData||[]).reduce((a,p) => {a[p.id]=p; return a}, {})
+  const inscrits = inscData.map(x => ({
+    ville: x.ville,
+    profils: profilsMap[x.aspirant_id] || {}
+  }))
   const emails = inscrits.map(x => x.profils?.email).filter(Boolean).join('\n')
 
   window._inscritsModal = inscrits
