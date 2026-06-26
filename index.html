@@ -1985,7 +1985,7 @@ window.addEventListener('load',async()=>{
 // INSCRIPTION SEMESTRIELLE
 // ============================================================
 async function verifierInscription() {
-  // Vérifier si une période d'inscription est active
+  if(G.admin) return // Les admins ne s'inscrivent pas aux modules
   const now = new Date().toISOString()
   const {data:periode} = await db.from('periodes_inscription')
     .select('*').eq('actif', true)
@@ -2102,9 +2102,14 @@ async function chargerPeriodes() {
 }
 
 async function supprimerPeriode(id) {
-  if(!confirm('Supprimer cette période ?')) return
-  await db.from('periodes_inscription').delete().eq('id',id)
-  toast('Période supprimée'); chargerPeriodes()
+  if(!confirm('Supprimer cette période ? Les inscriptions associées seront aussi supprimées.')) return
+  // Supprimer d'abord les inscriptions liées
+  await db.from('inscriptions').delete().eq('periode_id', id)
+  const {error} = await db.from('periodes_inscription').delete().eq('id', id)
+  if(error){toast('Erreur : '+error.message,'err');return}
+  toast('Période supprimée','ok')
+  chargerPeriodes()
+  chargerInscritsStats()
 }
 
 async function chargerInscritsStats() {
