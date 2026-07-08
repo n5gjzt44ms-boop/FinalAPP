@@ -223,17 +223,18 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="field"><label>Adresse e-mail</label><input type="email" id="l-email" placeholder="prenom.nom@compagnons-du-devoir.fr" onkeydown="if(event.key==='Enter')login()"/></div>
       <div class="field"><label>Mot de passe</label><input type="password" id="l-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"/></div>
       <button class="btn btn-dark btn-full" id="btn-login" onclick="login()"><i class="ti ti-login"></i> Se connecter</button>
-      <p style="text-align:center;font-size:.72rem;color:var(--t3);margin-top:1rem">Accès admin ou Ancien ? <span style="color:var(--r);cursor:pointer;font-weight:600" onclick="authMode('register');sh('banner-admin')">Créer un compte spécial</span></p>
+      
     </div>
     <div id="f-register" class="hidden">
       <div class="alert alert-info hidden" id="banner-admin"><i class="ti ti-shield"></i> Création d'un compte <strong>admin ou Ancien</strong></div>
+      <div class="alert hidden" id="banner-ancien" style="background:#EEEDFE;border:1px solid #3C3489;color:#3C3489"><i class="ti ti-star"></i> Vous créez un compte <strong>Compagnon Ancien</strong>. Bienvenue !</div>
       <div class="field-row">
         <div class="field"><label>Prénom</label><input type="text" id="r-prenom" placeholder="Jean"/></div>
         <div class="field"><label>Nom</label><input type="text" id="r-nom" placeholder="Dupont"/></div>
       </div>
       <div class="field"><label>E-mail</label><input type="email" id="r-email" placeholder="prenom.nom@compagnons-du-devoir.fr"/><small>Uniquement @compagnons-du-devoir.fr</small></div>
       <div class="field"><label>Mot de passe</label><input type="password" id="r-pwd" placeholder="8 caractères minimum"/></div>
-      <div class="field"><label>Rôle</label>
+      <div class="field hidden" id="f-role"><label>Rôle</label>
         <select class="fselect" id="r-role">
           <option value="aspirant">Aspirant</option>
           <option value="ancien">Ancien (Compagnon sédentaire)</option>
@@ -711,7 +712,10 @@ button,input,select,textarea{font-family:var(--ff)}
         <div class="card-head"><div style="display:flex;align-items:center;gap:7px"><i class="ti ti-shield" style="color:var(--r)"></i><span class="card-title">Inviter un administrateur</span></div></div>
         <div class="card-body">
           <p style="font-size:.82rem;color:var(--t2);margin-bottom:.8rem">Lien valable 7 jours, utilisable par plusieurs personnes.</p>
-          <button class="btn btn-ghost" onclick="genLienAdmin()"><i class="ti ti-link"></i> Générer un lien admin</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="genLienAdmin()"><i class="ti ti-link"></i> Lien admin</button>
+            <button class="btn btn-ghost" style="border-color:#3C3489;color:#3C3489" onclick="genLienAncien()"><i class="ti ti-star"></i> Lien Ancien</button>
+          </div>
           <div class="hidden" id="lien-result" style="margin-top:.8rem">
             <div style="background:var(--rl);border-radius:10px;padding:.8rem"><div style="font-size:.7rem;color:var(--t3);margin-bottom:3px">Lien — 7 jours · multi-usage</div><code style="font-size:.72rem;color:var(--r2);word-break:break-all" id="lien-code"></code></div>
             <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="copierLien()"><i class="ti ti-copy"></i> Copier</button>
@@ -1617,6 +1621,20 @@ async function loadAspirants() {
 async function debloquer(tentId,nom){if(!confirm('Débloquer une 2e tentative pour '+nom+' ?'))return;const {data:t}=await db.from('tentatives').select('aspirant_id,quiz_id').eq('id',tentId).single();if(!t)return;await db.from('tentatives').delete().eq('aspirant_id',t.aspirant_id).eq('quiz_id',t.quiz_id);toast('Tentative débloquée','ok');loadAspirants()}
 
 async function genLienAdmin(){const {data:{user}}=await db.auth.getUser();const token=crypto.randomUUID();await db.from('admin_tokens').insert({token,created_by:user.id,expires_at:new Date(Date.now()+7*24*60*60*1000).toISOString()});$('lien-code').textContent=location.origin+location.pathname+'?admin='+token;sh('lien-result')}
+function genLienAncien(){
+  const lien=location.origin+location.pathname+'?ancien=1'
+  const el=$('lien-result')
+  if(el){
+    $('lien-code').textContent=lien
+    sh('lien-result')
+    // Changer le label pour indiquer que c'est un lien Ancien
+    const sub=el.querySelector('div div:first-child')
+    if(sub) sub.textContent='Lien Ancien — permanent · à partager aux Compagnons'
+    el.style.borderLeft='3px solid #3C3489'
+  }
+  toast('Lien Ancien généré !','ok')
+}
+
 async function copierLien(){await navigator.clipboard.writeText($('lien-code').textContent);toast('Lien copié !','ok')}
 
 // ─── CARNET DE BORD ────────────────────────────────────────────────────────
@@ -1983,7 +2001,14 @@ async function chargerAnciensAdmin() {
 // ─── DÉMARRAGE ─────────────────────────────────────────────────────────────
 window.addEventListener('load',async()=>{
   const params=new URLSearchParams(location.search)
-  if(params.get('admin')){authMode('register');sh('banner-admin')}
+  if(params.get('admin')){authMode('register');sh('banner-admin');sh('f-role')}
+  if(params.get('ancien')){
+    authMode('register')
+    const sel=document.getElementById('r-role')
+    if(sel) sel.value='ancien'
+    hi('f-role');hi('f-promo')
+    document.getElementById('banner-ancien')?.classList.remove('hidden')
+  }
   const {data:{session}}=await db.auth.getSession()
   if(session) await initApp()
 })
