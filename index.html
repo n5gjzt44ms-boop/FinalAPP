@@ -796,7 +796,14 @@ async function register() {
   const {error}=await db.auth.signUp({email,password:pwd,options:{data:{prenom,nom,promo,role}}})
   if(error){msgLogin(error.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-user-plus"></i> Créer mon compte';return}
   const {error:le}=await db.auth.signInWithPassword({email,password:pwd})
-  if(!le){await initApp();return}
+  if(!le){
+    // Forcer le rôle dans profils (le trigger Supabase peut ignorer ce champ)
+    if(role==='ancien'||role==='admin'){
+      const {data:{user}}=await db.auth.getUser()
+      if(user) await db.from('profils').update({role}).eq('id',user.id)
+    }
+    await initApp();return
+  }
   msgLogin('Compte créé ! Vérifiez votre email.','ok')
   btn.disabled=false;btn.innerHTML='<i class="ti ti-user-plus"></i> Créer mon compte'
 }
@@ -1999,16 +2006,24 @@ async function chargerAnciensAdmin() {
 }
 
 // ─── DÉMARRAGE ─────────────────────────────────────────────────────────────
-window.addEventListener('load',async()=>{
+function detectUrlParams(){
   const params=new URLSearchParams(location.search)
-  if(params.get('admin')){authMode('register');sh('banner-admin');sh('f-role')}
   if(params.get('ancien')){
     authMode('register')
     const sel=document.getElementById('r-role')
     if(sel) sel.value='ancien'
     hi('f-role');hi('f-promo')
-    document.getElementById('banner-ancien')?.classList.remove('hidden')
+    const banner=document.getElementById('banner-ancien')
+    if(banner) banner.classList.remove('hidden')
+  } else if(params.get('admin')){
+    authMode('register')
+    sh('banner-admin');sh('f-role')
   }
+}
+
+window.addEventListener('load',async()=>{
+  detectUrlParams()
+  // params détectés via detectUrlParams()
   const {data:{session}}=await db.auth.getSession()
   if(session) await initApp()
 })
