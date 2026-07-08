@@ -226,7 +226,13 @@ button,input,select,textarea{font-family:var(--ff)}
       
     </div>
     <div id="f-register" class="hidden">
-      <div class="alert alert-info hidden" id="banner-admin"><i class="ti ti-shield"></i> Création d'un compte <strong>admin ou Ancien</strong></div>
+      <div class="alert alert-info hidden" id="banner-admin" style="flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px"><i class="ti ti-shield"></i> Compte spécial — choisissez votre rôle</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%">
+          <label id="role-admin-lbl" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600;background:var(--card);color:var(--t1)"><input type="radio" name="r-role-special" value="admin" onchange="setRoleSpecial('admin')" style="accent-color:var(--r)"/> <i class="ti ti-shield" style="color:var(--r)"></i> Administrateur</label>
+          <label id="role-ancien-lbl" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600;background:var(--card);color:var(--t1)"><input type="radio" name="r-role-special" value="ancien" onchange="setRoleSpecial('ancien')" style="accent-color:#3C3489"/> <i class="ti ti-star" style="color:#3C3489"></i> Ancien sédentaire</label>
+        </div>
+      </div>
       <div class="alert hidden" id="banner-ancien" style="background:#EEEDFE;border:1px solid #3C3489;color:#3C3489"><i class="ti ti-star"></i> Vous créez un compte <strong>Compagnon Ancien</strong>. Bienvenue !</div>
       <div class="field-row">
         <div class="field"><label>Prénom</label><input type="text" id="r-prenom" placeholder="Jean"/></div>
@@ -253,6 +259,13 @@ button,input,select,textarea{font-family:var(--ff)}
     <span class="badge badge-dark" id="top-badge">Aspirant</span>
     <div class="topbar-right">
       <div class="streak-top" id="streak-topbar"></div>
+      <div style="position:relative" id="search-wrap">
+        <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--bord2);border-radius:10px;padding:6px 12px;cursor:text" onclick="document.getElementById('search-input').focus()">
+          <i class="ti ti-search" style="font-size:.9rem;color:var(--t3)"></i>
+          <input id="search-input" placeholder="Rechercher…" style="border:none;background:none;outline:none;font-size:.82rem;width:140px;font-family:var(--ff);color:var(--t1)" oninput="rechercheGlobale(this.value)" onfocus="sh('search-results')" onblur="setTimeout(()=>hi('search-results'),200)"/>
+        </div>
+        <div id="search-results" class="hidden" style="position:absolute;top:calc(100% + 6px);right:0;width:320px;background:var(--card);border:1px solid var(--bord2);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:999;max-height:400px;overflow-y:auto;padding:8px"></div>
+      </div>
       <button class="btn btn-ghost btn-sm" onclick="logout()"><i class="ti ti-logout"></i> <span class="hide-mob">Déconnexion</span></button>
     </div>
   </header>
@@ -263,14 +276,13 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="nav-icon" id="n-revision" data-tip="Révision" onclick="nav('revision')"><i class="ti ti-cards"></i></div>
     <div class="nav-icon" id="n-carnet" data-tip="Carnet de bord" onclick="nav('carnet')"><i class="ti ti-notebook"></i></div>
     <div class="nav-icon" id="n-anciens" data-tip="Annuaire des Anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i></div>
-    <div class="nav-icon hidden" id="n-devoirs" data-tip="Travaux pratiques" onclick="nav('devoirs')"><i class="ti ti-file-upload"></i></div>
     <div class="nav-sep" id="sep-admin" style="display:none"></div>
     <div class="nav-icon hidden" id="n-ressources" data-tip="Ressources" onclick="nav('ressources')"><i class="ti ti-upload"></i></div>
     <div class="nav-icon hidden" id="n-quiz-admin" data-tip="Gérer les quiz" onclick="nav('quiz-admin')"><i class="ti ti-help-circle"></i></div>
-    <div class="nav-icon hidden" id="n-devoirs-admin" data-tip="Travaux pratiques" onclick="nav('devoirs-admin')"><i class="ti ti-file-check"></i></div>
     <div class="nav-icon hidden" id="n-annonces-admin" data-tip="Annonces" onclick="nav('annonces-admin')"><i class="ti ti-speakerphone"></i></div>
     <div class="nav-icon hidden" id="n-inscriptions-admin" data-tip="Inscriptions" onclick="nav('inscriptions-admin')"><i class="ti ti-calendar-event"></i></div>
     <div class="nav-icon hidden" id="n-aspirants" data-tip="Aspirants" onclick="nav('aspirants')"><i class="ti ti-users"></i></div>
+    <div class="nav-icon hidden" id="n-comptes-admin" data-tip="Tous les comptes" onclick="nav('comptes-admin')"><i class="ti ti-list-check"></i></div>
     <div class="nav-icon hidden" id="n-anciens-admin" data-tip="Anciens" onclick="nav('anciens-admin')"><i class="ti ti-star"></i></div>
     <div class="sidebar-foot">
       <div class="sidebar-avatar" id="av">?</div>
@@ -492,23 +504,15 @@ button,input,select,textarea{font-family:var(--ff)}
         <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Contactez un Ancien pour organiser un mini-stage ou obtenir des conseils.</p>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap" id="filtres-anciens">
-        <button class="btn btn-dark btn-sm" onclick="filtrerAnciens(0)">Tous</button>
-        <button class="btn btn-ghost btn-sm" onclick="filtrerAnciens(1)">Thermique</button>
-        <button class="btn btn-ghost btn-sm" onclick="filtrerAnciens(2)">Hydraulique</button>
-        <button class="btn btn-ghost btn-sm" onclick="filtrerAnciens(3)">Conception</button>
-        <button class="btn btn-ghost btn-sm" onclick="filtrerAnciens(4)">Électrique</button>
+        <button class="btn btn-dark btn-sm" data-fid="0" onclick="filtrerAnciens(0)">Tous</button>
+        <button class="btn btn-ghost btn-sm" data-fid="1" onclick="filtrerAnciens(1)"><i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</button>
+        <button class="btn btn-ghost btn-sm" data-fid="2" onclick="filtrerAnciens(2)"><i class="ti ti-droplets" style="color:#185FA5"></i> Hydraulique</button>
+        <button class="btn btn-ghost btn-sm" data-fid="3" onclick="filtrerAnciens(3)"><i class="ti ti-tools" style="color:#5F5E5A"></i> Conception</button>
+        <button class="btn btn-ghost btn-sm" data-fid="4" onclick="filtrerAnciens(4)"><i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</button>
       </div>
       <div class="grid2" id="anciens-grid"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
     </div>
 
-    <!-- TRAVAUX PRATIQUES ASPIRANT -->
-    <div class="vue" id="v-devoirs">
-      <div style="margin-bottom:1.2rem">
-        <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Travaux pratiques</div>
-        <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Déposez vos fichiers avant la date limite.</p>
-      </div>
-      <div id="devoirs-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
-    </div>
 
     <!-- SUIVI -->
     <div class="vue" id="v-suivi">
@@ -624,35 +628,6 @@ button,input,select,textarea{font-family:var(--ff)}
       </div>
     </div>
 
-    <!-- TRAVAUX PRATIQUES ADMIN -->
-    <div class="vue" id="v-devoirs-admin">
-      <div style="max-width:660px">
-        <div style="margin-bottom:1.2rem"><div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Travaux pratiques</div></div>
-        <div class="card" style="margin-bottom:1rem">
-          <div class="card-head"><span class="card-title">Créer un devoir</span></div>
-          <div class="card-body">
-            <div class="field-row" style="margin-bottom:.9rem">
-              <div><label class="field-label">Titre</label><input class="finput" id="dv-titre" placeholder="Schéma HydroSim"/></div>
-              <div><label class="field-label">Module</label>
-                <select class="fselect" id="dv-mod">
-                  <option value="1">Module 1</option><option value="2">Module 2</option><option value="3">Module 3</option><option value="4">Module 4</option>
-                </select>
-              </div>
-            </div>
-            <div style="margin-bottom:.9rem"><label class="field-label">Consigne</label><textarea class="ftextarea" id="dv-consigne" rows="3" placeholder="Travail attendu..."></textarea></div>
-            <div class="field-row" style="margin-bottom:.9rem">
-              <div><label class="field-label">Date limite</label><input type="datetime-local" class="finput" id="dv-limite"/></div>
-              <div><label class="field-label">Sujet PDF</label><input type="file" id="dv-sujet" accept=".pdf" style="font-size:.82rem;margin-top:4px"/></div>
-            </div>
-            <button class="btn btn-r" onclick="creerDevoir()"><i class="ti ti-plus"></i> Créer</button>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><span class="card-title">Rendus</span></div>
-          <div class="card-body" id="rendus-admin-body"><p style="font-size:.78rem;color:var(--t3)">Chargement...</p></div>
-        </div>
-      </div>
-    </div>
 
     <!-- ANNONCES ADMIN -->
     <div class="vue" id="v-annonces-admin">
@@ -723,6 +698,22 @@ button,input,select,textarea{font-family:var(--ff)}
         </div>
       </div>
       <div class="card"><div class="card-head"><span class="card-title">Tous les aspirants</span></div><div class="card-body" id="asp-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div></div>
+    </div>
+
+    <!-- COMPTES ADMIN -->
+    <div class="vue" id="v-comptes-admin">
+      <div style="margin-bottom:1.2rem">
+        <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Tous les comptes</div>
+        <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Vue globale de tous les utilisateurs inscrits.</p>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap" id="filtres-comptes">
+        <button class="btn btn-dark btn-sm" data-role="tous" onclick="filtrerComptes('tous')">Tous</button>
+        <button class="btn btn-ghost btn-sm" data-role="aspirant" onclick="filtrerComptes('aspirant')"><i class="ti ti-user"></i> Aspirants</button>
+        <button class="btn btn-ghost btn-sm" data-role="ancien" onclick="filtrerComptes('ancien')"><i class="ti ti-star"></i> Anciens</button>
+        <button class="btn btn-ghost btn-sm" data-role="admin" onclick="filtrerComptes('admin')"><i class="ti ti-shield"></i> Admins</button>
+        <button class="btn btn-ghost btn-sm" data-role="jamais" onclick="filtrerComptes('jamais')" style="border-color:var(--r);color:var(--r2)"><i class="ti ti-clock-off"></i> Jamais connectés</button>
+      </div>
+      <div class="card"><div class="card-body" id="comptes-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div></div>
     </div>
 
     <!-- ANCIENS ADMIN -->
@@ -834,8 +825,7 @@ async function initApp() {
   // Navigation selon le rôle
   if(G.admin){
     document.getElementById('sep-admin').style.display=''
-    ;['ressources','quiz-admin','devoirs-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin'].forEach(id=>sh('n-'+id))
-    sh('n-devoirs')
+    ;['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin'].forEach(id=>sh('n-'+id))
   }
   hi('vue-login');$('vue-app').classList.add('on')
 
@@ -848,7 +838,7 @@ async function initApp() {
   // Dashboard selon rôle
   if(G.ancien) {
     // Masquer les onglets non pertinents pour les Anciens
-    ;['n-carnet','n-devoirs','n-revision'].forEach(id=>hi(id))
+    ;['n-carnet','n-revision'].forEach(id=>hi(id))
     nav('dashboard-ancien')
   } else {
     nav('dashboard')
@@ -871,13 +861,12 @@ function nav(page) {
   if(page==='ressources') loadResAdmin()
   if(page==='quiz-admin') loadQuizAdmin()
   if(page==='aspirants') loadAspirants()
-  if(page==='devoirs') chargerDevoirs()
-  if(page==='devoirs-admin') chargerRendusAdmin()
   if(page==='annonces-admin') chargerAnnoncesAdmin()
   if(page==='carnet') chargerCarnet()
   if(page==='inscriptions-admin') {chargerPeriodes();chargerInscritsStats()}
   if(page==='anciens') chargerAnciens()
   if(page==='anciens-admin') chargerAnciensAdmin()
+  if(page==='comptes-admin') chargerTousComptes()
 }
 
 // ─── DASHBOARD ASPIRANT ────────────────────────────────────────────────────
@@ -940,8 +929,8 @@ async function loadDashboardAncien() {
       })
       const totalVal=parMod.reduce((a,m)=>a+m.val,0)
       const totalQ=parMod.reduce((a,m)=>a+m.total,0)
-      return `<tr>
-        <td><div style="font-size:.82rem;font-weight:600">Pays ${asp.nom||''} ${asp.prenom||''}</div></td>
+      return `<tr style="cursor:pointer" onclick="ouvrirProfilAspirantAncien('${asp.id}','${asp.nom||''} ${asp.prenom||''}')"> 
+        <td><div style="font-size:.82rem;font-weight:600">Pays ${asp.nom||''} ${asp.prenom||''}</div><div style="font-size:.68rem;color:var(--t3)">Voir le détail →</div></td>
         ${parMod.map(m=>m.total?`<td style="text-align:center">
           <span style="font-family:var(--fg);font-weight:700;color:${m.val===m.total?'var(--v)':m.val>0?'var(--amber)':'var(--t3)'}">${m.val}/${m.total}</span>
           ${m.val===m.total?'<i class="ti ti-circle-check" style="color:var(--v);font-size:.8rem"></i>':''}
@@ -1645,6 +1634,16 @@ function genLienAncien(){
   toast('Lien Ancien généré !','ok')
 }
 
+function setRoleSpecial(role) {
+  const sel=document.getElementById('r-role')
+  if(sel) sel.value=role
+  if(role==='ancien'){sh('banner-ancien');document.getElementById('banner-ancien')?.classList.remove('hidden')}
+  else hi('banner-ancien')
+  // Style actif
+  document.getElementById('role-admin-lbl').style.borderColor=role==='admin'?'var(--r)':'var(--bord2)'
+  document.getElementById('role-ancien-lbl').style.borderColor=role==='ancien'?'#3C3489':'var(--bord2)'
+}
+
 async function copierLien(){
   const el=$('lien-code')
   const texte=el?el.textContent:(window._dernierLien||'')
@@ -1853,12 +1852,62 @@ async function afficherClassementApresQuiz(quizId,monScore) {
   </div>`
 }
 
+// ─── PROFIL ASPIRANT VUE ANCIEN ────────────────────────────
+async function ouvrirProfilAspirantAncien(aspirantId, nom) {
+  const modal=document.createElement('div')
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto'
+  modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:640px;margin:auto;overflow:hidden">
+    <div style="background:var(--dark);padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">Pays ${nom}</div>
+      <button onclick="this.closest('div').parentElement.parentElement.remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2rem"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="padding:1.2rem" id="profil-asp-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+  </div>`
+  document.body.appendChild(modal)
+  const [{data:profil},{data:tents},{data:allQuiz},{data:carnet}]=await Promise.all([
+    db.from('profils').select('*').eq('id',aspirantId).single(),
+    db.from('tentatives').select('*,quiz(id,titre,module_id,niveau)').eq('aspirant_id',aspirantId).order('completed_at',{ascending:false}),
+    db.from('quiz').select('*').eq('actif',true).order('module_id').order('niveau'),
+    db.from('carnet_bord').select('*').eq('aspirant_id',aspirantId)
+  ])
+  const el=document.getElementById('profil-asp-body');if(!el) return
+  const t=tents||[],q=allQuiz||[]
+  const totalVal=t.filter(x=>x.valide).length
+  let html=`<div class="grid4" style="margin-bottom:1.2rem">
+    <div class="kpi"><div class="kpi-val" style="color:var(--r)">${t.length?Math.round(totalVal/t.length*100):0}<span style="font-size:1rem">%</span></div><div class="kpi-lbl">Progression</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--v)">${totalVal}</div><div class="kpi-lbl">Validés</div></div>
+    <div class="kpi"><div class="kpi-val">${t.length}</div><div class="kpi-lbl">Quiz passés</div></div>
+    <div class="kpi kpi-dark"><div class="kpi-val" style="color:var(--r)">${profil?.points_total||0}</div><div class="kpi-lbl" style="color:#555">Points</div></div>
+  </div>`
+  MODULES.forEach(m=>{
+    const qm=q.filter(x=>x.module_id===m.id),tm=t.filter(x=>x.quiz?.module_id===m.id)
+    const pct=qm.length?Math.round(tm.filter(x=>x.valide).length/qm.length*100):0
+    const cb=(carnet||[]).find(c=>c.module_id===m.id)
+    html+=`<div style="background:var(--bg);border:1px solid var(--bord);border-radius:12px;padding:.9rem;margin-bottom:.8rem">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:36px;height:36px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic}"></i></div>
+        <div style="flex:1"><div style="font-size:.875rem;font-weight:700">${m.nom}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px"><div class="pbar" style="flex:1"><div class="pfill ${pct===100?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div><span style="font-family:var(--fg);font-size:.78rem;font-weight:700">${pct}%</span></div></div>
+        ${cb?'<span class="badge badge-v">✓ Carnet</span>':''}
+      </div>
+      ${qm.map(qz=>{const tent=tm.find(x=>x.quiz_id===qz.id);const enAttente=tent?.notes_libres!==null&&tent?.notes_libres!==undefined&&!tent?.note_admin
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--bord)">
+          <i class="ti ${tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:.95rem;flex-shrink:0"></i>
+          <span style="flex:1;font-size:.78rem;font-weight:500">${qz.titre}</span>
+          <span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${tent?(enAttente?'⏳':tent.score+'/20'):'—'}</span>
+          ${tent?`<span style="font-size:.68rem;color:var(--t3)">${new Date(tent.completed_at).toLocaleDateString('fr-FR')}</span>`:''}
+        </div>`}).join('')}
+    </div>`
+  })
+  el.innerHTML=html
+}
+
 // ─── ANCIENS ───────────────────────────────────────────────────────────────
 let _anciensAll=[]
 
 async function chargerAnciens() {
   const [{data:anciens},{data:stages}]=await Promise.all([
-    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire').eq('role','ancien').eq('profil_complet',true).order('nom'),
+    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites').eq('role','ancien').eq('profil_complet',true).order('nom'),
     db.from('mini_stages').select('*').eq('actif',true)
   ])
   _anciensAll=(anciens||[]).map(a=>({...a,stages:(stages||[]).filter(s=>s.ancien_id===a.id)}))
@@ -1866,32 +1915,66 @@ async function chargerAnciens() {
 }
 
 function filtrerAnciens(moduleId) {
-  // Mettre à jour les boutons filtres
-  document.querySelectorAll('#filtres-anciens button').forEach((btn,i)=>{btn.className=i===(moduleId===0?0:moduleId)?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'})
-  const filtres=moduleId===0?_anciensAll:_anciensAll.filter(a=>a.stages.some(s=>s.module_id===moduleId))
+  document.querySelectorAll('#filtres-anciens button').forEach(btn=>{
+    const fid=parseInt(btn.dataset.fid)
+    btn.className=fid===moduleId?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'
+  })
+  const filtres=moduleId===0?_anciensAll:_anciensAll.filter(a=>(a.specialites||[]).includes(moduleId)||a.stages.some(s=>s.module_id===moduleId))
   afficherAnciens(filtres)
 }
 
 function afficherAnciens(anciens) {
   const el=$('anciens-grid');if(!el) return
-  if(!anciens.length){el.innerHTML='<p style="font-size:.82rem;color:var(--t3)">Aucun Ancien disponible pour ce module.</p>';return}
+  if(!anciens.length){el.innerHTML='<p style="font-size:.82rem;color:var(--t3)">Aucun Ancien disponible pour ce filtre.</p>';return}
+  const colors=['#FAEEDA','#E6F1FB','#FCEBEB','#EAF3DE','#EEEDFE']
   el.innerHTML=anciens.map(a=>{
     const ini=[(a.prenom||'')[0],(a.nom||'')[0]].join('').toUpperCase()||'?'
-    const colors=['#FAEEDA','#E6F1FB','#FCEBEB','#EAF3DE','#EEEDFE']
     const color=colors[a.nom?.charCodeAt(0)%colors.length]||colors[0]
-    return `<div class="ancien-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="width:42px;height:42px;border-radius:14px;background:${color};display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.9rem;font-weight:700;flex-shrink:0">${ini}</div>
-        <div><div style="font-size:.875rem;font-weight:700">Compagnon ${a.nom||''}</div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--t3)"><i class="ti ti-map-pin" style="font-size:.85rem;color:var(--amber)"></i>${a.ville_sedentaire||'—'}</div></div>
+    const specs=(a.specialites||[]).map(sid=>{const m=MODULES.find(x=>x.id===sid);return m?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:.68rem;padding:2px 8px;border-radius:20px;background:${m.bg};color:${m.ic};font-weight:600;margin:2px"><i class="ti ${m.icon}"></i>${m.nom}</span>`:''}).join('')
+    return `<div class="ancien-card" style="cursor:pointer" onclick="ouvrirProfilAncien('${a.id}')">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:44px;height:44px;border-radius:14px;background:${color};display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.9rem;font-weight:700;flex-shrink:0">${ini}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.875rem;font-weight:700">Compagnon ${a.nom||''}</div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--t3)"><i class="ti ti-map-pin" style="font-size:.85rem;color:var(--amber)"></i>${a.ville_sedentaire||'—'}</div>
+        </div>
+        <i class="ti ti-chevron-right" style="color:var(--t3);flex-shrink:0"></i>
       </div>
-      ${a.reference?`<p style="font-size:.78rem;color:var(--t2);margin-bottom:8px;line-height:1.5">${a.reference}</p>`:''}
-      ${a.stages.length?`<div style="margin-bottom:10px"><div style="font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:5px">Mini-stages proposés</div>
-        ${a.stages.map(s=>{const m=MODULES.find(x=>x.id===s.module_id);return `<div style="display:inline-flex;align-items:center;gap:4px;font-size:.72rem;padding:3px 9px;border-radius:20px;border:1px solid var(--bord2);color:var(--t2);margin:2px;font-weight:500"><i class="ti ti-calendar" style="font-size:.82rem;color:${m?.ic||'var(--t3)'}"></i>${m?.nom||'—'} · ${s.periode||'—'}</div>`}).join('')}
-      </div>`:''}
-      <button class="btn btn-full" style="background:var(--amberl);color:var(--amber);border:1.5px solid var(--amber);font-weight:700" onclick="contacterAncien('${a.id}','${a.prenom||''} ${a.nom||''}')"><i class="ti ti-phone"></i> Contacter</button>
+      ${specs?`<div style="margin-bottom:8px">${specs}</div>`:''}
+      ${a.stages.length?`<div style="font-size:.72rem;color:var(--t3);font-weight:500"><i class="ti ti-calendar" style="color:var(--amber)"></i> ${a.stages.length} mini-stage${a.stages.length>1?'s':''} proposé${a.stages.length>1?'s':''}</div>`:''}
     </div>`
   }).join('')
+}
+
+function ouvrirProfilAncien(ancienId) {
+  const a=_anciensAll.find(x=>x.id===ancienId);if(!a) return
+  const ini=[(a.prenom||'')[0],(a.nom||'')[0]].join('').toUpperCase()||'?'
+  const colors=['#FAEEDA','#E6F1FB','#FCEBEB','#EAF3DE','#EEEDFE']
+  const color=colors[a.nom?.charCodeAt(0)%colors.length]||colors[0]
+  const specs=(a.specialites||[]).map(sid=>{const m=MODULES.find(x=>x.id===sid);return m?`<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:${m.bg};color:${m.ic};font-size:.82rem;font-weight:600"><i class="ti ${m.icon}"></i>${m.nom}</span>`:''}).join('')
+  const modal=document.createElement('div');modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:480px;overflow:hidden">
+    <div style="background:${color};padding:1.4rem;position:relative">
+      <button onclick="this.closest('div').parentElement.parentElement.remove()" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,.1);border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:1.1rem">✕</button>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:54px;height:54px;border-radius:16px;background:rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:1.2rem;font-weight:700">${ini}</div>
+        <div><div style="font-family:var(--fg);font-size:1.1rem;font-weight:700">Compagnon ${a.prenom||''} ${a.nom||''}</div>
+        <div style="font-size:.78rem;display:flex;align-items:center;gap:4px;margin-top:3px;opacity:.8"><i class="ti ti-map-pin"></i>${a.ville_sedentaire||'—'}</div></div>
+      </div>
+    </div>
+    <div style="padding:1.2rem">
+      ${specs?`<div style="margin-bottom:1rem"><div style="font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:6px">Spécialités</div><div style="display:flex;flex-wrap:wrap;gap:5px">${specs}</div></div>`:''}
+      ${a.reference?`<div style="margin-bottom:1rem"><div style="font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:5px">Expérience</div><p style="font-size:.82rem;color:var(--t2);line-height:1.6">${a.reference}</p></div>`:''}
+      ${a.stages.length?`<div style="margin-bottom:1rem"><div style="font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:6px">Mini-stages proposés</div>
+        ${a.stages.map(s=>{const m=MODULES.find(x=>x.id===s.module_id);return `<div style="border:1px solid var(--bord);border-radius:10px;padding:9px 12px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px"><div style="width:26px;height:26px;border-radius:7px;background:${m?.bg||'#eee'};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m?.icon||'ti-calendar'}" style="color:${m?.ic||'#555'};font-size:.82rem"></i></div><span style="font-size:.82rem;font-weight:600">${m?.nom||'—'}</span><span style="font-size:.72rem;color:var(--t3);margin-left:auto">${s.periode||''}</span></div>
+          ${s.description?`<p style="font-size:.75rem;color:var(--t2);padding-left:33px">${s.description}</p>`:''}
+        </div>`}).join('')}
+      </div>`:''}
+      <button class="btn btn-full" style="background:var(--amberl);color:var(--amber);border:1.5px solid var(--amber);font-weight:700" onclick="contacterAncien('${a.id}','${a.prenom||''} ${a.nom||''}')"><i class="ti ti-phone"></i> Contacter ce Compagnon</button>
+    </div>
+  </div>`
+  document.body.appendChild(modal)
 }
 
 async function contacterAncien(ancienId,nom) {
@@ -1931,7 +2014,15 @@ function afficherQuestionnaireAncien() {
         <div><label class="field-label">Ville de sédentarisation <span style="color:var(--r)">*</span></label><input class="finput" id="anc-ville" placeholder="Lyon, Paris..."/></div>
         <div><label class="field-label">Téléphone <span style="color:var(--r)">*</span></label><input class="finput" id="anc-tel" placeholder="06 XX XX XX XX" type="tel"/></div>
       </div>
-      <div style="margin-bottom:1.2rem"><label class="field-label">Votre spécialité / référence</label><textarea class="ftextarea" id="anc-ref" rows="2" placeholder="Ex : Hydraulique industrielle, Engins TP, 15 ans d'expérience..."></textarea></div>
+      <div style="margin-bottom:1rem"><label class="field-label">Vos spécialités <span style="color:var(--r)">*</span></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px" id="anc-specialites-wrap">
+          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500" id="spec-lbl-1"><input type="checkbox" value="1" class="anc-spec" style="accent-color:var(--r)"/> <i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500" id="spec-lbl-2"><input type="checkbox" value="2" class="anc-spec" style="accent-color:var(--r)"/> <i class="ti ti-droplets" style="color:#185FA5"></i> Hydraulique</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500" id="spec-lbl-3"><input type="checkbox" value="3" class="anc-spec" style="accent-color:var(--r)"/> <i class="ti ti-tools" style="color:#5F5E5A"></i> Conception</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500" id="spec-lbl-4"><input type="checkbox" value="4" class="anc-spec" style="accent-color:var(--r)"/> <i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</label>
+        </div>
+      </div>
+      <div style="margin-bottom:1.2rem"><label class="field-label">Description / expérience</label><textarea class="ftextarea" id="anc-ref" rows="2" placeholder="Ex : 15 ans en hydraulique industrielle, engins TP..."></textarea></div>
       
       <div style="border-top:1px solid var(--bord);padding-top:1.2rem;margin-bottom:1.2rem">
         <div style="font-family:var(--fg);font-size:.95rem;font-weight:700;letter-spacing:-.2px;margin-bottom:.3rem">Mini-stages proposés</div>
@@ -1974,14 +2065,16 @@ async function sauvegarderProfilAncien() {
   const ville=document.getElementById('anc-ville')?.value?.trim()
   const tel=document.getElementById('anc-tel')?.value?.trim()
   const ref=document.getElementById('anc-ref')?.value?.trim()
+  const specs=[...document.querySelectorAll('.anc-spec:checked')].map(c=>parseInt(c.value))
   if(!ville||!tel){toast('Ville et téléphone sont obligatoires','err');return}
+  if(!specs.length){toast('Choisissez au moins une spécialité','err');return}
   const btn=document.getElementById('btn-save-ancien');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'
-  await db.from('profils').update({ville_sedentaire:ville,telephone:tel,reference:ref||null,profil_complet:true}).eq('id',G.profil.id)
+  await db.from('profils').update({ville_sedentaire:ville,telephone:tel,reference:ref||null,specialites:specs,profil_complet:true}).eq('id',G.profil.id)
   if(_stagesForm.length){await db.from('mini_stages').delete().eq('ancien_id',G.profil.id);await db.from('mini_stages').insert(_stagesForm.map(s=>({ancien_id:G.profil.id,module_id:s.module_id,periode:s.periode||null,description:s.description||null,actif:true})))}
-  G.profil.ville_sedentaire=ville;G.profil.profil_complet=true
+  G.profil.ville_sedentaire=ville;G.profil.profil_complet=true;G.profil.specialites=specs
   document.getElementById('modal-questionnaire-ancien')?.remove()
   toast('Profil enregistré !','ok')
-  ;['n-carnet','n-devoirs','n-revision'].forEach(id=>hi(id))
+  ;['n-carnet','n-revision'].forEach(id=>hi(id))
   nav('dashboard-ancien')
 }
 
