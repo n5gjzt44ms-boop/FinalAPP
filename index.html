@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ProgMéca</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231A1A1A'/><text x='16' y='23' text-anchor='middle' font-family='system-ui,sans-serif' font-weight='700' font-size='20' fill='%23E24B4A'>P</text></svg>"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -20,6 +22,14 @@
   --ff:'Outfit',system-ui,sans-serif;
   --fg:'Space Grotesk',system-ui,sans-serif;
   --sidebar-w:52px;
+}
+body.dark {
+  --t1:#F0EEE8; --t2:#AAA; --t3:#666;
+  --bg:#111111; --card:#1C1C1C;
+  --bord:rgba(255,255,255,.07); --bord2:rgba(255,255,255,.12);
+  --dark:#0A0A0A; --dark2:#222;
+  --rl:rgba(226,75,74,.15); --vl:rgba(59,109,17,.15);
+  --amberl:rgba(133,79,11,.2); --bl:rgba(24,95,165,.2);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-font-smoothing:antialiased}
@@ -259,6 +269,12 @@ button,input,select,textarea{font-family:var(--ff)}
     <span class="badge badge-dark" id="top-badge">Aspirant</span>
     <div class="topbar-right">
       <div class="streak-top" id="streak-topbar"></div>
+      <button class="btn btn-ghost btn-sm btn-icon" id="btn-dark" onclick="toggleDark()" title="Mode sombre"><i class="ti ti-moon"></i></button>
+      <div style="position:relative">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleNotifs()" id="btn-notif" title="Notifications"><i class="ti ti-bell"></i></button>
+        <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;width:16px;height:16px;background:var(--r);border-radius:50%;font-size:.6rem;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--fg)">0</span>
+        <div id="notif-panel" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:300px;background:var(--card);border:1px solid var(--bord2);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:999;max-height:360px;overflow-y:auto;padding:8px"></div>
+      </div>
       <div style="position:relative" id="search-wrap">
         <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--bord2);border-radius:10px;padding:6px 12px;cursor:text" onclick="document.getElementById('search-input').focus()">
           <i class="ti ti-search" style="font-size:.9rem;color:var(--t3)"></i>
@@ -276,6 +292,8 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="nav-icon" id="n-revision" data-tip="Révision" onclick="nav('revision')"><i class="ti ti-cards"></i></div>
     <div class="nav-icon" id="n-carnet" data-tip="Carnet de bord" onclick="nav('carnet')"><i class="ti ti-notebook"></i></div>
     <div class="nav-icon" id="n-anciens" data-tip="Annuaire des Anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i></div>
+    <div class="nav-icon" id="n-messages" data-tip="Messages" onclick="nav('messages')"><i class="ti ti-message-circle"></i></div>
+    <div class="nav-icon" id="n-calendrier" data-tip="Calendrier mini-stages" onclick="nav('calendrier')"><i class="ti ti-calendar-event"></i></div>
     <div class="nav-sep" id="sep-admin" style="display:none"></div>
     <div class="nav-icon hidden" id="n-ressources" data-tip="Ressources" onclick="nav('ressources')"><i class="ti ti-upload"></i></div>
     <div class="nav-icon hidden" id="n-quiz-admin" data-tip="Gérer les quiz" onclick="nav('quiz-admin')"><i class="ti ti-help-circle"></i></div>
@@ -284,6 +302,7 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="nav-icon hidden" id="n-aspirants" data-tip="Aspirants" onclick="nav('aspirants')"><i class="ti ti-users"></i></div>
     <div class="nav-icon hidden" id="n-comptes-admin" data-tip="Tous les comptes" onclick="nav('comptes-admin')"><i class="ti ti-list-check"></i></div>
     <div class="nav-icon hidden" id="n-anciens-admin" data-tip="Anciens" onclick="nav('anciens-admin')"><i class="ti ti-star"></i></div>
+    <div class="nav-icon hidden" id="n-stats-admin" data-tip="Statistiques" onclick="nav('stats-admin')"><i class="ti ti-chart-bar"></i></div>
     <div class="sidebar-foot">
       <div class="sidebar-avatar" id="av" style="cursor:pointer" data-tip="Mon profil Ancien" onclick="ouvrirMonProfil()">?</div>
     </div>
@@ -295,6 +314,7 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="bnav-item" id="b-modules" onclick="nav('modules')"><i class="ti ti-books"></i>Modules</div>
       <div class="bnav-item" id="b-revision" onclick="nav('revision')"><i class="ti ti-cards"></i>Révision</div>
       <div class="bnav-item" id="b-anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i>Anciens</div>
+      <div class="bnav-item" id="b-messages" onclick="nav('messages')"><i class="ti ti-message-circle"></i>Messages</div>
       <div class="bnav-item" id="b-carnet" onclick="nav('carnet')"><i class="ti ti-notebook"></i>Carnet</div>
     </div>
   </nav>
@@ -368,7 +388,10 @@ button,input,select,textarea{font-family:var(--ff)}
         <div style="margin-bottom:1.2rem">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
             <span style="font-size:.68rem;color:var(--r);font-weight:700;text-transform:uppercase;letter-spacing:1.5px" id="q-titre-lbl">—</span>
-            <span style="font-size:.72rem;color:var(--t3);font-weight:500" id="q-prog-lbl">1/10</span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-family:var(--fg);font-size:.82rem;font-weight:700;color:var(--t3)" id="q-timer">0:00</span>
+              <span style="font-size:.72rem;color:var(--t3);font-weight:500" id="q-prog-lbl">1/10</span>
+            </div>
           </div>
           <div class="pbar"><div class="pfill pfill-r" id="q-pbar" style="width:0%"></div></div>
         </div>
@@ -410,7 +433,11 @@ button,input,select,textarea{font-family:var(--ff)}
         <div class="card">
           <div class="card-head"><span class="card-title">Détail des réponses</span></div>
           <div class="card-body" id="r-detail"></div>
-          <div class="card-foot"><button class="btn btn-ghost" onclick="retourModule()"><i class="ti ti-arrow-left"></i> Retour</button></div>
+          <div class="card-foot">
+            <button class="btn btn-ghost" onclick="retourModule()"><i class="ti ti-arrow-left"></i> Retour</button>
+            <button class="btn btn-ghost btn-sm" onclick="voirHistorique()"><i class="ti ti-history"></i> Historique</button>
+          </div>
+          <div id="r-historique" style="display:none;padding:1rem;border-top:1px solid var(--bord)"></div>
         </div>
       </div>
     </div>
@@ -722,10 +749,50 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="card"><div class="card-head"><span class="card-title">Tous les Anciens inscrits</span></div><div class="card-body" id="anciens-admin-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div></div>
     </div>
 
+    <!-- MESSAGES -->
+    <div class="vue" id="v-messages">
+      <div style="margin-bottom:1.2rem;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Messages</div>
+          <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Échangez avec les Anciens ou les aspirants.</p>
+        </div>
+      </div>
+      <div class="grid2" style="height:calc(100vh - 200px);min-height:400px">
+        <div class="card" style="display:flex;flex-direction:column;overflow:hidden">
+          <div class="card-head"><span class="card-title">Conversations</span></div>
+          <div style="flex:1;overflow-y:auto;padding:.6rem" id="msg-conversations"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;overflow:hidden" id="msg-chat-panel">
+          <div class="card-head" id="msg-chat-head"><span style="font-size:.875rem;font-weight:600;color:var(--t3)">Sélectionnez une conversation</span></div>
+          <div style="flex:1;overflow-y:auto;padding:.8rem" id="msg-chat-body"></div>
+          <div style="padding:.8rem;border-top:1px solid var(--bord);display:flex;gap:8px" id="msg-input-zone" style="display:none">
+            <input class="finput" id="msg-input" placeholder="Votre message…" style="flex:1" onkeydown="if(event.key==='Enter')envoyerMessage()"/>
+            <button class="btn btn-r btn-sm" onclick="envoyerMessage()"><i class="ti ti-send"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS ADMIN -->
+    <div class="vue" id="v-stats-admin">
+      <div style="margin-bottom:1.2rem"><div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Statistiques</div></div>
+      <div id="stats-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+    </div>
+
+    <!-- CALENDRIER MINI-STAGES -->
+    <div class="vue" id="v-calendrier">
+      <div style="margin-bottom:1.2rem">
+        <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Calendrier des mini-stages</div>
+        <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Tous les stages proposés par les Anciens.</p>
+      </div>
+      <div id="calendrier-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+    </div>
+
   </main>
 </div>
 
 <div id="toast"></div>
+<button id="scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" style="display:none;position:fixed;bottom:80px;right:16px;width:40px;height:40px;border-radius:50%;background:var(--dark);color:#fff;border:none;cursor:pointer;z-index:888;box-shadow:0 4px 16px rgba(0,0,0,.25);font-size:1.1rem;align-items:center;justify-content:center"><i class="ti ti-arrow-up"></i></button>
 
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────────────
@@ -748,6 +815,37 @@ const db = createClient(SB_URL, SB_KEY)
 let G = {profil:null,admin:false,ancien:false,modActif:null,ongletActif:'cours',quizActif:null,questions:[],reponses:{},fichiersLibres:{},etape:0,choix:null,confirme:false,tentResult:null,anciensCache:[]}
 
 const $ = id => document.getElementById(id)
+
+// ─── DARK MODE ──────────────────────────────────────────────────────────────
+function toggleDark() {
+  const dark = document.body.classList.toggle('dark')
+  localStorage.setItem('pm-dark', dark?'1':'0')
+  const btn=$('btn-dark');if(btn) btn.innerHTML=dark?'<i class="ti ti-sun"></i>':'<i class="ti ti-moon"></i>'
+}
+function initDark() {
+  if(localStorage.getItem('pm-dark')==='1'){document.body.classList.add('dark');const btn=$('btn-dark');if(btn) btn.innerHTML='<i class="ti ti-sun"></i>'}
+}
+
+// ─── SCROLL TO TOP ─────────────────────────────────────────────────────────
+window.addEventListener('scroll', ()=>{
+  const btn=$('scroll-top')
+  if(btn) btn.style.display=window.scrollY>300?'flex':'none'
+}, {passive:true})
+
+// ─── TIMER QUIZ ────────────────────────────────────────────────────────────
+let _timerQuiz=null, _secondesQuiz=0
+function demarrerTimer() {
+  _secondesQuiz=0;clearInterval(_timerQuiz)
+  _timerQuiz=setInterval(()=>{
+    _secondesQuiz++
+    const el=$('q-timer');if(!el) return
+    const m=Math.floor(_secondesQuiz/60),s=_secondesQuiz%60
+    el.textContent=m+':'+(s<10?'0':'')+s
+    if(_secondesQuiz>3600) el.style.color='var(--r)'
+    else if(_secondesQuiz>1800) el.style.color='var(--amber)'
+  },1000)
+}
+function arreterTimer() {clearInterval(_timerQuiz);return _secondesQuiz}
 const sh = id => { const e=$(id); if(e) e.classList.remove('hidden') }
 const hi = id => { const e=$(id); if(e) e.classList.add('hidden') }
 
@@ -825,11 +923,18 @@ async function initApp() {
   // Navigation selon le rôle
   if(G.admin){
     document.getElementById('sep-admin').style.display=''
-    ;['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin'].forEach(id=>sh('n-'+id))
+    ;['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin','stats-admin'].forEach(id=>sh('n-'+id))
   }
   // Enregistrer la dernière connexion (fire and forget)
   db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
   hi('vue-login');$('vue-app').classList.add('on')
+  initDark()
+  // Vérifier messages non lus
+  setTimeout(async()=>{
+    const {data}=await db.from('messages').select('id').eq('to_id',user.id).eq('lu',false)
+    const badge=$('notif-badge');const total=data?.length||0
+    if(badge){badge.style.display=total?'flex':'none';badge.textContent=total}
+  },1000)
 
   // Ancien : questionnaire si profil incomplet
   if(G.ancien && !p.profil_complet) {
@@ -869,6 +974,9 @@ function nav(page) {
   if(page==='anciens') chargerAnciens()
   if(page==='anciens-admin') chargerAnciensAdmin()
   if(page==='comptes-admin') chargerTousComptes()
+  if(page==='messages') chargerMessages()
+  if(page==='stats-admin') chargerStatsAdmin()
+  if(page==='calendrier') chargerCalendrier()
 }
 
 // ─── DASHBOARD ASPIRANT ────────────────────────────────────────────────────
@@ -1075,7 +1183,7 @@ async function commencer(qid) {
   if(!isExamen&&exist) await db.from('tentatives').delete().eq('id',exist.id)
   const [{data:q},{data:qs}]=await Promise.all([db.from('quiz').select('*').eq('id',qid).single(),db.from('questions').select('*').eq('quiz_id',qid).order('ordre')])
   G.quizActif=q;G.questions=qs||[];G.reponses={};G.fichiersLibres={};G.etape=0;G.choix=null;G.confirme=false
-  nav('quiz');showQ()
+  nav('quiz');showQ();demarrerTimer()
 }
 
 function showQ() {
@@ -1129,6 +1237,7 @@ async function valider() {
 function suivant(){G.etape++;G.choix=null;G.confirme=false;showQ()}
 
 async function terminer() {
+  const tempsTotal=arreterTimer()
   nav('resultats')
   $('r-detail').innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
   const {data:qr}=await db.from('questions').select('*').eq('quiz_id',G.quizActif.id)
@@ -1197,6 +1306,25 @@ function afficheRes() {
 }
 
 function retourModule(){if(G.tentResult?.modId)ouvrirModule(G.tentResult.modId);else nav('modules')}
+
+async function voirHistorique() {
+  const el=$('r-historique');if(!el) return
+  if(el.style.display!=='none'){el.style.display='none';return}
+  el.style.display='block'
+  el.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.2rem;color:var(--r)"></i></div>'
+  const {data}=await db.from('tentatives').select('*').eq('aspirant_id',G.profil.id).eq('quiz_id',G.tentResult?.tent?.quiz_id).order('completed_at',{ascending:false})
+  if(!data?.length){el.innerHTML='<p style="font-size:.78rem;color:var(--t3)">Aucun historique.</p>';return}
+  el.innerHTML='<div style="font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:8px">Historique de vos passages</div>'+data.map((t,i)=>{
+    const tps=t.temps_secondes?Math.floor(t.temps_secondes/60)+'min '+t.temps_secondes%60+'s':'—'
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bord)">
+      <span style="font-size:.7rem;font-weight:700;color:var(--t3);min-width:18px">${data.length-i}</span>
+      <span style="font-family:var(--fg);font-size:1rem;font-weight:700;color:${t.valide?'var(--v)':'var(--r)'}">${t.score}/20</span>
+      <span class="badge ${t.valide?'badge-v':'badge-rl'}">${t.valide?'Validé':'Non validé'}</span>
+      <span style="font-size:.72rem;color:var(--t3);margin-left:auto">${new Date(t.completed_at).toLocaleDateString('fr-FR')}</span>
+      <span style="font-size:.68rem;color:var(--t3)"><i class="ti ti-clock" style="font-size:.8rem"></i> ${tps}</span>
+    </div>`
+  }).join('')
+}
 
 async function uploaderFichierLibre(input) {
   const fichier=input.files[0];if(!fichier) return
@@ -1704,7 +1832,54 @@ function lancerConfettis() {
   document.body.appendChild(msg);setTimeout(()=>overlay.remove(),8000)
 }
 
-async function exportCarnetPDF(){toast('Export PDF bientôt disponible','def')}
+async function exportCarnetPDF() {
+  if(!window.jspdf){toast('Chargement du PDF...','def');return}
+  const {jsPDF}=window.jspdf
+  const doc=new jsPDF({unit:'mm',format:'a4'})
+  const p=G.profil
+  const {data:carnet}=await db.from('carnet_bord').select('*').eq('aspirant_id',p.id)
+  const {data:tents}=await db.from('tentatives').select('*,quiz(titre,module_id)').eq('aspirant_id',p.id)
+  // Header
+  doc.setFillColor(26,26,26);doc.rect(0,0,210,40,'F')
+  doc.setTextColor(226,75,74);doc.setFont('helvetica','bold');doc.setFontSize(28)
+  doc.text('ProgMéca',15,22)
+  doc.setTextColor(255,255,255);doc.setFontSize(11);doc.setFont('helvetica','normal')
+  doc.text('Carnet de bord — Compagnons du Devoir',15,32)
+  // Infos
+  doc.setTextColor(26,26,26);doc.setFontSize(14);doc.setFont('helvetica','bold')
+  doc.text('Pays '+(p.prenom||'')+' '+(p.nom||''),15,55)
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(100,100,100)
+  doc.text('Promotion : '+(p.promo||'—'),15,63)
+  doc.text('Date : '+new Date().toLocaleDateString('fr-FR'),15,70)
+  // Modules
+  let y=85
+  const mods=[{id:1,nom:'Thermique'},{id:2,nom:'Hydraulique'},{id:3,nom:'Conception & Construction'},{id:4,nom:'Électrique'}]
+  doc.setFontSize(12);doc.setFont('helvetica','bold');doc.setTextColor(26,26,26)
+  doc.text('Progression par module',15,y);y+=8
+  mods.forEach(m=>{
+    const cb=(carnet||[]).find(c=>c.module_id===m.id)
+    const tm=(tents||[]).filter(t=>t.quiz?.module_id===m.id)
+    const val=tm.filter(t=>t.valide).length
+    doc.setFont('helvetica','normal');doc.setFontSize(10)
+    if(cb){doc.setTextColor(59,109,17);doc.text('✓ '+m.nom,18,y);doc.setTextColor(100,100,100);doc.text('Validé le '+new Date(cb.valide_at).toLocaleDateString('fr-FR')+' — Score : '+cb.score_final+'/20 — '+cb.ville,80,y)}
+    else{doc.setTextColor(100,100,100);doc.text('○ '+m.nom,18,y);doc.text(val+' quiz validé(s)',80,y)}
+    y+=8
+  })
+  // Quiz
+  y+=6;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(26,26,26)
+  doc.text('Détail des évaluations',15,y);y+=8
+  ;(tents||[]).sort((a,b)=>new Date(a.completed_at)-new Date(b.completed_at)).forEach(t=>{
+    if(y>270){doc.addPage();y=20}
+    doc.setFont('helvetica','normal');doc.setFontSize(9)
+    doc.setTextColor(t.valide?59:180,t.valide?109:50,t.valide?17:50)
+    doc.text((t.valide?'✓ ':'✗ ')+(t.quiz?.titre||'—'),18,y)
+    doc.setTextColor(100,100,100)
+    doc.text(t.score+'/20 — '+new Date(t.completed_at).toLocaleDateString('fr-FR'),150,y)
+    y+=7
+  })
+  doc.save('carnet-progmeca-'+(p.nom||'aspirant')+'.pdf')
+  toast('PDF téléchargé !','ok')
+}
 
 // ─── INSCRIPTIONS ──────────────────────────────────────────────────────────
 async function verifierInscription() {
@@ -2086,6 +2261,13 @@ function afficherQuestionnaireAncien() {
   // Enregistrer la dernière connexion (fire and forget)
   db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
   hi('vue-login');$('vue-app').classList.add('on')
+  initDark()
+  // Vérifier messages non lus
+  setTimeout(async()=>{
+    const {data}=await db.from('messages').select('id').eq('to_id',user.id).eq('lu',false)
+    const badge=$('notif-badge');const total=data?.length||0
+    if(badge){badge.style.display=total?'flex':'none';badge.textContent=total}
+  },1000)
   // Masquer toute la nav, afficher seulement le questionnaire
   const modal=document.createElement('div');modal.id='modal-questionnaire-ancien';modal.style.cssText='position:fixed;inset:0;background:var(--dark);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto'
   modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:520px;overflow:hidden">
@@ -2283,6 +2465,213 @@ async function rechercheGlobale(q) {
   if(asp.length&&(G.admin||G.ancien)){wrap.insertAdjacentHTML('beforeend',lbl('Aspirants'));asp.forEach(x=>{wrap.appendChild(item('ti-user','var(--bl)','var(--b)','Pays '+(x.nom||'')+' '+(x.prenom||''),'Aspirant',()=>{if(G.ancien)ouvrirProfilAspirantAncien(x.id,(x.nom||'')+' '+(x.prenom||''));else nav('aspirants')}))})}
   if(anc.length){wrap.insertAdjacentHTML('beforeend',lbl('Anciens'));anc.forEach(x=>{wrap.appendChild(item('ti-star','#EEEDFE','#3C3489','Compagnon '+(x.nom||''),(x.ville_sedentaire||'Ancien'),()=>nav('anciens')))})}
   el.innerHTML='';el.appendChild(wrap)
+}
+
+// ─── MESSAGERIE ─────────────────────────────────────────────────────────────
+let _msgDestinataire=null, _msgRealtimeCh=null
+
+async function chargerMessages() {
+  const el=$('msg-conversations');if(!el) return
+  // Charger toutes les conversations (personnes avec qui j'ai échangé)
+  const {data:sent}=await db.from('messages').select('to_id,profils!messages_to_id_fkey(prenom,nom,role)').eq('from_id',G.profil.id)
+  const {data:recv}=await db.from('messages').select('from_id,profils!messages_from_id_fkey(prenom,nom,role)').eq('to_id',G.profil.id)
+  // Liste de contacts (Anciens si aspirant, Aspirants si Ancien/Admin)
+  let role_cible=G.admin||G.ancien?'aspirant':'ancien'
+  const {data:contacts}=await db.from('profils').select('id,prenom,nom,role').in('role',[role_cible,'admin','ancien']).neq('id',G.profil.id).order('nom')
+  
+  const {data:nonLus}=await db.from('messages').select('from_id').eq('to_id',G.profil.id).eq('lu',false)
+  const nlMap=(nonLus||[]).reduce((a,m)=>{a[m.from_id]=(a[m.from_id]||0)+1;return a},{})
+  const badge=$('notif-badge')
+  const total=Object.values(nlMap).reduce((a,v)=>a+v,0)
+  if(badge){badge.style.display=total?'flex':'none';badge.textContent=total}
+
+  el.innerHTML=(contacts||[]).map(c=>{
+    const ini=[(c.prenom||'')[0],(c.nom||'')[0]].join('').toUpperCase()||'?'
+    const nl=nlMap[c.id]||0
+    const isAncien=c.role==='ancien'||c.role==='admin'
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;cursor:pointer;transition:background .12s" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background=''" onclick="ouvrirConversation('${c.id}','${(c.prenom||'')} ${(c.nom||'')}','${c.role}')">
+      <div style="width:36px;height:36px;border-radius:10px;background:${isAncien?'#EEEDFE':'var(--bl)'};display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.78rem;font-weight:700;color:${isAncien?'#3C3489':'var(--b)'};flex-shrink:0">${ini}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.875rem;font-weight:700">${isAncien?'Compagnon ':'Pays '}${c.nom||''} ${c.prenom||''}</div>
+        <div style="font-size:.7rem;color:var(--t3)">${c.role==='admin'?'Admin':c.role==='ancien'?'Ancien':'Aspirant'}</div>
+      </div>
+      ${nl?`<span style="background:var(--r);color:#fff;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:20px;font-family:var(--fg)">${nl}</span>`:''}
+    </div>`
+  }).join('')||'<p style="font-size:.82rem;color:var(--t3);padding:.5rem">Aucun contact disponible.</p>'
+  
+  // Realtime
+  if(_msgRealtimeCh) db.removeChannel(_msgRealtimeCh)
+  _msgRealtimeCh=db.channel('messages-'+G.profil.id)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'to_id=eq.'+G.profil.id},()=>{
+      chargerMessages()
+      if(_msgDestinataire) ouvrirConversation(_msgDestinataire.id,_msgDestinataire.nom,_msgDestinataire.role,true)
+    }).subscribe()
+}
+
+async function ouvrirConversation(userId, nom, role, silent=false) {
+  _msgDestinataire={id:userId,nom,role}
+  const head=$('msg-chat-head'),body=$('msg-chat-body'),zone=$('msg-input-zone')
+  if(!head||!body) return
+  const isAncien=role==='ancien'||role==='admin'
+  head.innerHTML=`<div style="display:flex;align-items:center;gap:8px">
+    <div style="width:32px;height:32px;border-radius:8px;background:${isAncien?'#EEEDFE':'var(--bl)'};display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:${isAncien?'#3C3489':'var(--b)'};">${nom.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase()}</div>
+    <span class="card-title">${isAncien?'Compagnon ':'Pays '}${nom}</span>
+  </div>`
+  if(zone) zone.style.display='flex'
+  if(!silent) body.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.2rem;color:var(--r)"></i></div>'
+  const {data}=await db.from('messages').select('*').or('and(from_id.eq.'+G.profil.id+',to_id.eq.'+userId+'),and(from_id.eq.'+userId+',to_id.eq.'+G.profil.id+')').order('created_at')
+  // Marquer comme lus
+  await db.from('messages').update({lu:true}).eq('from_id',userId).eq('to_id',G.profil.id).eq('lu',false)
+  body.innerHTML=(data||[]).length?(data||[]).map(m=>{
+    const moi=m.from_id===G.profil.id
+    const heure=new Date(m.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
+    const date=new Date(m.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})
+    return `<div style="display:flex;justify-content:${moi?'flex-end':'flex-start'};margin-bottom:6px">
+      <div style="max-width:75%;padding:8px 12px;border-radius:${moi?'14px 4px 14px 14px':'4px 14px 14px 14px'};background:${moi?'var(--r)':'var(--bg)'};color:${moi?'#fff':'var(--t1)'}">
+        <div style="font-size:.875rem;line-height:1.5">${m.contenu}</div>
+        <div style="font-size:.62rem;opacity:.7;text-align:right;margin-top:3px">${date} ${heure}</div>
+      </div>
+    </div>`
+  }).join(''):'<p style="font-size:.82rem;color:var(--t3);text-align:center;padding:2rem">Démarrez la conversation !</p>'
+  body.scrollTop=body.scrollHeight
+  chargerMessages()
+}
+
+async function envoyerMessage() {
+  if(!_msgDestinataire) return
+  const input=$('msg-input');if(!input) return
+  const contenu=input.value.trim();if(!contenu) return
+  input.value='';input.disabled=true
+  await db.from('messages').insert({from_id:G.profil.id,to_id:_msgDestinataire.id,contenu})
+  input.disabled=false;input.focus()
+  ouvrirConversation(_msgDestinataire.id,_msgDestinataire.nom,_msgDestinataire.role,false)
+}
+
+async function toggleNotifs() {
+  const panel=$('notif-panel');if(!panel) return
+  panel.style.display=panel.style.display==='none'?'block':'none'
+  if(panel.style.display==='none') return
+  panel.innerHTML='<div style="font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);padding:4px 8px 6px">Messages non lus</div>'
+  const {data}=await db.from('messages').select('*,profils!messages_from_id_fkey(prenom,nom)').eq('to_id',G.profil.id).eq('lu',false).order('created_at',{ascending:false}).limit(10)
+  if(!data?.length){panel.innerHTML+='<p style="font-size:.82rem;color:var(--t3);padding:8px">Aucun nouveau message</p>';return}
+  data.forEach(m=>{
+    const p=m.profils||{};const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
+    const div=document.createElement('div')
+    div.style.cssText='display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer'
+    div.onmouseenter=()=>div.style.background='var(--bg)'
+    div.onmouseleave=()=>div.style.background=''
+    div.onclick=()=>{panel.style.display='none';nav('messages');setTimeout(()=>ouvrirConversation(m.from_id,(p.prenom||'')+' '+(p.nom||''),'aspirant'),300)}
+    div.innerHTML=`<div style="width:30px;height:30px;border-radius:8px;background:var(--bl);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--b);flex-shrink:0">${ini}</div><div><div style="font-size:.82rem;font-weight:600">${p.prenom||''} ${p.nom||''}</div><div style="font-size:.72rem;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${m.contenu}</div></div>`
+    panel.appendChild(div)
+  })
+}
+document.addEventListener('click',e=>{const p=$('notif-panel');if(p&&!p.contains(e.target)&&e.target.id!=='btn-notif'&&!$('btn-notif')?.contains(e.target))p.style.display='none'})
+
+// ─── STATISTIQUES ADMIN ───────────────────────────────────────────────────
+async function chargerStatsAdmin() {
+  const el=$('stats-body');if(!el) return
+  el.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
+  const [{data:profils},{data:tents},{data:quiz}]=await Promise.all([
+    db.from('profils').select('role').neq('role',null),
+    db.from('tentatives').select('valide,score,quiz(module_id)'),
+    db.from('quiz').select('id,module_id').eq('actif',true)
+  ])
+  const t=tents||[],p=profils||[]
+  const nbAsp=p.filter(x=>x.role==='aspirant').length
+  const nbAnc=p.filter(x=>x.role==='ancien').length
+  const totalTents=t.length,totalVal=t.filter(x=>x.valide).length
+  const tauxVal=totalTents?Math.round(totalVal/totalTents*100):0
+  const moy=totalTents?Math.round(t.reduce((a,x)=>a+x.score,0)/totalTents):0
+
+  // Stats par module
+  const statsMod=MODULES.map(m=>{
+    const tm=t.filter(x=>x.quiz?.module_id===m.id)
+    const vm=tm.filter(x=>x.valide)
+    const moyM=tm.length?Math.round(tm.reduce((a,x)=>a+x.score,0)/tm.length):0
+    const tauxM=tm.length?Math.round(vm.length/tm.length*100):0
+    return {...m,tm:tm.length,vm:vm.length,moyM,tauxM}
+  })
+
+  // Graphique SVG barres
+  const maxTm=Math.max(...statsMod.map(m=>m.tm),1)
+  const barChart=statsMod.map((m,i)=>{
+    const h=m.tm?Math.round(m.tm/maxTm*100):0
+    const x=20+i*60
+    return `<g>
+      <rect x="${x}" y="${120-h}" width="40" height="${h}" rx="6" fill="${m.ic}" opacity=".85"/>
+      <text x="${x+20}" y="${120-h-5}" text-anchor="middle" font-size="10" font-weight="700" fill="${m.ic}">${m.tm}</text>
+      <text x="${x+20}" y="133" text-anchor="middle" font-size="9" fill="var(--t3)">${m.nom.split(' ')[0]}</text>
+    </g>`
+  }).join('')
+
+  el.innerHTML=`<div class="grid4" style="margin-bottom:1.2rem">
+    <div class="kpi"><div class="kpi-val" style="color:var(--b)">${nbAsp}</div><div class="kpi-lbl">Aspirants</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#3C3489">${nbAnc}</div><div class="kpi-lbl">Anciens</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--v)">${tauxVal}<span style="font-size:1rem">%</span></div><div class="kpi-lbl">Taux de validation</div></div>
+    <div class="kpi kpi-dark"><div class="kpi-val" style="color:var(--r)">${moy}<span style="font-size:1rem">/20</span></div><div class="kpi-lbl" style="color:#555">Score moyen</div></div>
+  </div>
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-head"><span class="card-title">Passages par module</span></div>
+    <div class="card-body">
+      <svg viewBox="0 0 270 145" style="width:100%;max-width:400px;display:block">
+        <line x1="15" y1="120" x2="255" y2="120" stroke="var(--bord2)" stroke-width="1"/>
+        ${barChart}
+      </svg>
+    </div>
+  </div>
+  <div class="grid2">
+    ${statsMod.map(m=>`<div class="card">
+      <div class="card-head">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:34px;height:34px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic}"></i></div>
+          <span class="card-title">${m.nom}</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+          <div><div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;color:var(--t1)">${m.tm}</div><div style="font-size:.68rem;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Passages</div></div>
+          <div><div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;color:var(--v)">${m.tauxM}%</div><div style="font-size:.68rem;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Validés</div></div>
+          <div><div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;color:var(--r)">${m.moyM}/20</div><div style="font-size:.68rem;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Moy.</div></div>
+        </div>
+        <div class="pbar" style="margin-top:10px"><div class="pfill pfill-v" style="width:${m.tauxM}%"></div></div>
+      </div>
+    </div>`).join('')}
+  </div>`
+}
+
+// ─── CALENDRIER MINI-STAGES ───────────────────────────────────────────────
+async function chargerCalendrier() {
+  const el=$('calendrier-body');if(!el) return
+  const [{data:stages},{data:anciens}]=await Promise.all([
+    db.from('mini_stages').select('*').eq('actif',true).order('created_at'),
+    db.from('profils').select('id,prenom,nom,ville_sedentaire').in('role',['ancien','admin']).eq('profil_complet',true)
+  ])
+  const anMap=(anciens||[]).reduce((a,p)=>{a[p.id]=p;return a},{})
+  const byModule=MODULES.map(m=>({...m,stages:(stages||[]).filter(s=>s.module_id===m.id)}))
+  el.innerHTML=byModule.filter(m=>m.stages.length).map(m=>`
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-head">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:34px;height:34px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic}"></i></div>
+          <span class="card-title">${m.nom}</span>
+          <span class="badge badge-g">${m.stages.length} stage${m.stages.length>1?'s':''}</span>
+        </div>
+      </div>
+      <div class="card-body">
+        ${m.stages.map(s=>{const a=anMap[s.ancien_id]||{};return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--bord)">
+          <div style="width:44px;height:44px;border-radius:12px;background:#EEEDFE;display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.78rem;font-weight:700;color:#3C3489;flex-shrink:0">${[(a.prenom||'')[0],(a.nom||'')[0]].join('').toUpperCase()||'?'}</div>
+          <div style="flex:1">
+            <div style="font-size:.875rem;font-weight:700">Compagnon ${a.nom||'—'}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">
+              ${a.ville_sedentaire?`<span style="font-size:.72rem;color:var(--t3)"><i class="ti ti-map-pin" style="font-size:.82rem;color:var(--amber)"></i> ${a.ville_sedentaire}</span>`:''}
+              ${s.periode?`<span class="badge badge-a"><i class="ti ti-calendar" style="font-size:.75rem"></i> ${s.periode}</span>`:''}
+            </div>
+            ${s.description?`<p style="font-size:.78rem;color:var(--t2);margin-top:5px;line-height:1.5">${s.description}</p>`:''}
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="contacterAncien('${s.ancien_id}','${a.prenom||''} ${a.nom||''}')"><i class="ti ti-phone"></i> Contacter</button>
+        </div>`}).join('')}
+      </div>
+    </div>`).join('')||'<p style="font-size:.82rem;color:var(--t3)">Aucun mini-stage proposé pour le moment.</p>'
 }
 
 // ─── DÉMARRAGE ─────────────────────────────────────────────────────────────
