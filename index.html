@@ -285,7 +285,7 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="nav-icon hidden" id="n-comptes-admin" data-tip="Tous les comptes" onclick="nav('comptes-admin')"><i class="ti ti-list-check"></i></div>
     <div class="nav-icon hidden" id="n-anciens-admin" data-tip="Anciens" onclick="nav('anciens-admin')"><i class="ti ti-star"></i></div>
     <div class="sidebar-foot">
-      <div class="sidebar-avatar" id="av">?</div>
+      <div class="sidebar-avatar" id="av" style="cursor:pointer" data-tip="Mon profil Ancien" onclick="ouvrirMonProfil()">?</div>
     </div>
   </nav>
 
@@ -827,6 +827,8 @@ async function initApp() {
     document.getElementById('sep-admin').style.display=''
     ;['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin'].forEach(id=>sh('n-'+id))
   }
+  // Enregistrer la dernière connexion (fire and forget)
+  db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
   hi('vue-login');$('vue-app').classList.add('on')
 
   // Ancien : questionnaire si profil incomplet
@@ -1902,12 +1904,96 @@ async function ouvrirProfilAspirantAncien(aspirantId, nom) {
   el.innerHTML=html
 }
 
+// ─── MON PROFIL ANCIEN (pour admin et ancien existants) ───────────────────────
+function ouvrirMonProfil() {
+  if(!G.admin && !G.ancien) return
+  const p=G.profil
+  const modal=document.createElement('div');modal.id='modal-mon-profil'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto'
+  
+  const specsChecked=id=>(p.specialites||[]).map(Number).includes(id)?'checked':''
+  
+  modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:520px;overflow:hidden">
+    <div style="background:var(--dark);padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">Mon profil Ancien</div>
+        <div style="font-size:.72rem;color:#555;margin-top:2px">Visible dans l'annuaire des Anciens</div>
+      </div>
+      <button onclick="document.getElementById('modal-mon-profil').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2rem"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="padding:1.4rem">
+      <div class="field-row" style="margin-bottom:.9rem">
+        <div><label class="field-label">Ville de sédentarisation</label><input class="finput" id="mp-ville" value="${p.ville_sedentaire||''}" placeholder="Lyon, Paris..."/></div>
+        <div><label class="field-label">Téléphone</label><input class="finput" id="mp-tel" value="${p.telephone||''}" placeholder="06 XX XX XX XX" type="tel"/></div>
+      </div>
+      <div style="margin-bottom:1rem"><label class="field-label">Spécialités</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="1" class="mp-spec" ${specsChecked(1)} style="accent-color:var(--r)"/> <i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="2" class="mp-spec" ${specsChecked(2)} style="accent-color:var(--r)"/> <i class="ti ti-droplets" style="color:#185FA5"></i> Hydraulique</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="3" class="mp-spec" ${specsChecked(3)} style="accent-color:var(--r)"/> <i class="ti ti-tools" style="color:#5F5E5A"></i> Conception</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="4" class="mp-spec" ${specsChecked(4)} style="accent-color:var(--r)"/> <i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</label>
+        </div>
+      </div>
+      <div style="margin-bottom:1.2rem"><label class="field-label">Description / expérience</label><textarea class="ftextarea" id="mp-ref" rows="2" placeholder="Ex : 15 ans en hydraulique industrielle...">${p.reference||''}</textarea></div>
+      
+      <div style="border-top:1px solid var(--bord);padding-top:1.2rem;margin-bottom:1.2rem">
+        <div style="font-family:var(--fg);font-size:.95rem;font-weight:700;margin-bottom:.3rem">Mini-stages proposés</div>
+        <p style="font-size:.78rem;color:var(--t2);margin-bottom:.8rem">Stages du week-end que vous proposez aux aspirants.</p>
+        <div id="mp-stages-list"></div>
+        <button class="btn btn-ghost btn-full" style="border-style:dashed" onclick="ajouterStageFormProfil()"><i class="ti ti-plus"></i> Ajouter un mini-stage</button>
+      </div>
+      <button class="btn btn-dark btn-full" id="btn-save-profil" onclick="sauvegarderMonProfil()"><i class="ti ti-check"></i> Enregistrer</button>
+    </div>
+  </div>`
+  document.body.appendChild(modal)
+  // Charger les stages existants
+  db.from('mini_stages').select('*').eq('ancien_id',G.profil.id).eq('actif',true).then(({data})=>{
+    _stagesForm=(data||[]).map(s=>({module_id:s.module_id,periode:s.periode||'',description:s.description||''}))
+    renderStagesFormProfil()
+  })
+}
+
+function ajouterStageFormProfil(){_stagesForm.push({module_id:1,periode:'',description:''});renderStagesFormProfil()}
+
+function renderStagesFormProfil() {
+  const el=document.getElementById('mp-stages-list');if(!el) return
+  el.innerHTML=_stagesForm.map((s,i)=>`<div style="background:var(--bg);border:1px solid var(--bord);border-radius:12px;padding:.9rem;margin-bottom:.8rem">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:.5rem">
+      <button onclick="_stagesForm.splice(${i},1);renderStagesFormProfil()" style="background:none;border:none;cursor:pointer;color:var(--t3)"><i class="ti ti-trash"></i></button>
+    </div>
+    <div class="field-row" style="margin-bottom:.7rem">
+      <div><label class="field-label">Module</label>
+        <select class="fselect" onchange="_stagesForm[${i}].module_id=parseInt(this.value)">
+          ${MODULES.map(m=>`<option value="${m.id}" ${s.module_id===m.id?'selected':''}>${m.nom}</option>`).join('')}
+        </select></div>
+      <div><label class="field-label">Période</label><input class="finput" value="${s.periode}" placeholder="Week-ends de mars..." onchange="_stagesForm[${i}].periode=this.value"/></div>
+    </div>
+    <div><label class="field-label">Description</label><textarea class="ftextarea" rows="2" placeholder="Pratique sur circuits réels..." onchange="_stagesForm[${i}].description=this.value">${s.description}</textarea></div>
+  </div>`).join('')
+}
+
+async function sauvegarderMonProfil() {
+  const ville=document.getElementById('mp-ville')?.value?.trim()
+  const tel=document.getElementById('mp-tel')?.value?.trim()
+  const ref=document.getElementById('mp-ref')?.value?.trim()
+  const specs=[...document.querySelectorAll('.mp-spec:checked')].map(c=>parseInt(c.value))
+  if(!ville||!tel){toast('Ville et téléphone obligatoires','err');return}
+  const btn=document.getElementById('btn-save-profil');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'
+  await db.from('profils').update({ville_sedentaire:ville,telephone:tel,reference:ref||null,specialites:specs,profil_complet:true}).eq('id',G.profil.id)
+  await db.from('mini_stages').delete().eq('ancien_id',G.profil.id)
+  if(_stagesForm.length) await db.from('mini_stages').insert(_stagesForm.map(s=>({ancien_id:G.profil.id,module_id:s.module_id,periode:s.periode||null,description:s.description||null,actif:true})))
+  G.profil={...G.profil,ville_sedentaire:ville,telephone:tel,reference:ref,specialites:specs,profil_complet:true}
+  document.getElementById('modal-mon-profil')?.remove()
+  toast('Profil enregistré ! Visible dans l\'annuaire.','ok')
+  btn.disabled=false
+}
+
 // ─── ANCIENS ───────────────────────────────────────────────────────────────
 let _anciensAll=[]
 
 async function chargerAnciens() {
   const [{data:anciens},{data:stages}]=await Promise.all([
-    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites').eq('role','ancien').eq('profil_complet',true).order('nom'),
+    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites').in('role',['ancien','admin']).eq('profil_complet',true).order('nom'),
     db.from('mini_stages').select('*').eq('actif',true)
   ])
   _anciensAll=(anciens||[]).map(a=>({...a,stages:(stages||[]).filter(s=>s.ancien_id===a.id)}))
@@ -1919,7 +2005,7 @@ function filtrerAnciens(moduleId) {
     const fid=parseInt(btn.dataset.fid)
     btn.className=fid===moduleId?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'
   })
-  const filtres=moduleId===0?_anciensAll:_anciensAll.filter(a=>(a.specialites||[]).includes(moduleId)||a.stages.some(s=>s.module_id===moduleId))
+  const filtres=moduleId===0?_anciensAll:_anciensAll.filter(a=>(a.specialites||[]).map(Number).includes(moduleId)||a.stages.some(s=>s.module_id===moduleId))
   afficherAnciens(filtres)
 }
 
@@ -1930,7 +2016,7 @@ function afficherAnciens(anciens) {
   el.innerHTML=anciens.map(a=>{
     const ini=[(a.prenom||'')[0],(a.nom||'')[0]].join('').toUpperCase()||'?'
     const color=colors[a.nom?.charCodeAt(0)%colors.length]||colors[0]
-    const specs=(a.specialites||[]).map(sid=>{const m=MODULES.find(x=>x.id===sid);return m?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:.68rem;padding:2px 8px;border-radius:20px;background:${m.bg};color:${m.ic};font-weight:600;margin:2px"><i class="ti ${m.icon}"></i>${m.nom}</span>`:''}).join('')
+    const specs=(a.specialites||[]).map(Number).map(sid=>{const m=MODULES.find(x=>x.id===sid);return m?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:.68rem;padding:2px 8px;border-radius:20px;background:${m.bg};color:${m.ic};font-weight:600;margin:2px"><i class="ti ${m.icon}"></i>${m.nom}</span>`:''}).join('')
     return `<div class="ancien-card" style="cursor:pointer" onclick="ouvrirProfilAncien('${a.id}')">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
         <div style="width:44px;height:44px;border-radius:14px;background:${color};display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.9rem;font-weight:700;flex-shrink:0">${ini}</div>
@@ -1951,7 +2037,7 @@ function ouvrirProfilAncien(ancienId) {
   const ini=[(a.prenom||'')[0],(a.nom||'')[0]].join('').toUpperCase()||'?'
   const colors=['#FAEEDA','#E6F1FB','#FCEBEB','#EAF3DE','#EEEDFE']
   const color=colors[a.nom?.charCodeAt(0)%colors.length]||colors[0]
-  const specs=(a.specialites||[]).map(sid=>{const m=MODULES.find(x=>x.id===sid);return m?`<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:${m.bg};color:${m.ic};font-size:.82rem;font-weight:600"><i class="ti ${m.icon}"></i>${m.nom}</span>`:''}).join('')
+  const specs=(a.specialites||[]).map(Number).map(sid=>{const m=MODULES.find(x=>x.id===sid);return m?`<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:${m.bg};color:${m.ic};font-size:.82rem;font-weight:600"><i class="ti ${m.icon}"></i>${m.nom}</span>`:''}).join('')
   const modal=document.createElement('div');modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
   modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:480px;overflow:hidden">
     <div style="background:${color};padding:1.4rem;position:relative">
@@ -1997,6 +2083,8 @@ async function contacterAncien(ancienId,nom) {
 
 // ─── QUESTIONNAIRE ANCIEN ──────────────────────────────────────────────────
 function afficherQuestionnaireAncien() {
+  // Enregistrer la dernière connexion (fire and forget)
+  db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
   hi('vue-login');$('vue-app').classList.add('on')
   // Masquer toute la nav, afficher seulement le questionnaire
   const modal=document.createElement('div');modal.id='modal-questionnaire-ancien';modal.style.cssText='position:fixed;inset:0;background:var(--dark);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto'
@@ -2105,6 +2193,96 @@ async function chargerAnciensAdmin() {
       `<p style="font-size:.78rem;color:var(--t3)">Profil non complété.</p>`}
     </div>`
   }).join('')
+}
+
+
+// ─── TOUS LES COMPTES ──────────────────────────────────────────────────────
+let _tousComptes=[]
+async function chargerTousComptes() {
+  const el=$('comptes-body');if(!el) return
+  el.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
+  const {data,error}=await db.from('profils').select('*').order('created_at',{ascending:false})
+  if(error){el.innerHTML='<p style="color:var(--r);font-size:.82rem">Erreur : '+error.message+'</p>';return}
+  _tousComptes=data||[]
+  filtrerComptes('tous')
+}
+
+function filtrerComptes(role) {
+  document.querySelectorAll('#filtres-comptes button').forEach(btn=>{
+    const isJamais=btn.dataset.role==='jamais'
+    if(btn.dataset.role===role) btn.className=isJamais?'btn btn-r btn-sm':'btn btn-dark btn-sm'
+    else btn.className=isJamais?'btn btn-ghost btn-sm':'btn btn-ghost btn-sm'
+    if(isJamais&&role!=='jamais') btn.style.cssText='border-color:var(--r);color:var(--r2)'
+    else if(isJamais) btn.style.cssText=''
+  })
+  const now=new Date()
+  let filtres=role==='jamais'?_tousComptes.filter(p=>!p.derniere_connexion):role==='tous'?_tousComptes:_tousComptes.filter(p=>p.role===role)
+  const el=$('comptes-body');if(!el) return
+  if(!filtres.length){el.innerHTML='<p style="font-size:.82rem;color:var(--t3);padding:.5rem 0">Aucun compte dans cette catégorie.</p>';return}
+  const ROLES={aspirant:{label:'Aspirant',badge:'badge-g'},ancien:{label:'Ancien',badge:'badge-ancien'},admin:{label:'Admin',badge:'badge-r'}}
+  const jamaisCount=_tousComptes.filter(p=>!p.derniere_connexion).length
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;font-size:.75rem;color:var(--t3);padding-bottom:.6rem;border-bottom:1px solid var(--bord)">
+    <span style="font-weight:600">${filtres.length} compte${filtres.length>1?'s':''}</span>
+    <span style="color:${jamaisCount?'var(--r)':'var(--t3)'};font-weight:600">${jamaisCount} jamais connecté${jamaisCount>1?'s':''}</span>
+  </div>`+filtres.map(p=>{
+    const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
+    const r=ROLES[p.role]||{label:p.role||'—',badge:'badge-g'}
+    const jamais=!p.derniere_connexion
+    const age=p.derniere_connexion?Math.floor((now-new Date(p.derniere_connexion))/86400000):null
+    const ageStr=age===null?null:age===0?"Aujourd'hui":age===1?'Hier':'Il y a '+age+' j'
+    const created=p.created_at?new Date(p.created_at).toLocaleDateString('fr-FR'):''
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord)${jamais?';background:var(--rl);border-radius:10px;margin-bottom:4px;padding:9px 10px':''}">
+      <div style="width:36px;height:36px;border-radius:10px;background:${jamais?'var(--r)':'var(--bg)'};display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.78rem;font-weight:700;color:${jamais?'#fff':'var(--t2)'};flex-shrink:0">${ini}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.875rem;font-weight:700">${p.prenom||''} ${p.nom||''}</div>
+        <div style="font-size:.7rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.email||'—'}${p.promo?' · '+p.promo:''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <span class="badge ${r.badge}" style="display:block;margin-bottom:3px">${r.label}</span>
+        <div style="font-size:.68rem;color:${jamais?'var(--r2)':'var(--t3)'}">
+          ${jamais?'⚠ Jamais connecté':ageStr||'—'}
+        </div>
+        <div style="font-size:.65rem;color:var(--t3)">Inscrit le ${created}</div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+
+// ─── RECHERCHE GLOBALE ──────────────────────────────────────────────────────
+async function rechercheGlobale(q) {
+  const el=$('search-results');if(!el) return
+  if(!q||q.length<2){el.innerHTML='';hi('search-results');return}
+  sh('search-results')
+  el.innerHTML='<div style="padding:8px;font-size:.78rem;color:var(--t3)">Recherche...</div>'
+  const [{data:profils},{data:ressources},{data:quiz}]=await Promise.all([
+    db.from('profils').select('id,prenom,nom,role,ville_sedentaire').or('prenom.ilike.%'+q+'%,nom.ilike.%'+q+'%').limit(8),
+    db.from('ressources').select('id,titre,type,module_id').ilike('titre','%'+q+'%').limit(6),
+    db.from('quiz').select('id,titre,module_id').ilike('titre','%'+q+'%').eq('actif',true).limit(6)
+  ])
+  const asp=(profils||[]).filter(p=>p.role==='aspirant')
+  const anc=(profils||[]).filter(p=>p.role==='ancien'||p.role==='admin')
+  const res=ressources||[], qz=quiz||[]
+  if(!asp.length&&!anc.length&&!res.length&&!qz.length){
+    el.innerHTML='<div style="padding:12px;font-size:.82rem;color:var(--t3);text-align:center">Aucun résultat</div>'
+    return
+  }
+  const lbl=txt=>'<div style="font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);padding:6px 8px 2px">'+txt+'</div>'
+  const item=(ico,bg,ic,titre,sous,fn)=>{
+    const d=document.createElement('div')
+    d.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer'
+    d.onmouseenter=()=>d.style.background='var(--bg)'
+    d.onmouseleave=()=>d.style.background=''
+    d.onclick=()=>{fn();hi('search-results');$('search-input').value=''}
+    d.innerHTML='<div style="width:28px;height:28px;border-radius:7px;background:'+bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+ico+'" style="color:'+ic+';font-size:.82rem"></i></div><div style="flex:1;min-width:0"><div style="font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+titre+'</div><div style="font-size:.68rem;color:var(--t3)">'+sous+'</div></div>'
+    return d
+  }
+  const wrap=document.createElement('div')
+  if(qz.length){wrap.insertAdjacentHTML('beforeend',lbl('Quiz'));qz.forEach(x=>{const m=MODULES.find(m=>m.id===x.module_id);wrap.appendChild(item(m?.icon||'ti-help',m?.bg||'var(--bg)',m?.ic||'var(--t3)',x.titre,m?.nom||'',()=>ouvrirModule(x.module_id)))})}
+  if(res.length){wrap.insertAdjacentHTML('beforeend',lbl('Cours & Ressources'));res.forEach(x=>{const m=MODULES.find(m=>m.id===x.module_id);wrap.appendChild(item('ti-file','var(--rl)','var(--r)',x.titre,(m?.nom||'')+'  '+(x.type||'').toUpperCase(),()=>ouvrirModule(x.module_id)))})}
+  if(asp.length&&(G.admin||G.ancien)){wrap.insertAdjacentHTML('beforeend',lbl('Aspirants'));asp.forEach(x=>{wrap.appendChild(item('ti-user','var(--bl)','var(--b)','Pays '+(x.nom||'')+' '+(x.prenom||''),'Aspirant',()=>{if(G.ancien)ouvrirProfilAspirantAncien(x.id,(x.nom||'')+' '+(x.prenom||''));else nav('aspirants')}))})}
+  if(anc.length){wrap.insertAdjacentHTML('beforeend',lbl('Anciens'));anc.forEach(x=>{wrap.appendChild(item('ti-star','#EEEDFE','#3C3489','Compagnon '+(x.nom||''),(x.ville_sedentaire||'Ancien'),()=>nav('anciens')))})}
+  el.innerHTML='';el.appendChild(wrap)
 }
 
 // ─── DÉMARRAGE ─────────────────────────────────────────────────────────────
