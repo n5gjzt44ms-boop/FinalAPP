@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ProgMéca</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root {
@@ -1627,14 +1627,17 @@ async function loadAspirants() {
 
 async function debloquer(tentId,nom){if(!confirm('Débloquer une 2e tentative pour '+nom+' ?'))return;const {data:t}=await db.from('tentatives').select('aspirant_id,quiz_id').eq('id',tentId).single();if(!t)return;await db.from('tentatives').delete().eq('aspirant_id',t.aspirant_id).eq('quiz_id',t.quiz_id);toast('Tentative débloquée','ok');loadAspirants()}
 
-async function genLienAdmin(){const {data:{user}}=await db.auth.getUser();const token=crypto.randomUUID();await db.from('admin_tokens').insert({token,created_by:user.id,expires_at:new Date(Date.now()+7*24*60*60*1000).toISOString()});$('lien-code').textContent=location.origin+location.pathname+'?admin='+token;sh('lien-result')}
+async function genLienAdmin(){const {data:{user}}=await db.auth.getUser();const token=crypto.randomUUID();await db.from('admin_tokens').insert({token,created_by:user.id,expires_at:new Date(Date.now()+7*24*60*60*1000).toISOString()});const lienAdmin=location.origin+location.pathname+'?admin='+token
+  window._dernierLien=lienAdmin
+  if($('lien-code')) $('lien-code').textContent=lienAdmin
+  sh('lien-result')}
 function genLienAncien(){
   const lien=location.origin+location.pathname+'?ancien=1'
+  window._dernierLien=lien
   const el=$('lien-result')
   if(el){
-    $('lien-code').textContent=lien
+    if($('lien-code')) $('lien-code').textContent=lien
     sh('lien-result')
-    // Changer le label pour indiquer que c'est un lien Ancien
     const sub=el.querySelector('div div:first-child')
     if(sub) sub.textContent='Lien Ancien — permanent · à partager aux Compagnons'
     el.style.borderLeft='3px solid #3C3489'
@@ -1642,7 +1645,13 @@ function genLienAncien(){
   toast('Lien Ancien généré !','ok')
 }
 
-async function copierLien(){await navigator.clipboard.writeText($('lien-code').textContent);toast('Lien copié !','ok')}
+async function copierLien(){
+  const el=$('lien-code')
+  const texte=el?el.textContent:(window._dernierLien||'')
+  if(!texte){toast('Aucun lien généré','err');return}
+  await navigator.clipboard.writeText(texte)
+  toast('Lien copié !','ok')
+}
 
 // ─── CARNET DE BORD ────────────────────────────────────────────────────────
 async function chargerCarnet(aspirantId) {
