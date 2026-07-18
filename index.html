@@ -2,7 +2,10 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>ProgMéca</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231A1A1A'/><text x='16' y='23' text-anchor='middle' font-family='system-ui,sans-serif' font-weight='700' font-size='20' fill='%23E24B4A'>P</text></svg>"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -33,7 +36,12 @@ body.dark {
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-font-smoothing:antialiased}
-body{font-family:var(--ff);background:var(--bg);color:var(--t1);font-size:15px;line-height:1.5}
+body{font-family:var(--ff);background:var(--bg);color:var(--t1);font-size:15px;line-height:1.5;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+html{overscroll-behavior:none;overflow-x:hidden}
+input,select,textarea{font-size:16px!important}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+*{-webkit-overflow-scrolling:touch}
+.main{overflow-x:hidden}
 button,input,select,textarea{font-family:var(--ff)}
 .hidden{display:none!important}
 @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -256,7 +264,6 @@ button,input,select,textarea{font-family:var(--ff)}
           <option value="ancien">Ancien (Compagnon sédentaire)</option>
         </select>
       </div>
-      <div class="field" id="f-promo"><label>Promotion (optionnel)</label><input type="text" id="r-promo" placeholder="Promo 2025"/></div>
       <button class="btn btn-dark btn-full" id="btn-register" onclick="register()"><i class="ti ti-user-plus"></i> Créer mon compte</button>
     </div>
   </div>
@@ -270,11 +277,8 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="topbar-right">
       <div class="streak-top" id="streak-topbar"></div>
       <button class="btn btn-ghost btn-sm btn-icon" id="btn-dark" onclick="toggleDark()" title="Mode sombre"><i class="ti ti-moon"></i></button>
-      <div style="position:relative">
-        <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleNotifs()" id="btn-notif" title="Notifications"><i class="ti ti-bell"></i></button>
-        <span id="notif-badge" style="display:none;position:absolute;top:-3px;right:-3px;width:16px;height:16px;background:var(--r);border-radius:50%;font-size:.6rem;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--fg)">0</span>
-        <div id="notif-panel" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:300px;background:var(--card);border:1px solid var(--bord2);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:999;max-height:360px;overflow-y:auto;padding:8px"></div>
-      </div>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="ouvrirGuide()" title="Aide"><i class="ti ti-help-circle"></i></button>
+
       <div style="position:relative" id="search-wrap">
         <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--bord2);border-radius:10px;padding:6px 12px;cursor:text" onclick="document.getElementById('search-input').focus()">
           <i class="ti ti-search" style="font-size:.9rem;color:var(--t3)"></i>
@@ -289,11 +293,11 @@ button,input,select,textarea{font-family:var(--ff)}
   <nav class="sidebar">
     <div class="nav-icon on" id="n-dashboard" data-tip="Tableau de bord" onclick="nav('dashboard')"><i class="ti ti-layout-dashboard"></i></div>
     <div class="nav-icon" id="n-modules" data-tip="Modules" onclick="nav('modules')"><i class="ti ti-books"></i></div>
-    <div class="nav-icon" id="n-revision" data-tip="Révision" onclick="nav('revision')"><i class="ti ti-cards"></i></div>
+
     <div class="nav-icon" id="n-carnet" data-tip="Carnet de bord" onclick="nav('carnet')"><i class="ti ti-notebook"></i></div>
     <div class="nav-icon" id="n-anciens" data-tip="Annuaire des Anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i></div>
-    <div class="nav-icon" id="n-messages" data-tip="Messages" onclick="nav('messages')"><i class="ti ti-message-circle"></i></div>
-    <div class="nav-icon" id="n-calendrier" data-tip="Calendrier mini-stages" onclick="nav('calendrier')"><i class="ti ti-calendar-event"></i></div>
+
+
     <div class="nav-sep" id="sep-admin" style="display:none"></div>
     <div class="nav-icon hidden" id="n-ressources" data-tip="Ressources" onclick="nav('ressources')"><i class="ti ti-upload"></i></div>
     <div class="nav-icon hidden" id="n-quiz-admin" data-tip="Gérer les quiz" onclick="nav('quiz-admin')"><i class="ti ti-help-circle"></i></div>
@@ -312,9 +316,9 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="bnav-inner">
       <div class="bnav-item on" id="b-dashboard" onclick="nav('dashboard')"><i class="ti ti-layout-dashboard"></i>Accueil</div>
       <div class="bnav-item" id="b-modules" onclick="nav('modules')"><i class="ti ti-books"></i>Modules</div>
-      <div class="bnav-item" id="b-revision" onclick="nav('revision')"><i class="ti ti-cards"></i>Révision</div>
+
       <div class="bnav-item" id="b-anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i>Anciens</div>
-      <div class="bnav-item" id="b-messages" onclick="nav('messages')"><i class="ti ti-message-circle"></i>Messages</div>
+
       <div class="bnav-item" id="b-carnet" onclick="nav('carnet')"><i class="ti ti-notebook"></i>Carnet</div>
     </div>
   </nav>
@@ -365,7 +369,7 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="vue" id="v-modules">
       <div style="margin-bottom:1.2rem">
         <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Modules de formation</div>
-        <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Validez tous les quiz d'un module (≥ 14/20) pour débloquer la pratique.</p>
+        <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Validez tous les quiz d'un module () pour débloquer la pratique.</p>
       </div>
       <div class="grid2" id="v-modules-grid"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
     </div>
@@ -425,7 +429,7 @@ button,input,select,textarea{font-family:var(--ff)}
             </div>
             <div style="font-size:1rem;font-weight:700;letter-spacing:-.3px;margin-bottom:4px" id="r-verdict">—</div>
             <p style="font-size:.82rem;color:var(--t2);max-width:320px;margin:0 auto 10px" id="r-msg">—</p>
-            <span style="font-size:.68rem;padding:4px 12px;border-radius:20px;background:var(--bg);border:1px solid var(--bord2);color:var(--t3);font-weight:600">Seuil : 14/20</span>
+            <span style="font-size:.68rem;padding:4px 12px;border-radius:20px;background:var(--bg);border:1px solid var(--bord2);color:var(--t3);font-weight:600"></span>
           </div>
           <div class="card-body" id="r-comps"></div>
         </div>
@@ -442,73 +446,6 @@ button,input,select,textarea{font-family:var(--ff)}
       </div>
     </div>
 
-    <!-- RÉVISION -->
-    <div class="vue" id="v-revision">
-      <div style="max-width:540px;margin:0 auto">
-        <div style="margin-bottom:1.2rem">
-          <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Mode révision</div>
-          <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Retournez les cartes. Sans note, sans pression.</p>
-        </div>
-        <div id="rev-selecteur">
-          <div class="card">
-            <div class="card-head"><span class="card-title">Choisir les cartes</span></div>
-            <div class="card-body">
-              <div style="margin-bottom:.9rem"><label class="field-label">Module</label>
-                <select class="fselect" id="rev-module">
-                  <option value="0">Tous les modules</option>
-                  <option value="1">Module 1 — Thermique</option>
-                  <option value="2">Module 2 — Hydraulique</option>
-                  <option value="3">Module 3 — Conception</option>
-                  <option value="4">Module 4 — Électrique</option>
-                </select>
-              </div>
-              <button class="btn btn-dark btn-full" onclick="demarrerRevision()"><i class="ti ti-cards"></i> Commencer</button>
-            </div>
-          </div>
-        </div>
-        <div id="rev-session" class="hidden">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-            <button class="btn btn-ghost btn-sm" onclick="arreterRevision()"><i class="ti ti-arrow-left"></i> Arrêter</button>
-            <span style="font-size:.78rem;color:var(--t3);font-weight:500" id="rev-compteur">1/10</span>
-            <span style="font-size:.78rem;color:var(--t3);font-weight:500" id="rev-score-lbl">0 sus</span>
-          </div>
-          <div class="pbar" style="margin-bottom:1.2rem"><div class="pfill pfill-r" id="rev-pbar" style="width:0%"></div></div>
-          <div style="perspective:1000px;margin-bottom:1rem;cursor:pointer" onclick="retournerCarte()">
-            <div id="rev-carte" style="position:relative;width:100%;min-height:240px;transition:transform .5s;transform-style:preserve-3d">
-              <div id="rev-face" style="position:absolute;width:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden">
-                <div class="card" style="min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.8rem;text-align:center">
-                  <span style="font-size:.65rem;color:var(--r);font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:1rem">Question</span>
-                  <div id="rev-img-wrap" style="display:none;margin-bottom:.8rem"><img id="rev-img" src="" style="max-height:130px;max-width:100%;border-radius:10px;object-fit:contain"/></div>
-                  <p style="font-size:1.05rem;line-height:1.6;font-weight:600;letter-spacing:-.2px" id="rev-question-txt">—</p>
-                  <p style="font-size:.72rem;color:var(--t3);margin-top:1rem;font-weight:500"><i class="ti ti-hand-click"></i> Cliquez pour voir la réponse</p>
-                </div>
-              </div>
-              <div id="rev-dos" style="position:absolute;width:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:rotateY(180deg)">
-                <div class="card" style="min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.8rem;text-align:center;background:var(--vl);border-color:var(--v)">
-                  <span style="font-size:.65rem;color:var(--v);font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:1rem">Réponse</span>
-                  <p style="font-size:1.05rem;line-height:1.6;color:var(--v);font-weight:600;letter-spacing:-.2px" id="rev-reponse-txt">—</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div id="rev-btns" class="hidden" style="display:flex;gap:8px">
-            <button class="btn" style="flex:1;background:var(--rl);color:var(--r2);border:1.5px solid var(--r)" onclick="carteSuivante(false)"><i class="ti ti-x"></i> Je ne savais pas</button>
-            <button class="btn" style="flex:1;background:var(--vl);color:var(--v);border:1.5px solid var(--v)" onclick="carteSuivante(true)"><i class="ti ti-check"></i> Je savais !</button>
-          </div>
-        </div>
-        <div id="rev-fin" class="hidden">
-          <div class="card" style="text-align:center;padding:2rem">
-            <i class="ti ti-trophy" style="font-size:2.5rem;color:var(--r);display:block;margin-bottom:1rem"></i>
-            <div style="font-family:var(--fg);font-size:1.2rem;font-weight:700;margin-bottom:.5rem">Session terminée !</div>
-            <p style="font-size:.82rem;color:var(--t2);margin-bottom:1rem" id="rev-fin-msg">—</p>
-            <div style="display:flex;gap:8px;justify-content:center">
-              <button class="btn btn-ghost" onclick="arreterRevision()">Changer</button>
-              <button class="btn btn-r" onclick="demarrerRevision()"><i class="ti ti-refresh"></i> Recommencer</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- CARNET DE BORD -->
     <div class="vue" id="v-carnet">
@@ -738,7 +675,7 @@ button,input,select,textarea{font-family:var(--ff)}
         <button class="btn btn-ghost btn-sm" data-role="aspirant" onclick="filtrerComptes('aspirant')"><i class="ti ti-user"></i> Aspirants</button>
         <button class="btn btn-ghost btn-sm" data-role="ancien" onclick="filtrerComptes('ancien')"><i class="ti ti-star"></i> Anciens</button>
         <button class="btn btn-ghost btn-sm" data-role="admin" onclick="filtrerComptes('admin')"><i class="ti ti-shield"></i> Admins</button>
-        <button class="btn btn-ghost btn-sm" data-role="jamais" onclick="filtrerComptes('jamais')" style="border-color:var(--r);color:var(--r2)"><i class="ti ti-clock-off"></i> Jamais connectés</button>
+
       </div>
       <div class="card"><div class="card-body" id="comptes-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div></div>
     </div>
@@ -749,29 +686,6 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="card"><div class="card-head"><span class="card-title">Tous les Anciens inscrits</span></div><div class="card-body" id="anciens-admin-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div></div>
     </div>
 
-    <!-- MESSAGES -->
-    <div class="vue" id="v-messages">
-      <div style="margin-bottom:1.2rem;display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Messages</div>
-          <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Échangez avec les Anciens ou les aspirants.</p>
-        </div>
-      </div>
-      <div class="grid2" style="height:calc(100vh - 200px);min-height:400px">
-        <div class="card" style="display:flex;flex-direction:column;overflow:hidden">
-          <div class="card-head"><span class="card-title">Conversations</span></div>
-          <div style="flex:1;overflow-y:auto;padding:.6rem" id="msg-conversations"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
-        </div>
-        <div class="card" style="display:flex;flex-direction:column;overflow:hidden" id="msg-chat-panel">
-          <div class="card-head" id="msg-chat-head"><span style="font-size:.875rem;font-weight:600;color:var(--t3)">Sélectionnez une conversation</span></div>
-          <div style="flex:1;overflow-y:auto;padding:.8rem" id="msg-chat-body"></div>
-          <div style="padding:.8rem;border-top:1px solid var(--bord);display:flex;gap:8px" id="msg-input-zone" style="display:none">
-            <input class="finput" id="msg-input" placeholder="Votre message…" style="flex:1" onkeydown="if(event.key==='Enter')envoyerMessage()"/>
-            <button class="btn btn-r btn-sm" onclick="envoyerMessage()"><i class="ti ti-send"></i></button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- STATS ADMIN -->
     <div class="vue" id="v-stats-admin">
@@ -779,14 +693,6 @@ button,input,select,textarea{font-family:var(--ff)}
       <div id="stats-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
     </div>
 
-    <!-- CALENDRIER MINI-STAGES -->
-    <div class="vue" id="v-calendrier">
-      <div style="margin-bottom:1.2rem">
-        <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Calendrier des mini-stages</div>
-        <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Tous les stages proposés par les Anciens.</p>
-      </div>
-      <div id="calendrier-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
-    </div>
 
   </main>
 </div>
@@ -877,12 +783,11 @@ async function login() {
 async function register() {
   const email=$('r-email').value.trim(),pwd=$('r-pwd').value
   const prenom=$('r-prenom').value.trim(),nom=$('r-nom').value.trim()
-  const promo=$('r-promo').value.trim()
   const role=$('r-role').value
   if(!email.endsWith(DOMAINE)){msgLogin('Adresse '+DOMAINE+' requise.');return}
   if(pwd.length<8){msgLogin('Mot de passe : 8 caractères minimum.');return}
   const btn=$('btn-register');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Création...'
-  const {error}=await db.auth.signUp({email,password:pwd,options:{data:{prenom,nom,promo,role}}})
+  const {error}=await db.auth.signUp({email,password:pwd,options:{data:{prenom,nom,role}}})
   if(error){msgLogin(error.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-user-plus"></i> Créer mon compte';return}
   const {error:le}=await db.auth.signInWithPassword({email,password:pwd})
   if(!le){
@@ -909,6 +814,7 @@ async function initApp() {
   const {data:p}=await db.from('profils').select('*').eq('id',user.id).single()
   if(!p){await db.auth.signOut();return}
   G.profil=p;G.admin=p.role==='admin';G.ancien=p.role==='ancien'
+  if(!G.profil.module_inscrit && p.module_inscrit) G.profil.module_inscrit=p.module_inscrit
   const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
   $('av').textContent=ini
   $('d-prenom').textContent=p.nom||p.prenom||'Compagnon'
@@ -945,7 +851,7 @@ async function initApp() {
   // Dashboard selon rôle
   if(G.ancien) {
     // Masquer les onglets non pertinents pour les Anciens
-    ;['n-carnet','n-revision'].forEach(id=>hi(id))
+    ;['n-carnet'].forEach(id=>hi(id))
     nav('dashboard-ancien')
   } else {
     nav('dashboard')
@@ -974,9 +880,7 @@ function nav(page) {
   if(page==='anciens') chargerAnciens()
   if(page==='anciens-admin') chargerAnciensAdmin()
   if(page==='comptes-admin') chargerTousComptes()
-  if(page==='messages') chargerMessages()
   if(page==='stats-admin') chargerStatsAdmin()
-  if(page==='calendrier') chargerCalendrier()
 }
 
 // ─── DASHBOARD ASPIRANT ────────────────────────────────────────────────────
@@ -1137,7 +1041,10 @@ async function renderEval(modId,quiz,tents) {
     const t=tents.find(x=>x.quiz_id===q.id)
     const now=new Date(),debut=q.date_debut?new Date(q.date_debut):null,fin=q.date_fin?new Date(q.date_fin):null
     const horsCreneaux=q.mode_examen&&((debut&&now<debut)||(fin&&now>fin))
-    const isExamen=!!q.mode_examen,peutCommencer=!horsCreneaux&&(!isExamen||!t)
+    const isExamen=!!q.mode_examen
+    // Bloquer examen si mauvais module ou pas inscrit
+    const bonModule=!isExamen||(G.profil.module_inscrit===modId)
+    const peutCommencer=!horsCreneaux&&(!isExamen||!t)&&bonModule
     const bc=t?.valide?'var(--v)':t?'var(--r)':'var(--bord2)'
     const ic=t?.valide?'ti-check':t?'ti-x':'ti-help'
     const ibg=t?.valide?'var(--vl)':t?'var(--rl)':'var(--bg)'
@@ -1153,14 +1060,15 @@ async function renderEval(modId,quiz,tents) {
     if(peutCommencer||(!isExamen&&t)) h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> ${t&&!isExamen?'Repasser':'Commencer'}</button>`
     h+=`</div></div>`
     if(isExamen&&t) h+=`<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide?'Validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR'):'Score définitif : '+t.score+'/20'}</div>`
-    if(horsCreneaux&&!t){const msg=debut&&now<debut?'Disponible le '+debut.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Clôturé';h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-calendar-event"></i> ${msg}</div>`}
+    if(!bonModule&&!t){h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-lock"></i> Réservé aux aspirants inscrits en ${MODULES.find(m=>m.id===modId)?.nom}</div>`}
+    else if(horsCreneaux&&!t){const msg=debut&&now<debut?'Disponible le '+debut.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Clôturé';h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-calendar-event"></i> ${msg}</div>`}
     h+='</div>'
   })
   const toutOk=quiz.length>0&&quiz.every(q=>tents.find(t=>t.quiz_id===q.id&&t.valide))
   h+=`<div class="pratique-bloc" style="border-color:${toutOk?'var(--v)':'var(--bord)'};background:${toutOk?'var(--vl)':'var(--bg)'}">
     <div style="width:44px;height:44px;border-radius:12px;background:${toutOk?'var(--vl)':'var(--bg)'};border:1px solid var(--bord);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${toutOk?'ti-trophy':'ti-lock'}" style="color:${toutOk?'var(--v)':'var(--t3)'};font-size:1.2rem"></i></div>
     <div><div style="font-weight:700;color:${toutOk?'var(--v)':'var(--t2)'};margin-bottom:3px">${toutOk?'Partie pratique débloquée !':'Partie pratique verrouillée'}</div>
-    <div style="font-size:.78rem;color:${toutOk?'var(--v)':'var(--t2)'}">Validez tous les questionnaires (≥ ${SEUIL}/20).</div></div>
+    <div style="font-size:.78rem;color:${toutOk?'var(--v)':'var(--t2)'}">Validez tous les questionnaires ().</div></div>
   </div>`
   $('o-eval').innerHTML=h
 }
@@ -1280,12 +1188,12 @@ function afficheRes() {
   const enAttente=aDesLibres&&!tent?.note_admin
   const c=$('r-circle')
   c.style.borderColor=enAttente?'var(--amber)':valide?'var(--v)':'var(--r)'
-  c.style.background=enAttente?'var(--amberl)':valide?'var(--vl)':'var(--rl)'
-  $('r-score').textContent=enAttente?'?':score;$('r-score').style.color=enAttente?'var(--amber)':valide?'var(--v)':'var(--r)'
-  $('r-total').textContent=enAttente?'en attente':'/ 20'
-  $('r-verdict').textContent=enAttente?'⏳ En attente de correction':valide?'✓ Quiz validé':'✗ Non validé'
+  const afficherNote=G.admin
+  $('r-score').textContent=enAttente?'?':(afficherNote?score:(valide?'✓':'✗'));$('r-score').style.color=enAttente?'var(--amber)':valide?'var(--v)':'var(--r)'
+  $('r-total').textContent=enAttente?'en attente':(afficherNote?'/ 20':'')
+  $('r-verdict').textContent=enAttente?'En attente de correction':valide?'Quiz validé':'Non validé'
   $('r-verdict').style.color=enAttente?'var(--amber)':valide?'var(--v)':'var(--r2)'
-  $('r-msg').textContent=enAttente?'Votre copie est transmise. Score affiché après correction.':valide?'Félicitations ! Vous avez atteint le seuil.':'Score en dessous du seuil. Révisez les cours.'
+  $('r-msg').textContent=enAttente?'Votre copie est transmise. Résultat affiché après correction.':valide?'Toutes vos réponses sont correctes !':'Certaines réponses sont incorrectes. Révisez les cours.'
   const comps=Object.entries(parComp)
   $('r-comps').innerHTML=comps.length?'<div class="section-label">Résultats par compétence</div>'+comps.map(([code,v])=>{const pct=Math.round(v.score/v.total*100);return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:.75rem;color:var(--t2);width:80px;flex-shrink:0;font-weight:600">${code}</span><div class="pbar" style="flex:1"><div class="pfill ${pct>=50?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div><span style="font-size:.72rem;font-weight:600;min-width:40px;text-align:right">${v.score}/${v.total}</span><span class="badge ${pct>=50?'badge-v':'badge-rl'}" style="font-size:.62rem">${pct>=50?'Acquis':'À revoir'}</span></div>`}).join(''):''
   if(!valide&&modId&&!enAttente){db.from('ressources').select('*').eq('module_id',modId).then(({data:res})=>{if(res?.length){$('r-revisions').innerHTML=`<div class="card-head"><span class="card-title">Cours à réviser</span></div><div class="card-body">${res.map(r=>`<div class="res-row" onclick="ouvrirRes('${r.id}','${r.storage_path||''}','${r.url_externe||''}')"><i class="ti ti-file" style="font-size:.95rem;color:var(--r);flex-shrink:0"></i><div class="res-name">${r.titre}</div><i class="ti ti-arrow-right" style="font-size:.875rem;color:var(--t3)"></i></div>`).join('')}</div>`;sh('r-revisions')}else hi('r-revisions')})}else hi('r-revisions')
@@ -1300,7 +1208,7 @@ function afficheRes() {
       <div style="flex:1">${q.image_url?`<img src="${q.image_url}" style="width:100%;max-height:80px;object-fit:contain;border-radius:8px;border:1px solid var(--bord);margin-bottom:4px"/>`:''}<div style="font-size:.82rem;font-weight:500;margin-bottom:2px">${q.enonce}</div>
       ${isLibre?`<div style="font-size:.72rem;color:var(--b)">Votre réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--amber);font-style:italic">En attente de correction</div>`:!ok?`<div style="font-size:.72rem;color:var(--r)">Votre réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--v);font-weight:600">Bonne réponse : ${bonneTexte} ✓</div>`:''}
       </div>
-      <span style="font-size:.72rem;font-weight:700;font-family:var(--fg);color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--t3)'};flex-shrink:0">${isLibre?noteQ:ok?'+'+q.points:'0'}pt</span>
+      ${G.admin?`<span style="font-size:.72rem;font-weight:700;font-family:var(--fg);color:\${isLibre?'var(--amber)':ok?'var(--v)':'var(--t3)'};flex-shrink:0">\${isLibre?noteQ:ok?'+'+q.points:'0'}pt</span>`:''}
     </div>`
   }).join('')
 }
@@ -1348,64 +1256,6 @@ async function loadSuivi() {
 }
 
 // ─── RÉVISION ──────────────────────────────────────────────────────────────
-let revCartes=[],revIndex=0,revRetourne=false,revSus=0
-
-async function demarrerRevision() {
-  const modId=parseInt(document.getElementById('rev-module').value)
-  let q=db.from('questions').select('*, quiz(module_id,actif)')
-  if(modId>0){const {data:qm}=await db.from('quiz').select('id').eq('module_id',modId).eq('actif',true);const ids=(qm||[]).map(x=>x.id);if(!ids.length){toast('Aucun quiz dans ce module','err');return};q=q.in('quiz_id',ids)}
-  const {data:questions,error}=await q.limit(50)
-  if(error){toast('Erreur : '+error.message,'err');return}
-  const cartes=(questions||[]).filter(x=>x.enonce?.trim())
-  if(!cartes.length){toast('Aucune carte — créez d\'abord des quiz !','err');return}
-  revCartes=cartes.sort(()=>Math.random()-.5);revIndex=0;revSus=0;revRetourne=false
-  document.getElementById('rev-selecteur').classList.add('hidden')
-  document.getElementById('rev-fin').classList.add('hidden')
-  document.getElementById('rev-session').classList.remove('hidden')
-  afficherCarte()
-}
-
-function afficherCarte() {
-  const c=revCartes[revIndex];revRetourne=false
-  document.getElementById('rev-carte').style.transform='rotateY(0deg)'
-  document.getElementById('rev-question-txt').textContent=c.enonce||'—'
-  const iw=document.getElementById('rev-img-wrap'),ir=document.getElementById('rev-img')
-  if(iw&&ir){if(c.image_url){ir.src=c.image_url;iw.style.display=''}else{iw.style.display='none';ir.src=''}}
-  let rep=''
-  if(c.type_question==='vf')rep=c.bonne_reponse===0?'VRAI':'FAUX'
-  else if(c.type_question==='libre')rep=c.reponse_type||'Voir le cours associé'
-  else rep=(c.options||[])[c.bonne_reponse]||'—'
-  document.getElementById('rev-reponse-txt').textContent=rep
-  document.getElementById('rev-compteur').textContent='Carte '+(revIndex+1)+' / '+revCartes.length
-  document.getElementById('rev-score-lbl').textContent=revSus+' sus / '+revIndex+' vus'
-  document.getElementById('rev-pbar').style.width=Math.round(revIndex/revCartes.length*100)+'%'
-  document.getElementById('rev-btns').classList.add('hidden')
-}
-
-function retournerCarte() {
-  if(revRetourne)return;revRetourne=true
-  document.getElementById('rev-carte').style.transform='rotateY(180deg)'
-  setTimeout(()=>{const b=document.getElementById('rev-btns');b.classList.remove('hidden');b.style.display='flex'},300)
-}
-
-function carteSuivante(su) {
-  if(su)revSus++;revIndex++
-  document.getElementById('rev-btns').classList.add('hidden')
-  if(revIndex>=revCartes.length)finRevision();else afficherCarte()
-}
-
-function finRevision() {
-  document.getElementById('rev-session').classList.add('hidden')
-  document.getElementById('rev-fin').classList.remove('hidden')
-  const pct=Math.round(revSus/revCartes.length*100)
-  document.getElementById('rev-fin-msg').textContent='Vous avez su '+revSus+' carte'+(revSus>1?'s':'')+' sur '+revCartes.length+' ('+pct+'%). '+(pct>=80?'Excellent !':pct>=60?'Bon travail !':'Continuez à réviser !')
-}
-
-function arreterRevision() {
-  document.getElementById('rev-session').classList.add('hidden')
-  document.getElementById('rev-fin').classList.add('hidden')
-  document.getElementById('rev-selecteur').classList.remove('hidden')
-}
 
 // ─── RESSOURCES ADMIN ──────────────────────────────────────────────────────
 async function uploadRes() {
@@ -1723,7 +1573,7 @@ async function loadAspirants() {
     return `<div style="border-bottom:1px solid var(--bord);padding:.9rem 0">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
         <div class="sidebar-avatar" style="flex-shrink:0">${ini}</div>
-        <div style="flex:1"><div style="font-size:.875rem;font-weight:700">Pays ${p.prenom||''} ${p.nom||''}</div><div style="font-size:.7rem;color:var(--t3)">${p.email} · ${p.promo||'—'}</div></div>
+        <div style="flex:1"><div style="font-size:.875rem;font-weight:700">Pays ${p.prenom||''} ${p.nom||''}</div><div style="font-size:.7rem;color:var(--t3)">${p.email}</div></div>
         <span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:var(--t3)">${tp.filter(x=>x.valide).length}/${tp.length}</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px">
@@ -1849,7 +1699,6 @@ async function exportCarnetPDF() {
   doc.setTextColor(26,26,26);doc.setFontSize(14);doc.setFont('helvetica','bold')
   doc.text('Pays '+(p.prenom||'')+' '+(p.nom||''),15,55)
   doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(100,100,100)
-  doc.text('Promotion : '+(p.promo||'—'),15,63)
   doc.text('Date : '+new Date().toLocaleDateString('fr-FR'),15,70)
   // Modules
   let y=85
@@ -1885,17 +1734,25 @@ async function exportCarnetPDF() {
 async function verifierInscription() {
   if(G.admin||G.ancien) return
   const now=new Date().toISOString()
+  // Vérifier si une période admin est active
   const {data:periode}=await db.from('periodes_inscription').select('*').eq('actif',true).lte('date_debut',now).gte('date_fin',now).maybeSingle()
-  if(!periode) return
-  const {data:inscription}=await db.from('inscriptions').select('*').eq('aspirant_id',G.profil.id).eq('periode_id',periode.id).maybeSingle()
-  if(inscription) return
-  afficherFormulaireInscription(periode)
+  if(periode){
+    // Période active : vérifier si l'aspirant est déjà inscrit
+    const {data:inscription}=await db.from('inscriptions').select('*').eq('aspirant_id',G.profil.id).eq('periode_id',periode.id).maybeSingle()
+    if(!inscription) afficherFormulaireInscription(periode)
+    return
+  }
+  // Pas de période active : vérifier si l'aspirant a déjà choisi un module
+  const {data:dejaInscrit}=await db.from('inscriptions').select('id').eq('aspirant_id',G.profil.id).limit(1)
+  if(dejaInscrit?.length) return
+  // 1ère connexion sans période → afficher le choix de module
+  afficherFormulaireInscription({id:'libre',nom:'Bienvenue sur ProgMéca',date_fin:null})
 }
 
 function afficherFormulaireInscription(periode) {
   const modal=document.createElement('div');modal.id='modal-inscription';modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
   modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:480px;overflow:hidden">
-    <div style="background:var(--r);color:#fff;padding:1.2rem 1.4rem"><div style="font-family:var(--fg);font-size:1.2rem;font-weight:700;letter-spacing:-.3px;margin-bottom:3px">Inscriptions ouvertes</div><div style="font-size:.78rem;opacity:.85">${periode.nom} · Fermeture le ${new Date(periode.date_fin).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</div></div>
+    <div style="background:var(--r);color:#fff;padding:1.2rem 1.4rem"><div style="font-family:var(--fg);font-size:1.2rem;font-weight:700;letter-spacing:-.3px;margin-bottom:3px">${periode.id==='libre'?'Choisissez votre module':'Inscriptions ouvertes'}</div><div style="font-size:.78rem;opacity:.85">${periode.nom}${periode.date_fin?' · Fermeture le '+new Date(periode.date_fin).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}):' · Dites-nous sur quel module vous travaillez'}</div></div>
     <div style="padding:1.2rem">
       <p style="font-size:.82rem;color:var(--t2);margin-bottom:1rem">Choisissez le module que vous souhaitez valider ce semestre.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem" id="choix-modules"></div>
@@ -1914,13 +1771,21 @@ function selectModuleInscription(modId){MODULES.forEach(m=>{const lbl=document.g
 
 async function confirmerInscription(periodeId) {
   const radio=document.querySelector('input[name="mod-insc"]:checked');if(!radio){toast('Choisissez un module','err');return}
-  const modId=parseInt(radio.value),ville=document.getElementById('insc-ville').value.trim()
+  const modId=parseInt(radio.value),ville=document.getElementById('insc-ville')?.value?.trim()
   if(!ville){toast('Veuillez renseigner votre ville actuelle','err');return}
   const btn=document.getElementById('btn-inscrire');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i>'
-  const {error}=await db.from('inscriptions').insert({aspirant_id:G.profil.id,module_id:modId,periode_id:periodeId,ville:ville||null})
-  if(error){toast('Erreur : '+error.message,'err');btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Confirmer';return}
-  G.profil.module_inscrit=modId;document.getElementById('modal-inscription')?.remove()
-  toast('Inscription confirmée — '+MODULES.find(m=>m.id===modId)?.nom+' !','ok');loadDashboard()
+  // Sauvegarder module_inscrit dans le profil
+  await db.from('profils').update({module_inscrit:modId}).eq('id',G.profil.id)
+  G.profil.module_inscrit=modId
+  // Enregistrer l'inscription formelle si une période existe
+  if(periodeId&&periodeId!=='libre'){
+    await db.from('inscriptions').insert({aspirant_id:G.profil.id,module_id:modId,periode_id:periodeId,ville:ville||null})
+  } else {
+    // Période libre : stocker quand même pour les stats
+    await db.from('inscriptions').insert({aspirant_id:G.profil.id,module_id:modId,ville:ville||null}).then(()=>{})
+  }
+  document.getElementById('modal-inscription')?.remove()
+  toast('Module enregistré — '+MODULES.find(m=>m.id===modId)?.nom+' !','ok');loadDashboard()
 }
 
 async function creerPeriodeInscription(){const nom=document.getElementById('pi-nom').value.trim(),debut=document.getElementById('pi-debut').value,fin=document.getElementById('pi-fin').value;if(!nom||!debut||!fin){toast('Remplissez tous les champs','err');return};const {data:{user}}=await db.auth.getUser();const {error}=await db.from('periodes_inscription').insert({nom,date_debut:new Date(debut).toISOString(),date_fin:new Date(fin).toISOString(),actif:true,created_by:user.id});if(error){toast('Erreur : '+error.message,'err');return};toast('Période créée !','ok');document.getElementById('pi-nom').value='';chargerPeriodes();chargerInscritsStats()}
@@ -2111,12 +1976,7 @@ function ouvrirMonProfil() {
       </div>
       <div style="margin-bottom:1.2rem"><label class="field-label">Description / expérience</label><textarea class="ftextarea" id="mp-ref" rows="2" placeholder="Ex : 15 ans en hydraulique industrielle...">${p.reference||''}</textarea></div>
       
-      <div style="border-top:1px solid var(--bord);padding-top:1.2rem;margin-bottom:1.2rem">
-        <div style="font-family:var(--fg);font-size:.95rem;font-weight:700;margin-bottom:.3rem">Mini-stages proposés</div>
-        <p style="font-size:.78rem;color:var(--t2);margin-bottom:.8rem">Stages du week-end que vous proposez aux aspirants.</p>
-        <div id="mp-stages-list"></div>
-        <button class="btn btn-ghost btn-full" style="border-style:dashed" onclick="ajouterStageFormProfil()"><i class="ti ti-plus"></i> Ajouter un mini-stage</button>
-      </div>
+
       <button class="btn btn-dark btn-full" id="btn-save-profil" onclick="sauvegarderMonProfil()"><i class="ti ti-check"></i> Enregistrer</button>
     </div>
   </div>`
@@ -2344,7 +2204,7 @@ async function sauvegarderProfilAncien() {
   G.profil.ville_sedentaire=ville;G.profil.profil_complet=true;G.profil.specialites=specs
   document.getElementById('modal-questionnaire-ancien')?.remove()
   toast('Profil enregistré !','ok')
-  ;['n-carnet','n-revision'].forEach(id=>hi(id))
+  ;['n-carnet'].forEach(id=>hi(id))
   nav('dashboard-ancien')
 }
 
@@ -2398,33 +2258,27 @@ function filtrerComptes(role) {
     else if(isJamais) btn.style.cssText=''
   })
   const now=new Date()
-  let filtres=role==='jamais'?_tousComptes.filter(p=>!p.derniere_connexion):role==='tous'?_tousComptes:_tousComptes.filter(p=>p.role===role)
+  let filtres=role==='tous'?_tousComptes:_tousComptes.filter(p=>p.role===role)
   const el=$('comptes-body');if(!el) return
   if(!filtres.length){el.innerHTML='<p style="font-size:.82rem;color:var(--t3);padding:.5rem 0">Aucun compte dans cette catégorie.</p>';return}
   const ROLES={aspirant:{label:'Aspirant',badge:'badge-g'},ancien:{label:'Ancien',badge:'badge-ancien'},admin:{label:'Admin',badge:'badge-r'}}
-  const jamaisCount=_tousComptes.filter(p=>!p.derniere_connexion).length
+  const jamaisCount=0
   el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;font-size:.75rem;color:var(--t3);padding-bottom:.6rem;border-bottom:1px solid var(--bord)">
     <span style="font-weight:600">${filtres.length} compte${filtres.length>1?'s':''}</span>
     <span style="color:${jamaisCount?'var(--r)':'var(--t3)'};font-weight:600">${jamaisCount} jamais connecté${jamaisCount>1?'s':''}</span>
   </div>`+filtres.map(p=>{
     const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
     const r=ROLES[p.role]||{label:p.role||'—',badge:'badge-g'}
-    const jamais=!p.derniere_connexion
-    const age=p.derniere_connexion?Math.floor((now-new Date(p.derniere_connexion))/86400000):null
-    const ageStr=age===null?null:age===0?"Aujourd'hui":age===1?'Hier':'Il y a '+age+' j'
     const created=p.created_at?new Date(p.created_at).toLocaleDateString('fr-FR'):''
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord)${jamais?';background:var(--rl);border-radius:10px;margin-bottom:4px;padding:9px 10px':''}">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord);cursor:pointer" onclick="ouvrirFicheCompte('${p.id}','${p.role}')" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background=''">
       <div style="width:36px;height:36px;border-radius:10px;background:${jamais?'var(--r)':'var(--bg)'};display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.78rem;font-weight:700;color:${jamais?'#fff':'var(--t2)'};flex-shrink:0">${ini}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:.875rem;font-weight:700">${p.prenom||''} ${p.nom||''}</div>
-        <div style="font-size:.7rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.email||'—'}${p.promo?' · '+p.promo:''}</div>
+        <div style="font-size:.7rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.email||'—'}</div>
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <span class="badge ${r.badge}" style="display:block;margin-bottom:3px">${r.label}</span>
-        <div style="font-size:.68rem;color:${jamais?'var(--r2)':'var(--t3)'}">
-          ${jamais?'⚠ Jamais connecté':ageStr||'—'}
-        </div>
-        <div style="font-size:.65rem;color:var(--t3)">Inscrit le ${created}</div>
+        <span class="badge ${r.badge}">${r.label}</span>
+        <div style="font-size:.65rem;color:var(--t3);margin-top:3px">Inscrit le ${created}</div>
       </div>
     </div>`
   }).join('')
@@ -2467,105 +2321,6 @@ async function rechercheGlobale(q) {
   el.innerHTML='';el.appendChild(wrap)
 }
 
-// ─── MESSAGERIE ─────────────────────────────────────────────────────────────
-let _msgDestinataire=null, _msgRealtimeCh=null
-
-async function chargerMessages() {
-  const el=$('msg-conversations');if(!el) return
-  // Charger toutes les conversations (personnes avec qui j'ai échangé)
-  const {data:sent}=await db.from('messages').select('to_id,profils!messages_to_id_fkey(prenom,nom,role)').eq('from_id',G.profil.id)
-  const {data:recv}=await db.from('messages').select('from_id,profils!messages_from_id_fkey(prenom,nom,role)').eq('to_id',G.profil.id)
-  // Liste de contacts (Anciens si aspirant, Aspirants si Ancien/Admin)
-  let role_cible=G.admin||G.ancien?'aspirant':'ancien'
-  const {data:contacts}=await db.from('profils').select('id,prenom,nom,role').in('role',[role_cible,'admin','ancien']).neq('id',G.profil.id).order('nom')
-  
-  const {data:nonLus}=await db.from('messages').select('from_id').eq('to_id',G.profil.id).eq('lu',false)
-  const nlMap=(nonLus||[]).reduce((a,m)=>{a[m.from_id]=(a[m.from_id]||0)+1;return a},{})
-  const badge=$('notif-badge')
-  const total=Object.values(nlMap).reduce((a,v)=>a+v,0)
-  if(badge){badge.style.display=total?'flex':'none';badge.textContent=total}
-
-  el.innerHTML=(contacts||[]).map(c=>{
-    const ini=[(c.prenom||'')[0],(c.nom||'')[0]].join('').toUpperCase()||'?'
-    const nl=nlMap[c.id]||0
-    const isAncien=c.role==='ancien'||c.role==='admin'
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;cursor:pointer;transition:background .12s" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background=''" onclick="ouvrirConversation('${c.id}','${(c.prenom||'')} ${(c.nom||'')}','${c.role}')">
-      <div style="width:36px;height:36px;border-radius:10px;background:${isAncien?'#EEEDFE':'var(--bl)'};display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.78rem;font-weight:700;color:${isAncien?'#3C3489':'var(--b)'};flex-shrink:0">${ini}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.875rem;font-weight:700">${isAncien?'Compagnon ':'Pays '}${c.nom||''} ${c.prenom||''}</div>
-        <div style="font-size:.7rem;color:var(--t3)">${c.role==='admin'?'Admin':c.role==='ancien'?'Ancien':'Aspirant'}</div>
-      </div>
-      ${nl?`<span style="background:var(--r);color:#fff;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:20px;font-family:var(--fg)">${nl}</span>`:''}
-    </div>`
-  }).join('')||'<p style="font-size:.82rem;color:var(--t3);padding:.5rem">Aucun contact disponible.</p>'
-  
-  // Realtime
-  if(_msgRealtimeCh) db.removeChannel(_msgRealtimeCh)
-  _msgRealtimeCh=db.channel('messages-'+G.profil.id)
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'to_id=eq.'+G.profil.id},()=>{
-      chargerMessages()
-      if(_msgDestinataire) ouvrirConversation(_msgDestinataire.id,_msgDestinataire.nom,_msgDestinataire.role,true)
-    }).subscribe()
-}
-
-async function ouvrirConversation(userId, nom, role, silent=false) {
-  _msgDestinataire={id:userId,nom,role}
-  const head=$('msg-chat-head'),body=$('msg-chat-body'),zone=$('msg-input-zone')
-  if(!head||!body) return
-  const isAncien=role==='ancien'||role==='admin'
-  head.innerHTML=`<div style="display:flex;align-items:center;gap:8px">
-    <div style="width:32px;height:32px;border-radius:8px;background:${isAncien?'#EEEDFE':'var(--bl)'};display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:${isAncien?'#3C3489':'var(--b)'};">${nom.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase()}</div>
-    <span class="card-title">${isAncien?'Compagnon ':'Pays '}${nom}</span>
-  </div>`
-  if(zone) zone.style.display='flex'
-  if(!silent) body.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.2rem;color:var(--r)"></i></div>'
-  const {data}=await db.from('messages').select('*').or('and(from_id.eq.'+G.profil.id+',to_id.eq.'+userId+'),and(from_id.eq.'+userId+',to_id.eq.'+G.profil.id+')').order('created_at')
-  // Marquer comme lus
-  await db.from('messages').update({lu:true}).eq('from_id',userId).eq('to_id',G.profil.id).eq('lu',false)
-  body.innerHTML=(data||[]).length?(data||[]).map(m=>{
-    const moi=m.from_id===G.profil.id
-    const heure=new Date(m.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
-    const date=new Date(m.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})
-    return `<div style="display:flex;justify-content:${moi?'flex-end':'flex-start'};margin-bottom:6px">
-      <div style="max-width:75%;padding:8px 12px;border-radius:${moi?'14px 4px 14px 14px':'4px 14px 14px 14px'};background:${moi?'var(--r)':'var(--bg)'};color:${moi?'#fff':'var(--t1)'}">
-        <div style="font-size:.875rem;line-height:1.5">${m.contenu}</div>
-        <div style="font-size:.62rem;opacity:.7;text-align:right;margin-top:3px">${date} ${heure}</div>
-      </div>
-    </div>`
-  }).join(''):'<p style="font-size:.82rem;color:var(--t3);text-align:center;padding:2rem">Démarrez la conversation !</p>'
-  body.scrollTop=body.scrollHeight
-  chargerMessages()
-}
-
-async function envoyerMessage() {
-  if(!_msgDestinataire) return
-  const input=$('msg-input');if(!input) return
-  const contenu=input.value.trim();if(!contenu) return
-  input.value='';input.disabled=true
-  await db.from('messages').insert({from_id:G.profil.id,to_id:_msgDestinataire.id,contenu})
-  input.disabled=false;input.focus()
-  ouvrirConversation(_msgDestinataire.id,_msgDestinataire.nom,_msgDestinataire.role,false)
-}
-
-async function toggleNotifs() {
-  const panel=$('notif-panel');if(!panel) return
-  panel.style.display=panel.style.display==='none'?'block':'none'
-  if(panel.style.display==='none') return
-  panel.innerHTML='<div style="font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);padding:4px 8px 6px">Messages non lus</div>'
-  const {data}=await db.from('messages').select('*,profils!messages_from_id_fkey(prenom,nom)').eq('to_id',G.profil.id).eq('lu',false).order('created_at',{ascending:false}).limit(10)
-  if(!data?.length){panel.innerHTML+='<p style="font-size:.82rem;color:var(--t3);padding:8px">Aucun nouveau message</p>';return}
-  data.forEach(m=>{
-    const p=m.profils||{};const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
-    const div=document.createElement('div')
-    div.style.cssText='display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer'
-    div.onmouseenter=()=>div.style.background='var(--bg)'
-    div.onmouseleave=()=>div.style.background=''
-    div.onclick=()=>{panel.style.display='none';nav('messages');setTimeout(()=>ouvrirConversation(m.from_id,(p.prenom||'')+' '+(p.nom||''),'aspirant'),300)}
-    div.innerHTML=`<div style="width:30px;height:30px;border-radius:8px;background:var(--bl);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--b);flex-shrink:0">${ini}</div><div><div style="font-size:.82rem;font-weight:600">${p.prenom||''} ${p.nom||''}</div><div style="font-size:.72rem;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${m.contenu}</div></div>`
-    panel.appendChild(div)
-  })
-}
-document.addEventListener('click',e=>{const p=$('notif-panel');if(p&&!p.contains(e.target)&&e.target.id!=='btn-notif'&&!$('btn-notif')?.contains(e.target))p.style.display='none'})
 
 // ─── STATISTIQUES ADMIN ───────────────────────────────────────────────────
 async function chargerStatsAdmin() {
@@ -2640,39 +2395,6 @@ async function chargerStatsAdmin() {
 }
 
 // ─── CALENDRIER MINI-STAGES ───────────────────────────────────────────────
-async function chargerCalendrier() {
-  const el=$('calendrier-body');if(!el) return
-  const [{data:stages},{data:anciens}]=await Promise.all([
-    db.from('mini_stages').select('*').eq('actif',true).order('created_at'),
-    db.from('profils').select('id,prenom,nom,ville_sedentaire').in('role',['ancien','admin']).eq('profil_complet',true)
-  ])
-  const anMap=(anciens||[]).reduce((a,p)=>{a[p.id]=p;return a},{})
-  const byModule=MODULES.map(m=>({...m,stages:(stages||[]).filter(s=>s.module_id===m.id)}))
-  el.innerHTML=byModule.filter(m=>m.stages.length).map(m=>`
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-head">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="width:34px;height:34px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic}"></i></div>
-          <span class="card-title">${m.nom}</span>
-          <span class="badge badge-g">${m.stages.length} stage${m.stages.length>1?'s':''}</span>
-        </div>
-      </div>
-      <div class="card-body">
-        ${m.stages.map(s=>{const a=anMap[s.ancien_id]||{};return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--bord)">
-          <div style="width:44px;height:44px;border-radius:12px;background:#EEEDFE;display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.78rem;font-weight:700;color:#3C3489;flex-shrink:0">${[(a.prenom||'')[0],(a.nom||'')[0]].join('').toUpperCase()||'?'}</div>
-          <div style="flex:1">
-            <div style="font-size:.875rem;font-weight:700">Compagnon ${a.nom||'—'}</div>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">
-              ${a.ville_sedentaire?`<span style="font-size:.72rem;color:var(--t3)"><i class="ti ti-map-pin" style="font-size:.82rem;color:var(--amber)"></i> ${a.ville_sedentaire}</span>`:''}
-              ${s.periode?`<span class="badge badge-a"><i class="ti ti-calendar" style="font-size:.75rem"></i> ${s.periode}</span>`:''}
-            </div>
-            ${s.description?`<p style="font-size:.78rem;color:var(--t2);margin-top:5px;line-height:1.5">${s.description}</p>`:''}
-          </div>
-          <button class="btn btn-ghost btn-sm" onclick="contacterAncien('${s.ancien_id}','${a.prenom||''} ${a.nom||''}')"><i class="ti ti-phone"></i> Contacter</button>
-        </div>`}).join('')}
-      </div>
-    </div>`).join('')||'<p style="font-size:.82rem;color:var(--t3)">Aucun mini-stage proposé pour le moment.</p>'
-}
 
 // ─── DÉMARRAGE ─────────────────────────────────────────────────────────────
 function detectUrlParams(){
@@ -2681,7 +2403,7 @@ function detectUrlParams(){
     authMode('register')
     const sel=document.getElementById('r-role')
     if(sel) sel.value='ancien'
-    hi('f-role');hi('f-promo')
+    hi('f-role')
     const banner=document.getElementById('banner-ancien')
     if(banner) banner.classList.remove('hidden')
   } else if(params.get('admin')){
