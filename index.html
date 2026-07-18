@@ -1173,20 +1173,100 @@ function onglet(o) {
 }
 
 async function renderCours(modId) {
-  const {data:res}=await db.from('ressources').select('*, dossier:dossier_id(nom)').eq('module_id',modId).order('ordre')
-  const r=res||[]
+  const {data:res}=await db.from('ressources').select('*, dossier:dossier_id(id,nom)').eq('module_id',modId).order('ordre')
+  const {data:dossiers}=await db.from('dossiers').select('*').eq('module_id',modId).order('nom')
+  const r=res||[], d=dossiers||[]
   const TYPO={pdf:{bg:'#FCEBEB',ic:'#E24B4A',icon:'ti-file-type-pdf',lbl:'PDF'},doc:{bg:'#E6F1FB',ic:'#185FA5',icon:'ti-file-type-doc',lbl:'Word'},cad:{bg:'#EAF3DE',ic:'#3B6D11',icon:'ti-vector',lbl:'CAO'}}
-  const row=x=>{const ty=TYPO[x.type]||TYPO.pdf;return `<div class="res-row" onclick="ouvrirRes('${x.id}','${x.storage_path||''}','${x.url_externe||''}')">
-    <div class="res-ico" style="background:${ty.bg}"><i class="ti ${ty.icon}" style="color:${ty.ic}"></i></div>
-    <div style="flex:1;min-width:0"><div class="res-name">${x.titre}</div>
-    <div class="res-meta">${x.dossier?.nom?x.dossier.nom+' · ':''}${ty.lbl}${x.taille?' · '+x.taille:''}</div></div>
-    <i class="ti ti-arrow-right" style="font-size:.875rem;color:var(--t3);flex-shrink:0"></i>
-  </div>`}
-  if(!r.length){$('o-cours').innerHTML='<p style="font-size:.82rem;color:var(--t3)">Aucune ressource disponible.</p>';return}
-  let h='';const d=[...new Set(r.filter(x=>x.dossier_id).map(x=>x.dossier?.nom).filter(Boolean))]
-  d.forEach(dn=>{h+=`<div class="section-label" style="margin-top:.8rem"><i class="ti ti-folder" style="margin-right:4px;color:var(--amber)"></i>${dn}</div>`;h+=r.filter(x=>x.dossier?.nom===dn).map(row).join('')})
-  const sans=r.filter(x=>!x.dossier_id);if(sans.length){if(d.length)h+='<div class="divider"></div>';h+=sans.map(row).join('')}
-  $('o-cours').innerHTML=h
+  const DOSSIER_ICONS={'Composants':{icon:'ti-components',bg:'#E6F1FB',ic:'#185FA5'},
+    'Schématisation':{icon:'ti-vector',bg:'#EAF3DE',ic:'#3B6D11'},
+    'Calculs':{icon:'ti-calculator',bg:'#FAEEDA',ic:'#854F0B'},
+    'Dépannage':{icon:'ti-tool',bg:'#FCEBEB',ic:'#E24B4A'}}
+
+  if(!r.length && !d.length){$('o-cours').innerHTML='<p style="font-size:.82rem;color:var(--t3)">Aucune ressource disponible.</p>';return}
+
+  // Vue dossiers (accueil)
+  function showDossiers() {
+    const hasDossiers=d.length>0
+    if(!hasDossiers){showToutes();return}
+    let h='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:1rem">'
+    d.forEach(dos=>{
+      const nb=r.filter(x=>x.dossier_id===dos.id).length
+      const ico=DOSSIER_ICONS[dos.nom]||{icon:'ti-folder',bg:'var(--bg)',ic:'var(--amber)'}
+      h+=`<div onclick="showDossierContenu('${dos.id}','${dos.nom}')" style="background:var(--card);border:1px solid var(--bord);border-radius:14px;padding:1.2rem;cursor:pointer;transition:box-shadow .15s;display:flex;flex-direction:column;gap:10px" onmouseenter="this.style.boxShadow='0 4px 20px rgba(0,0,0,.1)'" onmouseleave="this.style.boxShadow=''">
+        <div style="width:48px;height:48px;border-radius:14px;background:${ico.bg};display:flex;align-items:center;justify-content:center">
+          <i class="ti ${ico.icon}" style="color:${ico.ic};font-size:1.4rem"></i>
+        </div>
+        <div>
+          <div style="font-family:var(--fg);font-size:1rem;font-weight:700;letter-spacing:-.2px;margin-bottom:4px">${dos.nom}</div>
+          <div style="font-size:.72rem;color:var(--t3);font-weight:600">${nb} ressource${nb>1?'s':''}</div>
+        </div>
+        <div style="margin-top:auto;display:flex;align-items:center;justify-content:flex-end">
+          <i class="ti ti-arrow-right" style="color:var(--t3);font-size:.875rem"></i>
+        </div>
+      </div>`
+    })
+    // Dossier "Sans catégorie" si des ressources n'ont pas de dossier
+    const sans=r.filter(x=>!x.dossier_id)
+    if(sans.length){
+      h+=`<div onclick="showDossierContenu(null,'Autres')" style="background:var(--card);border:1px solid var(--bord);border-radius:14px;padding:1.2rem;cursor:pointer;display:flex;flex-direction:column;gap:10px" onmouseenter="this.style.boxShadow='0 4px 20px rgba(0,0,0,.1)'" onmouseleave="this.style.boxShadow=''">
+        <div style="width:48px;height:48px;border-radius:14px;background:var(--bg);display:flex;align-items:center;justify-content:center">
+          <i class="ti ti-folder" style="color:var(--amber);font-size:1.4rem"></i>
+        </div>
+        <div>
+          <div style="font-family:var(--fg);font-size:1rem;font-weight:700;margin-bottom:4px">Autres</div>
+          <div style="font-size:.72rem;color:var(--t3);font-weight:600">${sans.length} ressource${sans.length>1?'s':''}</div>
+        </div>
+        <div style="margin-top:auto;display:flex;align-items:center;justify-content:flex-end"><i class="ti ti-arrow-right" style="color:var(--t3)"></i></div>
+      </div>`
+    }
+    h+='</div>'
+    $('o-cours').innerHTML=h
+  }
+
+  // Vue contenu d'un dossier
+  function showDossierContenu(dossierId, dosNom) {
+    const ressourcesDos=dossierId?r.filter(x=>x.dossier_id===dossierId):r.filter(x=>!x.dossier_id)
+    const ico=DOSSIER_ICONS[dosNom]||{icon:'ti-folder',bg:'var(--bg)',ic:'var(--amber)'}
+    let h=`<div style="margin-bottom:1rem">
+      <button onclick="showDossiers()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--t2);font-weight:600;padding:0;font-family:var(--ff)">
+        <i class="ti ti-arrow-left"></i> Retour
+      </button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.2rem;padding-bottom:1rem;border-bottom:1px solid var(--bord)">
+      <div style="width:44px;height:44px;border-radius:14px;background:${ico.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="ti ${ico.icon}" style="color:${ico.ic};font-size:1.3rem"></i>
+      </div>
+      <div>
+        <div style="font-family:var(--fg);font-size:1.1rem;font-weight:700;letter-spacing:-.3px">${dosNom}</div>
+        <div style="font-size:.72rem;color:var(--t3)">${ressourcesDos.length} ressource${ressourcesDos.length>1?'s':''}</div>
+      </div>
+    </div>`
+    if(!ressourcesDos.length){h+='<p style="font-size:.82rem;color:var(--t3)">Aucune ressource dans ce dossier.</p>'}
+    else{
+      ressourcesDos.forEach(x=>{
+        const ty=TYPO[x.type]||TYPO.pdf
+        h+=`<div class="res-row" onclick="ouvrirRes('${x.id}','${x.storage_path||''}','${x.url_externe||''}')">
+          <div class="res-ico" style="background:${ty.bg}"><i class="ti ${ty.icon}" style="color:${ty.ic}"></i></div>
+          <div style="flex:1;min-width:0">
+            <div class="res-name">${x.titre}</div>
+            <div class="res-meta">${ty.lbl}${x.taille?' · '+x.taille:''}</div>
+          </div>
+          <i class="ti ti-arrow-right" style="font-size:.875rem;color:var(--t3);flex-shrink:0"></i>
+        </div>`
+      })
+    }
+    $('o-cours').innerHTML=h
+  }
+
+  function showToutes(){
+    const row=x=>{const ty=TYPO[x.type]||TYPO.pdf;return `<div class="res-row" onclick="ouvrirRes('${x.id}','${x.storage_path||''}','${x.url_externe||''}')"><div class="res-ico" style="background:${ty.bg}"><i class="ti ${ty.icon}" style="color:${ty.ic}"></i></div><div style="flex:1;min-width:0"><div class="res-name">${x.titre}</div><div class="res-meta">${ty.lbl}</div></div><i class="ti ti-arrow-right" style="color:var(--t3);flex-shrink:0"></i></div>`}
+    $('o-cours').innerHTML=r.map(row).join('')||'<p style="font-size:.82rem;color:var(--t3)">Aucune ressource.</p>'
+  }
+
+  // Rendre les fonctions accessibles depuis le HTML
+  window.showDossiers=showDossiers
+  window.showDossierContenu=showDossierContenu
+  showDossiers()
 }
 
 async function ouvrirRes(id,path,url) {
