@@ -8,10 +8,172 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>ProgMéca</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231A1A1A'/><text x='16' y='23' text-anchor='middle' font-family='system-ui,sans-serif' font-weight='700' font-size='20' fill='%23E24B4A'>P</text></svg>"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+// ─── GUIDE UTILISATEUR ────────────────────────────────────────────────────────
+const GUIDES = {
+  aspirant: {
+    titre: "Guide aspirant",
+    couleur: 'var(--b)', fond: 'var(--bl)',
+    etapes: [
+      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Votre accueil. Retrouvez vos modules, vos dernieres activites et les annonces de votre formateur."},
+      {icon:'ti-books', titre:'Modules', texte:"4 modules : Thermique, Hydraulique, Conception & Construction, Electrique. Chaque module contient des cours et des evaluations."},
+      {icon:'ti-file', titre:'Cours & ressources', texte:"Onglet Cours : PDFs, plans CAO et documents mis a disposition. Cliquez pour ouvrir ou telecharger."},
+      {icon:'ti-help', titre:'Exercices et examens', texte:"Les exercices sont repassables librement. Les examens dates sont reserves aux aspirants inscrits dans ce module."},
+      {icon:'ti-users-group', titre:'Anciens', texte:"Retrouvez les Compagnons sedentaires, leurs specialites et contactez-les pour organiser un mini-stage."},
+      {icon:'ti-notebook', titre:'Carnet de bord', texte:"Votre progression sur le Tour de France. Une fois un module valide, renseignez votre ville. Exportez en PDF."},
+    ]
+  },
+  admin: {
+    titre: "Guide administrateur",
+    couleur: 'var(--r)', fond: 'var(--rl)',
+    etapes: [
+      {icon:'ti-help-circle', titre:'Gerer les quiz', texte:"Creez des exercices (repassables) ou des examens (avec creneau horaire). Questions QCM, Vrai/Faux ou reponse libre."},
+      {icon:'ti-upload', titre:'Ressources', texte:"Uploadez des PDFs, Word ou CAO par module. Organisez en dossiers."},
+      {icon:'ti-speakerphone', titre:'Annonces', texte:"Publiez des annonces visibles par tous les aspirants. Choisissez duree et niveau."},
+      {icon:'ti-calendar-event', titre:'Inscriptions', texte:"Ouvrez une periode pour un module. Les aspirants non inscrits ne peuvent pas passer les examens finaux."},
+      {icon:'ti-users', titre:'Aspirants', texte:"Progression de chaque aspirant, deblocage de tentatives et correction des reponses libres."},
+      {icon:'ti-list-check', titre:'Tous les comptes', texte:"Vue globale. Filtrez par role et cliquez pour voir les coordonnees."},
+      {icon:'ti-chart-bar', titre:'Statistiques', texte:"Taux de validation et scores moyens par module."},
+      {icon:'ti-link', titre:'Inviter', texte:"Lien admin (7 jours) depuis la page Aspirants, ou lien ?ancien=1 pour les Compagnons sedentaires."},
+    ]
+  },
+  ancien: {
+    titre: "Guide Compagnon Ancien",
+    couleur: '#3C3489', fond: '#EEEDFE',
+    etapes: [
+      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Progression de tous les aspirants. Cliquez sur une ligne pour le detail complet."},
+      {icon:'ti-books', titre:'Modules', texte:"Consultez le contenu des 4 modules pour connaitre le programme suivi par les aspirants."},
+      {icon:'ti-users-group', titre:'Annuaire', texte:"Les aspirants vous trouvent ici pour organiser des mini-stages. Votre profil doit etre complet."},
+      {icon:'ti-star', titre:'Votre profil', texte:"Cliquez sur votre avatar en bas de la barre laterale pour modifier vos specialites et coordonnees."},
+    ]
+  }
+}
+
+function ouvrirGuide() {
+  const role = G.admin ? 'admin' : G.ancien ? 'ancien' : 'aspirant'
+  const guide = GUIDES[role]
+  if (!guide) return
+  document.getElementById('modal-guide')?.remove()
+  const modal = document.createElement('div')
+  modal.id = 'modal-guide'
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto'
+  modal.onclick = function(e){ if(e.target===modal) modal.remove() }
+  const etapesHtml = guide.etapes.map((e,i) => `
+    <div style="display:flex;gap:14px;padding:14px 0;border-bottom:${i<guide.etapes.length-1?'1px solid var(--bord)':'none'}">
+      <div style="width:40px;height:40px;border-radius:12px;background:${guide.fond};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+        <i class="ti ${e.icon}" style="color:${guide.couleur};font-size:1.1rem"></i>
+      </div>
+      <div>
+        <div style="font-family:var(--fg);font-size:.95rem;font-weight:700;letter-spacing:-.2px;margin-bottom:4px">${e.titre}</div>
+        <p style="font-size:.82rem;color:var(--t2);line-height:1.6">${e.texte}</p>
+      </div>
+    </div>`).join('')
+  modal.innerHTML = `<div style="background:var(--card);border-radius:20px;width:100%;max-width:540px;margin:auto;overflow:hidden">
+    <div style="background:${guide.fond};padding:1.4rem;border-bottom:1px solid var(--bord)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:48px;height:48px;border-radius:14px;background:${guide.couleur};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ti-help-circle" style="color:#fff;font-size:1.4rem"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-family:var(--fg);font-size:1.2rem;font-weight:700;color:${guide.couleur}">${guide.titre}</div>
+          <div style="font-size:.75rem;color:var(--t3);margin-top:2px">${guide.etapes.length} sections</div>
+        </div>
+        <button onclick="document.getElementById('modal-guide').remove()" style="background:rgba(0,0,0,.08);border:none;border-radius:10px;padding:7px 10px;cursor:pointer;font-size:1rem;color:var(--t2)"><i class="ti ti-x"></i></button>
+      </div>
+    </div>
+    <div style="padding:0 1.4rem;max-height:70vh;overflow-y:auto">${etapesHtml}</div>
+    <div style="padding:1rem 1.4rem;border-top:1px solid var(--bord);text-align:center">
+      <button class="btn btn-dark btn-full" onclick="document.getElementById('modal-guide').remove()">Compris !</button>
+    </div>
+  </div>`
+  document.body.appendChild(modal)
+}
+
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js">
+// ─── GUIDE UTILISATEUR ────────────────────────────────────────────────────────
+const GUIDES = {
+  aspirant: {
+    titre: "Guide aspirant",
+    couleur: 'var(--b)', fond: 'var(--bl)',
+    etapes: [
+      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Votre accueil. Retrouvez vos modules, vos dernieres activites et les annonces de votre formateur."},
+      {icon:'ti-books', titre:'Modules', texte:"4 modules : Thermique, Hydraulique, Conception & Construction, Electrique. Chaque module contient des cours et des evaluations."},
+      {icon:'ti-file', titre:'Cours & ressources', texte:"Onglet Cours : PDFs, plans CAO et documents mis a disposition. Cliquez pour ouvrir ou telecharger."},
+      {icon:'ti-help', titre:'Exercices et examens', texte:"Les exercices sont repassables librement. Les examens dates sont reserves aux aspirants inscrits dans ce module."},
+      {icon:'ti-users-group', titre:'Anciens', texte:"Retrouvez les Compagnons sedentaires, leurs specialites et contactez-les pour organiser un mini-stage."},
+      {icon:'ti-notebook', titre:'Carnet de bord', texte:"Votre progression sur le Tour de France. Une fois un module valide, renseignez votre ville. Exportez en PDF."},
+    ]
+  },
+  admin: {
+    titre: "Guide administrateur",
+    couleur: 'var(--r)', fond: 'var(--rl)',
+    etapes: [
+      {icon:'ti-help-circle', titre:'Gerer les quiz', texte:"Creez des exercices (repassables) ou des examens (avec creneau horaire). Questions QCM, Vrai/Faux ou reponse libre."},
+      {icon:'ti-upload', titre:'Ressources', texte:"Uploadez des PDFs, Word ou CAO par module. Organisez en dossiers."},
+      {icon:'ti-speakerphone', titre:'Annonces', texte:"Publiez des annonces visibles par tous les aspirants. Choisissez duree et niveau."},
+      {icon:'ti-calendar-event', titre:'Inscriptions', texte:"Ouvrez une periode pour un module. Les aspirants non inscrits ne peuvent pas passer les examens finaux."},
+      {icon:'ti-users', titre:'Aspirants', texte:"Progression de chaque aspirant, deblocage de tentatives et correction des reponses libres."},
+      {icon:'ti-list-check', titre:'Tous les comptes', texte:"Vue globale. Filtrez par role et cliquez pour voir les coordonnees."},
+      {icon:'ti-chart-bar', titre:'Statistiques', texte:"Taux de validation et scores moyens par module."},
+      {icon:'ti-link', titre:'Inviter', texte:"Lien admin (7 jours) depuis la page Aspirants, ou lien ?ancien=1 pour les Compagnons sedentaires."},
+    ]
+  },
+  ancien: {
+    titre: "Guide Compagnon Ancien",
+    couleur: '#3C3489', fond: '#EEEDFE',
+    etapes: [
+      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Progression de tous les aspirants. Cliquez sur une ligne pour le detail complet."},
+      {icon:'ti-books', titre:'Modules', texte:"Consultez le contenu des 4 modules pour connaitre le programme suivi par les aspirants."},
+      {icon:'ti-users-group', titre:'Annuaire', texte:"Les aspirants vous trouvent ici pour organiser des mini-stages. Votre profil doit etre complet."},
+      {icon:'ti-star', titre:'Votre profil', texte:"Cliquez sur votre avatar en bas de la barre laterale pour modifier vos specialites et coordonnees."},
+    ]
+  }
+}
+
+function ouvrirGuide() {
+  const role = G.admin ? 'admin' : G.ancien ? 'ancien' : 'aspirant'
+  const guide = GUIDES[role]
+  if (!guide) return
+  document.getElementById('modal-guide')?.remove()
+  const modal = document.createElement('div')
+  modal.id = 'modal-guide'
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto'
+  modal.onclick = function(e){ if(e.target===modal) modal.remove() }
+  const etapesHtml = guide.etapes.map((e,i) => `
+    <div style="display:flex;gap:14px;padding:14px 0;border-bottom:${i<guide.etapes.length-1?'1px solid var(--bord)':'none'}">
+      <div style="width:40px;height:40px;border-radius:12px;background:${guide.fond};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+        <i class="ti ${e.icon}" style="color:${guide.couleur};font-size:1.1rem"></i>
+      </div>
+      <div>
+        <div style="font-family:var(--fg);font-size:.95rem;font-weight:700;letter-spacing:-.2px;margin-bottom:4px">${e.titre}</div>
+        <p style="font-size:.82rem;color:var(--t2);line-height:1.6">${e.texte}</p>
+      </div>
+    </div>`).join('')
+  modal.innerHTML = `<div style="background:var(--card);border-radius:20px;width:100%;max-width:540px;margin:auto;overflow:hidden">
+    <div style="background:${guide.fond};padding:1.4rem;border-bottom:1px solid var(--bord)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:48px;height:48px;border-radius:14px;background:${guide.couleur};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ti-help-circle" style="color:#fff;font-size:1.4rem"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-family:var(--fg);font-size:1.2rem;font-weight:700;color:${guide.couleur}">${guide.titre}</div>
+          <div style="font-size:.75rem;color:var(--t3);margin-top:2px">${guide.etapes.length} sections</div>
+        </div>
+        <button onclick="document.getElementById('modal-guide').remove()" style="background:rgba(0,0,0,.08);border:none;border-radius:10px;padding:7px 10px;cursor:pointer;font-size:1rem;color:var(--t2)"><i class="ti ti-x"></i></button>
+      </div>
+    </div>
+    <div style="padding:0 1.4rem;max-height:70vh;overflow-y:auto">${etapesHtml}</div>
+    <div style="padding:1rem 1.4rem;border-top:1px solid var(--bord);text-align:center">
+      <button class="btn btn-dark btn-full" onclick="document.getElementById('modal-guide').remove()">Compris !</button>
+    </div>
+  </div>`
+  document.body.appendChild(modal)
+}
+
+</script>
 <style>
 :root {
   --r:#E24B4A; --r2:#A32D2D; --rl:#FCEBEB;
@@ -282,7 +444,7 @@ button,input,select,textarea{font-family:var(--ff)}
       <div style="position:relative" id="search-wrap">
         <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--bord2);border-radius:10px;padding:6px 12px;cursor:text" onclick="document.getElementById('search-input').focus()">
           <i class="ti ti-search" style="font-size:.9rem;color:var(--t3)"></i>
-          <input id="search-input" placeholder="Rechercher…" style="border:none;background:none;outline:none;font-size:.82rem;width:140px;font-family:var(--ff);color:var(--t1)" oninput="rechercheGlobale(this.value)" onfocus="sh('search-results')" onblur="setTimeout(()=>hi('search-results'),200)"/>
+          <input id="search-input" placeholder="Rechercher…" style="border:none;background:none;outline:none;font-size:.82rem;width:140px;font-family:var(--ff);color:var(--t1)" oninput="rechercheGlobale(this.value)" onfocus="sh('search-results')" onblur="setTimeout(()=>hi('search-results'),300)"/>
         </div>
         <div id="search-results" class="hidden" style="position:absolute;top:calc(100% + 6px);right:0;width:320px;background:var(--card);border:1px solid var(--bord2);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:999;max-height:400px;overflow-y:auto;padding:8px"></div>
       </div>
@@ -2309,7 +2471,7 @@ async function rechercheGlobale(q) {
     d.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer'
     d.onmouseenter=()=>d.style.background='var(--bg)'
     d.onmouseleave=()=>d.style.background=''
-    d.onclick=()=>{fn();hi('search-results');$('search-input').value=''}
+    d.onmousedown=(e)=>{e.preventDefault();fn();hi('search-results');$('search-input').value='';$('search-input').blur()}
     d.innerHTML='<div style="width:28px;height:28px;border-radius:7px;background:'+bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+ico+'" style="color:'+ic+';font-size:.82rem"></i></div><div style="flex:1;min-width:0"><div style="font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+titre+'</div><div style="font-size:.68rem;color:var(--t3)">'+sous+'</div></div>'
     return d
   }
@@ -2418,6 +2580,87 @@ window.addEventListener('load',async()=>{
   const {data:{session}}=await db.auth.getSession()
   if(session) await initApp()
 })
+
+// ─── GUIDE UTILISATEUR ────────────────────────────────────────────────────────
+const GUIDES = {
+  aspirant: {
+    titre: "Guide aspirant",
+    couleur: 'var(--b)', fond: 'var(--bl)',
+    etapes: [
+      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Votre accueil. Retrouvez vos modules, vos dernieres activites et les annonces de votre formateur."},
+      {icon:'ti-books', titre:'Modules', texte:"4 modules : Thermique, Hydraulique, Conception & Construction, Electrique. Chaque module contient des cours et des evaluations."},
+      {icon:'ti-file', titre:'Cours & ressources', texte:"Onglet Cours : PDFs, plans CAO et documents mis a disposition. Cliquez pour ouvrir ou telecharger."},
+      {icon:'ti-help', titre:'Exercices et examens', texte:"Les exercices sont repassables librement. Les examens dates sont reserves aux aspirants inscrits dans ce module."},
+      {icon:'ti-users-group', titre:'Anciens', texte:"Retrouvez les Compagnons sedentaires, leurs specialites et contactez-les pour organiser un mini-stage."},
+      {icon:'ti-notebook', titre:'Carnet de bord', texte:"Votre progression sur le Tour de France. Une fois un module valide, renseignez votre ville. Exportez en PDF."},
+    ]
+  },
+  admin: {
+    titre: "Guide administrateur",
+    couleur: 'var(--r)', fond: 'var(--rl)',
+    etapes: [
+      {icon:'ti-help-circle', titre:'Gerer les quiz', texte:"Creez des exercices (repassables) ou des examens (avec creneau horaire). Questions QCM, Vrai/Faux ou reponse libre."},
+      {icon:'ti-upload', titre:'Ressources', texte:"Uploadez des PDFs, Word ou CAO par module. Organisez en dossiers."},
+      {icon:'ti-speakerphone', titre:'Annonces', texte:"Publiez des annonces visibles par tous les aspirants. Choisissez duree et niveau."},
+      {icon:'ti-calendar-event', titre:'Inscriptions', texte:"Ouvrez une periode pour un module. Les aspirants non inscrits ne peuvent pas passer les examens finaux."},
+      {icon:'ti-users', titre:'Aspirants', texte:"Progression de chaque aspirant, deblocage de tentatives et correction des reponses libres."},
+      {icon:'ti-list-check', titre:'Tous les comptes', texte:"Vue globale. Filtrez par role et cliquez pour voir les coordonnees."},
+      {icon:'ti-chart-bar', titre:'Statistiques', texte:"Taux de validation et scores moyens par module."},
+      {icon:'ti-link', titre:'Inviter', texte:"Lien admin (7 jours) depuis la page Aspirants, ou lien ?ancien=1 pour les Compagnons sedentaires."},
+    ]
+  },
+  ancien: {
+    titre: "Guide Compagnon Ancien",
+    couleur: '#3C3489', fond: '#EEEDFE',
+    etapes: [
+      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Progression de tous les aspirants. Cliquez sur une ligne pour le detail complet."},
+      {icon:'ti-books', titre:'Modules', texte:"Consultez le contenu des 4 modules pour connaitre le programme suivi par les aspirants."},
+      {icon:'ti-users-group', titre:'Annuaire', texte:"Les aspirants vous trouvent ici pour organiser des mini-stages. Votre profil doit etre complet."},
+      {icon:'ti-star', titre:'Votre profil', texte:"Cliquez sur votre avatar en bas de la barre laterale pour modifier vos specialites et coordonnees."},
+    ]
+  }
+}
+
+function ouvrirGuide() {
+  const role = G.admin ? 'admin' : G.ancien ? 'ancien' : 'aspirant'
+  const guide = GUIDES[role]
+  if (!guide) return
+  document.getElementById('modal-guide')?.remove()
+  const modal = document.createElement('div')
+  modal.id = 'modal-guide'
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto'
+  modal.onclick = function(e){ if(e.target===modal) modal.remove() }
+  const etapesHtml = guide.etapes.map((e,i) => `
+    <div style="display:flex;gap:14px;padding:14px 0;border-bottom:${i<guide.etapes.length-1?'1px solid var(--bord)':'none'}">
+      <div style="width:40px;height:40px;border-radius:12px;background:${guide.fond};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+        <i class="ti ${e.icon}" style="color:${guide.couleur};font-size:1.1rem"></i>
+      </div>
+      <div>
+        <div style="font-family:var(--fg);font-size:.95rem;font-weight:700;letter-spacing:-.2px;margin-bottom:4px">${e.titre}</div>
+        <p style="font-size:.82rem;color:var(--t2);line-height:1.6">${e.texte}</p>
+      </div>
+    </div>`).join('')
+  modal.innerHTML = `<div style="background:var(--card);border-radius:20px;width:100%;max-width:540px;margin:auto;overflow:hidden">
+    <div style="background:${guide.fond};padding:1.4rem;border-bottom:1px solid var(--bord)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:48px;height:48px;border-radius:14px;background:${guide.couleur};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ti-help-circle" style="color:#fff;font-size:1.4rem"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-family:var(--fg);font-size:1.2rem;font-weight:700;color:${guide.couleur}">${guide.titre}</div>
+          <div style="font-size:.75rem;color:var(--t3);margin-top:2px">${guide.etapes.length} sections</div>
+        </div>
+        <button onclick="document.getElementById('modal-guide').remove()" style="background:rgba(0,0,0,.08);border:none;border-radius:10px;padding:7px 10px;cursor:pointer;font-size:1rem;color:var(--t2)"><i class="ti ti-x"></i></button>
+      </div>
+    </div>
+    <div style="padding:0 1.4rem;max-height:70vh;overflow-y:auto">${etapesHtml}</div>
+    <div style="padding:1rem 1.4rem;border-top:1px solid var(--bord);text-align:center">
+      <button class="btn btn-dark btn-full" onclick="document.getElementById('modal-guide').remove()">Compris !</button>
+    </div>
+  </div>`
+  document.body.appendChild(modal)
+}
+
 </script>
 </body>
 </html>
