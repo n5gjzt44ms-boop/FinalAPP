@@ -1038,14 +1038,34 @@ async function initApp() {
     nav(savedA&&okA.includes(savedA)?savedA:'dashboard-ancien')
   } else if(G.admin) {
     const savedD=localStorage.getItem('pm_page')
-    const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin']
-    nav(savedD&&okD.includes(savedD)?savedD:'dashboard')
+    const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module']
+    if(savedD&&okD.includes(savedD)){
+      if(savedD==='module'){
+        const savedMod=parseInt(localStorage.getItem('pm_module')||'0')
+        if(savedMod) ouvrirModule(savedMod)
+        else nav('modules')
+      } else {
+        nav(savedD)
+      }
+    } else {
+      nav('dashboard')
+    }
   } else {
     const savedP=localStorage.getItem('pm_page')
-    const okP=['dashboard','modules','suivi','carnet']
-    nav(savedP&&okP.includes(savedP)?savedP:'dashboard')
+    const okP=['dashboard','modules','module','suivi','carnet']
     chargerAnnonces()
     verifierInscription()
+    if(savedP&&okP.includes(savedP)){
+      if(savedP==='module'){
+        const savedMod=parseInt(localStorage.getItem('pm_module')||'0')
+        if(savedMod) ouvrirModule(savedMod)
+        else nav('modules')
+      } else {
+        nav(savedP)
+      }
+    } else {
+      nav('dashboard')
+    }
   }
 }
 
@@ -1172,6 +1192,7 @@ async function loadModules() {
 
 async function ouvrirModule(id) {
   G.modActif=id
+  localStorage.setItem('pm_module', id)
   const m=MODULES.find(x=>x.id===id)
   $('m-bc').textContent=m.nom
   nav('module')
@@ -1378,9 +1399,8 @@ function demarrerCountdownTimer(){
       if(el.classList.contains('pending')&&debut){
         const diff=debut-now
         if(diff<=0){
-          // Vient de démarrer — recharger la section
           clearInterval(_cdTimer);_cdTimer=null
-          if(G.moduleActif) { const el=document.querySelector('[data-mod="'+ G.moduleActif+'"]'); if(el) el.click(); else loadModules() }
+          if(G.moduleActif!=null) ouvrirModule(G.moduleActif)
           return
         }
         const jj=Math.floor(diff/86400000),hh=Math.floor((diff%86400000)/3600000),mm=Math.floor((diff%3600000)/60000),ss=Math.floor((diff%60000)/1000)
@@ -1389,7 +1409,7 @@ function demarrerCountdownTimer(){
         const diff=fin-now
         if(diff<=0){
           clearInterval(_cdTimer);_cdTimer=null
-          if(G.moduleActif) { const el=document.querySelector('[data-mod="'+ G.moduleActif+'"]'); if(el) el.click(); else loadModules() }
+          if(G.moduleActif!=null) ouvrirModule(G.moduleActif)
           return
         }
         const hh=Math.floor(diff/3600000),mm=Math.floor((diff%3600000)/60000),ss=Math.floor((diff%60000)/1000)
