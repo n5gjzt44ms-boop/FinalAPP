@@ -343,6 +343,26 @@ button,input,select,textarea{font-family:var(--ff)}
 .quiz-row-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .quiz-row-name{font-size:.875rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .quiz-row-meta{font-size:.7rem;color:var(--t3);margin-top:1px}
+.quiz-countdown-bubble{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:58px;height:44px;border-radius:22px;
+  font-family:var(--fg);font-size:.82rem;font-weight:700;
+  padding:0 12px;cursor:default;transition:all .2s;letter-spacing:-.3px;
+  white-space:nowrap;
+}
+.quiz-countdown-bubble.pending{
+  background:linear-gradient(135deg,#1a1a2e,#16213e);
+  border:2px solid var(--r);color:var(--r);
+  animation:pulsePending 2s infinite;
+}
+.quiz-countdown-bubble.active{
+  background:var(--r);color:#fff;cursor:pointer;
+  animation:pulseActive 1.5s infinite;
+  box-shadow:0 0 0 0 rgba(226,75,74,.4);
+}
+.quiz-countdown-bubble.active:hover{background:#c03b3a;transform:scale(1.05)}
+@keyframes pulsePending{0%,100%{opacity:1}50%{opacity:.7}}
+@keyframes pulseActive{0%{box-shadow:0 0 0 0 rgba(226,75,74,.4)}70%{box-shadow:0 0 0 8px rgba(226,75,74,0)}100%{box-shadow:0 0 0 0 rgba(226,75,74,0)}}
 .quiz-lock{display:flex;align-items:center;gap:5px;padding:6px 14px;background:var(--bg);border-top:1px solid var(--bord);font-size:.7rem;color:var(--t3)}
 .quiz-q{font-size:1.05rem;font-weight:600;line-height:1.5;margin-bottom:1.1rem;letter-spacing:-.2px}
 .quiz-opt{width:100%;padding:12px 16px;background:var(--card);border:1.5px solid var(--bord2);border-radius:10px;font-size:.9rem;cursor:pointer;text-align:left;font-family:var(--ff);display:flex;align-items:center;gap:10px;margin-bottom:8px;transition:all .12s;color:var(--t1);font-weight:500}
@@ -1024,6 +1044,7 @@ async function initApp() {
 
 // ─── NAVIGATION ────────────────────────────────────────────────────────────
 function nav(page) {
+  localStorage.setItem('pm_page',page)
   document.querySelectorAll('.vue').forEach(v=>v.classList.remove('on'))
   document.querySelectorAll('.nav-icon,.bnav-item').forEach(n=>n.classList.remove('on'))
   const v=$('v-'+page);if(v) v.classList.add('on')
@@ -1031,6 +1052,7 @@ function nav(page) {
   const b=$('b-'+page);if(b) b.classList.add('on')
   if(page==='dashboard') loadDashboard()
   if(page==='dashboard-ancien') loadDashboardAncien()
+  if(page!=='modules'&&_cdTimer){clearInterval(_cdTimer);_cdTimer=null}
   if(page==='modules') loadModules()
   if(page==='suivi') loadSuivi()
   if(page==='ressources') loadResAdmin()
@@ -1277,6 +1299,7 @@ async function ouvrirRes(id,path,url) {
 }
 
 async function renderEval(modId,quiz,tents) {
+  G.moduleActif=modId
   if(!quiz.length){$('o-eval').innerHTML='<p style="font-size:.82rem;color:var(--t3)">Aucun quiz pour ce module.</p>';return}
   let h=''
   quiz.forEach(q=>{
@@ -1285,7 +1308,7 @@ async function renderEval(modId,quiz,tents) {
     const horsCreneaux=q.mode_examen&&((debut&&now<debut)||(fin&&now>fin))
     const isExamen=!!q.mode_examen
     // Bloquer examen si mauvais module ou pas inscrit
-    const bonModule=!isExamen||(G.profil.module_inscrit===modId)
+    const bonModule=G.admin||!isExamen||(G.profil.module_inscrit===modId)
     const peutCommencer=!horsCreneaux&&(!isExamen||!t)&&bonModule
     const bc=t?.valide?'var(--v)':t?'var(--r)':'var(--bord2)'
     const ic=t?.valide?'ti-check':t?'ti-x':'ti-help'
@@ -1313,6 +1336,44 @@ async function renderEval(modId,quiz,tents) {
     <div style="font-size:.78rem;color:${toutOk?'var(--v)':'var(--t2)'}">Validez tous les questionnaires ().</div></div>
   </div>`
   $('o-eval').innerHTML=h
+  // Démarrer le timer live si des bulles sont présentes
+  if(document.querySelector('.quiz-countdown-bubble')){
+    demarrerCountdownTimer()
+  }
+}
+
+// Timer live pour les bulles countdown
+let _cdTimer=null
+function demarrerCountdownTimer(){
+  if(_cdTimer) clearInterval(_cdTimer)
+  _cdTimer=setInterval(function(){
+    document.querySelectorAll('.quiz-countdown-bubble').forEach(function(el){
+      const debut=el.dataset.debut?new Date(el.dataset.debut):null
+      const fin=el.dataset.fin?new Date(el.dataset.fin):null
+      const qid=el.dataset.qid
+      const now=new Date()
+      if(el.classList.contains('pending')&&debut){
+        const diff=debut-now
+        if(diff<=0){
+          // Vient de démarrer — recharger la section
+          clearInterval(_cdTimer);_cdTimer=null
+          if(G.moduleActif) { const el=document.querySelector('[data-mod="'+ G.moduleActif+'"]'); if(el) el.click(); else loadModules() }
+          return
+        }
+        const jj=Math.floor(diff/86400000),hh=Math.floor((diff%86400000)/3600000),mm=Math.floor((diff%3600000)/60000),ss=Math.floor((diff%60000)/1000)
+        el.textContent=jj>=1?'J-'+jj:(hh>0?hh+'h'+String(mm).padStart(2,'0')+'m':mm>0?mm+'m'+String(ss).padStart(2,'0')+'s':'⚠ '+String(ss).padStart(2,'0')+'s')
+      } else if(el.classList.contains('active')&&fin){
+        const diff=fin-now
+        if(diff<=0){
+          clearInterval(_cdTimer);_cdTimer=null
+          if(G.moduleActif) { const el=document.querySelector('[data-mod="'+ G.moduleActif+'"]'); if(el) el.click(); else loadModules() }
+          return
+        }
+        const hh=Math.floor(diff/3600000),mm=Math.floor((diff%3600000)/60000),ss=Math.floor((diff%60000)/1000)
+        el.textContent=hh>0?hh+'h'+String(mm).padStart(2,'0'):'⏰ '+mm+'m'+String(ss).padStart(2,'0')+'s'
+      }
+    })
+  },1000)
 }
 
 function compteARebours(dateDebut,dateFin) {
