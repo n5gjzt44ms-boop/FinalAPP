@@ -1703,6 +1703,7 @@ async function loadQuizAdmin() {
   el.innerHTML=(data||[]).length?(data||[]).map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--bord)">
     <i class="ti ${x.mode_examen?'ti-calendar-event':'ti-help'}" style="color:${x.mode_examen?'var(--r)':'var(--amber)'};font-size:1rem;flex-shrink:0"></i>
     <div style="flex:1"><div style="font-size:.82rem;font-weight:600">${x.titre}</div><div style="font-size:.7rem;color:var(--t3)">${x.mode_examen?'Examen':'Exercice'} · Niv.${x.niveau} · ${x.total_points}pts</div></div>
+    <button class="btn btn-ghost btn-sm btn-icon" onclick="editerQuiz('${x.id}')" title="Modifier"><i class="ti ti-pencil"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="dupliquerQuiz('${x.id}')"><i class="ti ti-copy"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="delQuiz('${x.id}')"><i class="ti ti-trash"></i></button>
   </div>`).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz pour ce module.</p>'
@@ -2812,6 +2813,118 @@ function ouvrirGuide() {
     </div>
   </div>`
   document.body.appendChild(modal)
+}
+
+</script>
+<script>
+
+// ─── ÉDITION QUIZ ─────────────────────────────────────────────────────────────
+async function editerQuiz(quizId) {
+  const r1=await db.from('quiz').select('*').eq('id',quizId).single()
+  const r2=await db.from('questions').select('*').eq('quiz_id',quizId).order('ordre')
+  const quiz=r1.data; if(!quiz) return
+  let questions=[...(r2.data||[])]
+  const modal=document.createElement('div')
+  modal.id='modal-edit-quiz'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto'
+  document.body.appendChild(modal)
+  const TLBLS={qcm:'QCM',multi:'Multi',libre:'Libre',vf:'V/F'}
+
+  function buildQ(q,i) {
+    const opts=q.options||['','','','']
+    const bonnes=Array.isArray(q.bonnes_reponses)?q.bonnes_reponses:[q.bonne_reponse||0]
+    const isLibre=q.type_question==='libre'
+    const div=document.createElement('div')
+    div.style.cssText='border:1px solid var(--bord);border-radius:12px;padding:.9rem;margin-bottom:.8rem;background:var(--bg)'
+    let html='<div style="display:flex;align-items:center;gap:8px;margin-bottom:.6rem">'
+      +'<span style="font-size:.7rem;font-weight:700;color:var(--r)">Q'+(i+1)+'</span>'
+      +'<span style="font-size:.68rem;background:var(--rl);color:var(--r);padding:2px 8px;border-radius:20px;font-weight:600">'+(TLBLS[q.type_question]||'Multi')+'</span>'
+      +'<div style="margin-left:auto;display:flex;gap:2px">'
+      +(i>0?'<button onclick="eqMv('+i+',-1)" style="background:none;border:none;cursor:pointer;color:var(--t3)"><i class="ti ti-arrow-up"></i></button>':'')
+      +(i<questions.length-1?'<button onclick="eqMv('+i+',1)" style="background:none;border:none;cursor:pointer;color:var(--t3)"><i class="ti ti-arrow-down"></i></button>':'')
+      +'<button onclick="eqDel('+i+')" style="background:none;border:none;cursor:pointer;color:var(--r)"><i class="ti ti-trash"></i></button>'
+      +'</div></div>'
+    div.innerHTML=html
+    const ta=document.createElement('textarea')
+    ta.id='eq-e-'+i; ta.value=q.enonce||''
+    ta.style.cssText='width:100%;padding:8px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.82rem;resize:vertical;min-height:52px;font-family:var(--ff);margin-bottom:.5rem'
+    div.appendChild(ta)
+    if(!isLibre){
+      const lbl=document.createElement('div'); lbl.style.cssText='font-size:.68rem;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px'
+      lbl.textContent='Options (cochez la/les bonne(s) réponse(s))'; div.appendChild(lbl)
+      opts.forEach(function(o,j){
+        const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:4px'
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.id='eq-cb-'+i+'-'+j; cb.checked=bonnes.includes(j)
+        cb.style.cssText='width:16px;height:16px;accent-color:var(--r);flex-shrink:0'
+        const inp=document.createElement('input'); inp.id='eq-op-'+i+'-'+j; inp.value=o||''
+        inp.placeholder='Option '+['A','B','C','D'][j]
+        inp.style.cssText='flex:1;padding:6px 10px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.8rem;font-family:var(--ff)'
+        row.appendChild(cb); row.appendChild(inp); div.appendChild(row)
+      })
+    } else {
+      const lbl=document.createElement('div'); lbl.style.cssText='font-size:.72rem;color:var(--t3);font-style:italic;margin-bottom:.4rem'
+      lbl.textContent='Question libre — corrigée manuellement par un admin'; div.appendChild(lbl)
+    }
+    const explLbl=document.createElement('div'); explLbl.style.cssText='font-size:.68rem;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;margin-top:.5rem'
+    explLbl.textContent='Explication / Corrigé'; div.appendChild(explLbl)
+    const explTa=document.createElement('textarea'); explTa.id='eq-ex-'+i; explTa.value=q.reponse_type||''
+    explTa.style.cssText='width:100%;padding:6px 10px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.78rem;resize:vertical;min-height:40px;font-family:var(--ff)'
+    div.appendChild(explTa)
+    const hi=document.createElement('input'); hi.type='hidden'; hi.id='eq-pt-'+i; hi.value=q.points||4; div.appendChild(hi)
+    const ht=document.createElement('input'); ht.type='hidden'; ht.id='eq-tp-'+i; ht.value=q.type_question||'multi'; div.appendChild(ht)
+    return div
+  }
+
+  function render() {
+    modal.innerHTML=''
+    const wrap=document.createElement('div')
+    wrap.style.cssText='background:var(--card);border-radius:16px;width:100%;max-width:680px;margin:auto;overflow:hidden'
+    const hd=document.createElement('div'); hd.style.cssText='background:var(--r);color:#fff;padding:1rem 1.2rem;display:flex;align-items:center;gap:10px'
+    const titInp=document.createElement('input'); titInp.id='eq-titre'; titInp.value=quiz.titre||''
+    titInp.style.cssText='background:rgba(255,255,255,.15);border:none;border-radius:6px;color:#fff;font-size:.95rem;font-weight:700;padding:2px 8px;flex:1;outline:none;font-family:var(--fg)'
+    const cBtn=document.createElement('button'); cBtn.innerHTML='<i class="ti ti-x"></i>'; cBtn.style.cssText='background:none;border:none;color:#fff;cursor:pointer;font-size:1.3rem'
+    cBtn.onclick=function(){document.getElementById('modal-edit-quiz').remove()}
+    const ic=document.createElement('i'); ic.className='ti ti-pencil'; ic.style.fontSize='1.1rem'
+    hd.appendChild(ic); hd.appendChild(titInp); hd.appendChild(cBtn); wrap.appendChild(hd)
+    const body=document.createElement('div'); body.style.cssText='padding:1rem;max-height:72vh;overflow-y:auto'
+    questions.forEach(function(q,i){body.appendChild(buildQ(q,i))})
+    const addBtn=document.createElement('button'); addBtn.className='btn btn-ghost btn-full'; addBtn.style.cssText='border-style:dashed;margin-bottom:.5rem'
+    addBtn.innerHTML='<i class="ti ti-plus"></i> Ajouter une question'; addBtn.onclick=eqAdd; body.appendChild(addBtn); wrap.appendChild(body)
+    const ft=document.createElement('div'); ft.style.cssText='padding:.9rem 1.2rem;border-top:1px solid var(--bord);display:flex;gap:8px;justify-content:flex-end;background:var(--bg)'
+    const cb2=document.createElement('button'); cb2.className='btn btn-ghost'; cb2.textContent='Annuler'; cb2.onclick=function(){document.getElementById('modal-edit-quiz').remove()}
+    const sb=document.createElement('button'); sb.id='eq-save-btn'; sb.className='btn btn-dark'; sb.innerHTML='<i class="ti ti-device-floppy"></i> Enregistrer'; sb.onclick=function(){eqSave(quizId)}
+    ft.appendChild(cb2); ft.appendChild(sb); wrap.appendChild(ft); modal.appendChild(wrap)
+  }
+
+  window.eqMv=function(i,d){var n=i+d;if(n<0||n>=questions.length)return;var t=questions[i];questions[i]=questions[n];questions[n]=t;render()}
+  window.eqDel=function(i){if(!confirm('Supprimer cette question ?'))return;questions.splice(i,1);render()}
+  window.eqAdd=function(){questions.push({enonce:'',type_question:'multi',options:['','','',''],bonnes_reponses:[0],bonne_reponse:0,reponse_type:'',points:4,ordre:questions.length});render();setTimeout(function(){var els=modal.querySelectorAll('[id^="eq-e-"]');els.length&&els[els.length-1].focus()},50)}
+  window.eqSave=async function(qzId){
+    const btn=document.getElementById('eq-save-btn')
+    btn.disabled=true; btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'
+    const titre=(document.getElementById('eq-titre').value||'').trim()||quiz.titre
+    await db.from('quiz').update({titre:titre}).eq('id',qzId)
+    const qsToSave=questions.map(function(q,i){
+      const enonce=(document.getElementById('eq-e-'+i)&&document.getElementById('eq-e-'+i).value||'').trim()
+      const expl=(document.getElementById('eq-ex-'+i)&&document.getElementById('eq-ex-'+i).value||'').trim()
+      const pts=parseFloat((document.getElementById('eq-pt-'+i)&&document.getElementById('eq-pt-'+i).value)||'4')
+      const type=(document.getElementById('eq-tp-'+i)&&document.getElementById('eq-tp-'+i).value)||'multi'
+      var opts=q.options||['','','',''],bonnes=[0]
+      if(type!=='libre'){
+        opts=[0,1,2,3].map(function(j){return(document.getElementById('eq-op-'+i+'-'+j)&&document.getElementById('eq-op-'+i+'-'+j).value||'').trim()})
+        bonnes=[0,1,2,3].filter(function(j){return document.getElementById('eq-cb-'+i+'-'+j)&&document.getElementById('eq-cb-'+i+'-'+j).checked})
+        if(!bonnes.length)bonnes=[0]
+      }
+      return{quiz_id:qzId,enonce:enonce,type_question:type,options:opts,bonne_reponse:bonnes[0]||0,bonnes_reponses:bonnes,reponse_type:expl||null,points:pts,ordre:i}
+    })
+    await db.from('questions').delete().eq('quiz_id',qzId)
+    const res=await db.from('questions').insert(qsToSave)
+    if(res.error){toast('Erreur : '+res.error.message,'err');btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Enregistrer';return}
+    await db.from('quiz').update({total_points:qsToSave.reduce(function(a,q){return a+q.points},0)}).eq('id',qzId)
+    document.getElementById('modal-edit-quiz').remove()
+    toast('Quiz mis à jour !','ok');loadQuizAdmin()
+  }
+  render()
 }
 
 </script>
