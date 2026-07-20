@@ -1356,12 +1356,39 @@ function showQ() {
       </label>
       <div id="fichier-statut" style="font-size:.72rem;color:var(--v);margin-top:4px"></div>`
     $('btn-valider').disabled=false
+  } else if(typeQ==='multi'){
+    $('q-opts').innerHTML=`<div style="font-size:.72rem;color:var(--r);margin-bottom:.8rem;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;gap:6px"><i class="ti ti-checkbox"></i> Sélectionnez une ou plusieurs réponses</div>`+
+      (q.options||[]).map((o,i)=>`<button class="quiz-opt" id="o${i}" onclick="choisirMulti(${i})" style="text-align:left;display:flex;align-items:center;gap:10px">
+        <div id="d${i}" style="width:20px;height:20px;border-radius:5px;border:2px solid var(--bord2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s"></div>
+        <span>${o}</span>
+      </button>`).join('')
+    $('btn-valider').disabled=false
   } else {
     $('q-opts').innerHTML=(q.options||[]).map((o,i)=>`<button class="quiz-opt" id="o${i}" onclick="choisir(${i})"><div class="opt-dot" id="d${i}"></div>${o}</button>`).join('')
     $('btn-valider').disabled=true
   }
   sh('btn-valider');hi('btn-suivant');hi('btn-terminer')
   if(typeQ!=='libre'){G.choix=null;G.confirme=false}
+}
+
+let _multiSelect = new Set()
+function choisirMulti(i) {
+  if(G.confirme) return
+  if(_multiSelect.has(i)) _multiSelect.delete(i)
+  else _multiSelect.add(i)
+  G.questions[G.etape].options.forEach((_,j)=>{
+    const b=$('o'+j), d=$('d'+j)
+    if(_multiSelect.has(j)){
+      b.classList.add('sel')
+      b.style.borderColor='var(--r)';b.style.background='var(--rl)'
+      if(d){d.style.background='var(--r)';d.style.borderColor='var(--r)';d.innerHTML='<i class="ti ti-check" style="color:#fff;font-size:.75rem"></i>'}
+    } else {
+      b.classList.remove('sel')
+      b.style.borderColor='';b.style.background=''
+      if(d){d.style.background='';d.style.borderColor='var(--bord2)';d.innerHTML=''}
+    }
+  })
+  $('btn-valider').disabled=_multiSelect.size===0
 }
 
 function choisir(i) {
@@ -1377,6 +1404,30 @@ async function valider() {
     G.reponses[G.questions[G.etape].id]=rep;G.confirme=true;hi('btn-valider')
     G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
   }
+  if(typeQ==='multi'){
+    const rep=[..._multiSelect]
+    G.reponses[G.questions[G.etape].id]=rep;G.confirme=true
+    // Afficher la correction multi
+    const q=G.questions[G.etape]
+    const {data:qr}=await db.from('questions').select('bonnes_reponses,reponse_type').eq('id',q.id).single()
+    const bonnes=new Set((qr?.bonnes_reponses||[]).map(Number))
+    q.options.forEach((_,j)=>{
+      const b=$('o'+j)
+      if(b){
+        b.style.pointerEvents='none'
+        if(bonnes.has(j)){b.classList.add('ok');b.style.borderColor='var(--v)';b.style.background='var(--vl)'}
+        else if(_multiSelect.has(j)){b.classList.add('ko');b.style.borderColor='var(--r)';b.style.background='var(--rl)'}
+      }
+    })
+    // Afficher explication si disponible
+    if(qr?.reponse_type){
+      const expDiv=document.createElement('div')
+      expDiv.style.cssText='margin-top:.8rem;padding:10px 14px;background:var(--vl);border:1px solid var(--v);border-radius:10px;font-size:.78rem;color:var(--v);line-height:1.5'
+      expDiv.innerHTML='<strong>Explication :</strong> '+qr.reponse_type
+      $('q-opts').appendChild(expDiv)
+    }
+    hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
+  }
   if(G.choix===null) return;G.confirme=true;G.reponses[G.questions[G.etape].id]=G.choix
   const {data:qr}=await db.from('questions').select('bonne_reponse').eq('id',G.questions[G.etape].id).single()
   const bonne=qr?.bonne_reponse
@@ -1384,7 +1435,7 @@ async function valider() {
   hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant')
 }
 
-function suivant(){G.etape++;G.choix=null;G.confirme=false;showQ()}
+function suivant(){G.etape++;G.choix=null;G.confirme=false;_multiSelect=new Set();showQ()}
 
 async function terminer() {
   const tempsTotal=arreterTimer()
@@ -1396,7 +1447,15 @@ async function terminer() {
   let score=0;const parComp={}
   qr.forEach(q=>{
     if(q.type_question==='libre') return
-    const ok=G.reponses[q.id]===q.bonne_reponse
+    let ok=false
+    if(q.type_question==='multi'){
+      // Multi : toutes les bonnes cases cochées et aucune mauvaise
+      const bonnes=new Set((q.bonnes_reponses||[]).map(Number))
+      const rep=new Set((G.reponses[q.id]||[]).map(Number))
+      ok=bonnes.size===rep.size&&[...bonnes].every(b=>rep.has(b))
+    } else {
+      ok=G.reponses[q.id]===q.bonne_reponse
+    }
     if(ok) score+=parseFloat(q.points)||2
     if(q.competence){if(!parComp[q.competence])parComp[q.competence]={score:0,total:0};parComp[q.competence].total+=parseFloat(q.points)||2;if(ok)parComp[q.competence].score+=parseFloat(q.points)||2}
   })
@@ -1427,7 +1486,7 @@ async function voirRes(tentId) {
 function afficheRes() {
   const {tent,questions,parComp,score,valide,modId,reps}=G.tentResult
   const aDesLibres=G.tentResult?.aDesLibres||questions.some(q=>q.type_question==='libre')
-  const enAttente=aDesLibres&&!tent?.note_admin
+  const enAttente=aDesLibres&&(tent?.note_admin===null||tent?.note_admin===undefined)
   const c=$('r-circle')
   c.style.borderColor=enAttente?'var(--amber)':valide?'var(--v)':'var(--r)'
   const afficherNote=G.admin
@@ -1440,10 +1499,24 @@ function afficheRes() {
   $('r-comps').innerHTML=comps.length?'<div class="section-label">Résultats par compétence</div>'+comps.map(([code,v])=>{const pct=Math.round(v.score/v.total*100);return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:.75rem;color:var(--t2);width:80px;flex-shrink:0;font-weight:600">${code}</span><div class="pbar" style="flex:1"><div class="pfill ${pct>=50?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div><span style="font-size:.72rem;font-weight:600;min-width:40px;text-align:right">${v.score}/${v.total}</span><span class="badge ${pct>=50?'badge-v':'badge-rl'}" style="font-size:.62rem">${pct>=50?'Acquis':'À revoir'}</span></div>`}).join(''):''
   if(!valide&&modId&&!enAttente){db.from('ressources').select('*').eq('module_id',modId).then(({data:res})=>{if(res?.length){$('r-revisions').innerHTML=`<div class="card-head"><span class="card-title">Cours à réviser</span></div><div class="card-body">${res.map(r=>`<div class="res-row" onclick="ouvrirRes('${r.id}','${r.storage_path||''}','${r.url_externe||''}')"><i class="ti ti-file" style="font-size:.95rem;color:var(--r);flex-shrink:0"></i><div class="res-name">${r.titre}</div><i class="ti ti-arrow-right" style="font-size:.875rem;color:var(--t3)"></i></div>`).join('')}</div>`;sh('r-revisions')}else hi('r-revisions')})}else hi('r-revisions')
   $('r-detail').innerHTML=questions.map((q,i)=>{
-    const rep=reps[q.id],isLibre=q.type_question==='libre',ok=!isLibre&&rep===q.bonne_reponse
+    const rep=reps[q.id],isLibre=q.type_question==='libre',isMulti=q.type_question==='multi'
+    let ok=false
+    if(isMulti){
+      const bonnes=new Set((q.bonnes_reponses||[]).map(Number))
+      const repS=new Set((Array.isArray(rep)?rep:[]).map(Number))
+      // Strict : toutes les bonnes cochées ET aucune mauvaise
+      ok=bonnes.size===repS.size&&[...bonnes].every(b=>repS.has(b))
+    }
+    else if(!isLibre){ok=rep===q.bonne_reponse}
     const noteQ=isLibre?(tent?.notes_libres?.[q.id]??'?'):''
     let repTexte='—',bonneTexte='—'
     if(isLibre){repTexte=typeof rep==='string'?rep:'—'}
+    else if(isMulti){
+      const bonnes=(q.bonnes_reponses||[]).map(Number)
+      const repArr=Array.isArray(rep)?rep.map(Number):[]
+      repTexte=repArr.map(i=>q.options?.[i]).filter(Boolean).join(' · ')||'—'
+      bonneTexte=bonnes.map(i=>q.options?.[i]).filter(Boolean).join(' · ')||'—'
+    }
     else{repTexte=q.options?.[rep]??'—';bonneTexte=q.options?.[q.bonne_reponse]??'—'}
     return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:${i<questions.length-1?'1px solid var(--bord)':'none'}">
       <i class="ti ${isLibre?'ti-pencil':ok?'ti-circle-check':'ti-circle-x'}" style="color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--r)'};font-size:1rem;flex-shrink:0;margin-top:2px"></i>
