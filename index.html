@@ -1032,11 +1032,18 @@ async function initApp() {
 
   // Dashboard selon rôle
   if(G.ancien) {
-    // Masquer les onglets non pertinents pour les Anciens
     ;['n-carnet'].forEach(id=>hi(id))
-    nav('dashboard-ancien')
+    const savedA=localStorage.getItem('pm_page')
+    const okA=['dashboard-ancien','modules','annuaire']
+    nav(savedA&&okA.includes(savedA)?savedA:'dashboard-ancien')
+  } else if(G.admin) {
+    const savedD=localStorage.getItem('pm_page')
+    const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin']
+    nav(savedD&&okD.includes(savedD)?savedD:'dashboard')
   } else {
-    nav('dashboard')
+    const savedP=localStorage.getItem('pm_page')
+    const okP=['dashboard','modules','suivi','carnet']
+    nav(savedP&&okP.includes(savedP)?savedP:'dashboard')
     chargerAnnonces()
     verifierInscription()
   }
@@ -1320,13 +1327,31 @@ async function renderEval(modId,quiz,tents) {
         <div style="flex:1;min-width:0"><div class="quiz-row-name">${q.titre}</div>
         <div class="quiz-row-meta">${FILIERES[q.filiere]||''} ${isExamen?'· Examen'+crd:' · Exercice repassable'}</div></div>
         <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">`
-    if(t) h+=`<span style="font-family:var(--fg);font-size:.875rem;font-weight:700;color:${t.valide?'var(--v)':'var(--r)'}">${t.score}/20</span>`
+    if(t) h+=`<span style="font-family:var(--fg);font-size:.875rem;font-weight:700;color:${t.valide?'var(--v)':'var(--r)'};">${G.admin?t.score+'/20':''}</span>`
     if(t) h+=`<button class="btn btn-ghost btn-sm" onclick="voirRes('${t.id}')">Résultats</button>`
-    if(peutCommencer||(!isExamen&&t)) h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> ${t&&!isExamen?'Repasser':'Commencer'}</button>`
+    // BULLE COUNTDOWN ou bouton selon l'état
+    if(!t && isExamen && debut && now < debut && bonModule) {
+      // Avant le début : bulle rouge animée avec countdown
+      const diff=debut-now, jj=Math.floor(diff/86400000), hh=Math.floor((diff%86400000)/3600000), mm=Math.floor((diff%3600000)/60000), ss=Math.floor((diff%60000)/1000)
+      const lbl=jj>=1?'J-'+jj:hh>0?hh+'h'+String(mm).padStart(2,'0')+'m':mm>0?mm+'m'+String(ss).padStart(2,'0')+'s':'⚠'+String(ss).padStart(2,'0')+'s'
+      h+=`<div class="quiz-countdown-bubble pending" id="cd-${q.id}" data-debut="${q.date_debut||''}" data-fin="${q.date_fin||''}" title="Démarre le ${debut.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}">${lbl}</div>`
+    } else if(!t && isExamen && fin && now > fin && bonModule) {
+      h+=`<div style="font-size:.72rem;color:var(--t3);font-weight:600">Clôturé</div>`
+    } else if(!t && isExamen && bonModule && (!debut || now >= debut) && (!fin || now <= fin)) {
+      // Examen en cours : bulle active avec temps restant
+      if(fin) {
+        const diff2=fin-now, hh2=Math.floor(diff2/3600000), mm2=Math.floor((diff2%3600000)/60000), ss2=Math.floor((diff2%60000)/1000)
+        const lbl2=hh2>0?hh2+'h'+String(mm2).padStart(2,'0'):'⏰'+mm2+'m'+String(ss2).padStart(2,'0')+'s'
+        h+=`<div class="quiz-countdown-bubble active" id="cd-${q.id}" data-debut="${q.date_debut||''}" data-fin="${q.date_fin||''}" onclick="commencer('${q.id}')" title="Cliquez pour commencer">${lbl2}</div>`
+      } else {
+        h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> Commencer</button>`
+      }
+    } else if(peutCommencer || (!isExamen && t)) {
+      h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> ${t&&!isExamen?'Repasser':'Commencer'}</button>`
+    }
     h+=`</div></div>`
     if(isExamen&&t) h+=`<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide?'Validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR'):'Score définitif : '+t.score+'/20'}</div>`
-    if(!bonModule&&!t){h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-lock"></i> Réservé aux aspirants inscrits en ${MODULES.find(m=>m.id===modId)?.nom}</div>`}
-    else if(horsCreneaux&&!t){const msg=debut&&now<debut?'Disponible le '+debut.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Clôturé';h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-calendar-event"></i> ${msg}</div>`}
+    if(!bonModule&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-lock"></i> Réservé aux aspirants inscrits en ${MODULES.find(m=>m.id===modId)?.nom}</div>`}
     h+='</div>'
   })
   const toutOk=quiz.length>0&&quiz.every(q=>tents.find(t=>t.quiz_id===q.id&&t.valide))
@@ -1336,10 +1361,8 @@ async function renderEval(modId,quiz,tents) {
     <div style="font-size:.78rem;color:${toutOk?'var(--v)':'var(--t2)'}">Validez tous les questionnaires ().</div></div>
   </div>`
   $('o-eval').innerHTML=h
-  // Démarrer le timer live si des bulles sont présentes
-  if(document.querySelector('.quiz-countdown-bubble')){
-    demarrerCountdownTimer()
-  }
+  // Démarrer le timer si des bulles sont présentes
+  if(document.querySelector('.quiz-countdown-bubble')) demarrerCountdownTimer()
 }
 
 // Timer live pour les bulles countdown
