@@ -924,13 +924,41 @@ window.addEventListener('scroll', ()=>{
 let _timerQuiz=null, _secondesQuiz=0
 function demarrerTimer() {
   _secondesQuiz=0;clearInterval(_timerQuiz)
+  // Afficher le décompte restant si examen avec date_fin
+  const dateFin=G.quizActif?.date_fin?new Date(G.quizActif.date_fin):null
+  const isExamen=G.quizActif?.mode_examen
+  // Mettre à jour le header timer
+  const el=$('q-timer')
+  if(el && isExamen && dateFin) {
+    el.style.cursor='default'
+    el.title="Temps restant avant cloture de l'examen"
+  }
   _timerQuiz=setInterval(()=>{
     _secondesQuiz++
     const el=$('q-timer');if(!el) return
-    const m=Math.floor(_secondesQuiz/60),s=_secondesQuiz%60
-    el.textContent=m+':'+(s<10?'0':'')+s
-    if(_secondesQuiz>3600) el.style.color='var(--r)'
-    else if(_secondesQuiz>1800) el.style.color='var(--amber)'
+    if(isExamen && dateFin) {
+      // Mode compte à rebours
+      const restant=Math.max(0, Math.floor((dateFin-new Date())/1000))
+      if(restant<=0){
+        el.textContent='⏰ 0:00'
+        el.style.color='var(--r)'
+        clearInterval(_timerQuiz)
+        toast('Temps écoulé — soumission automatique','warn')
+        setTimeout(()=>terminer(),1500)
+        return
+      }
+      const h=Math.floor(restant/3600),m=Math.floor((restant%3600)/60),s=restant%60
+      el.textContent='⏰ '+(h>0?h+'h':'')+m+':'+(s<10?'0':'')+s
+      if(restant<300) el.style.color='var(--r)'
+      else if(restant<600) el.style.color='var(--amber)'
+      else el.style.color=''
+    } else {
+      // Mode chronomètre (exercice)
+      const m=Math.floor(_secondesQuiz/60),s=_secondesQuiz%60
+      el.textContent=m+':'+(s<10?'0':'')+s
+      if(_secondesQuiz>3600) el.style.color='var(--r)'
+      else if(_secondesQuiz>1800) el.style.color='var(--amber)'
+    }
   },1000)
 }
 function arreterTimer() {clearInterval(_timerQuiz);return _secondesQuiz}
@@ -1211,11 +1239,13 @@ async function ouvrirModule(id) {
   </div>`
   await renderCours(id)
   await renderEval(id,quiz,tents)
-  onglet(G.ongletActif)
+  const savedOnglet=localStorage.getItem('pm_onglet')||'eval'
+  onglet(savedOnglet)
 }
 
 function onglet(o) {
   G.ongletActif=o
+  localStorage.setItem('pm_onglet',o)
   $('o-cours').classList.toggle('hidden',o!=='cours')
   $('o-eval').classList.toggle('hidden',o!=='eval')
   $('t-cours').classList.toggle('on',o==='cours')
@@ -1355,7 +1385,7 @@ async function renderEval(modId,quiz,tents) {
       // Avant le début : bulle rouge animée avec countdown
       const diff=debut-now, jj=Math.floor(diff/86400000), hh=Math.floor((diff%86400000)/3600000), mm=Math.floor((diff%3600000)/60000), ss=Math.floor((diff%60000)/1000)
       const lbl=jj>=1?'J-'+jj:hh>0?hh+'h'+String(mm).padStart(2,'0')+'m':mm>0?mm+'m'+String(ss).padStart(2,'0')+'s':'⚠'+String(ss).padStart(2,'0')+'s'
-      h+=`<div class="quiz-countdown-bubble pending" id="cd-${q.id}" data-debut="${q.date_debut||''}" data-fin="${q.date_fin||''}" title="Démarre le ${debut.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}">${lbl}</div>`
+      h+=`<div class="quiz-countdown-bubble pending" id="cd-${q.id}" data-debut="${q.date_debut||''}" data-fin="${q.date_fin||''}" data-qid="${q.id}" title="Démarre le ${debut.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}">${lbl}</div>`
     } else if(!t && isExamen && fin && now > fin && bonModule) {
       h+=`<div style="font-size:.72rem;color:var(--t3);font-weight:600">Clôturé</div>`
     } else if(!t && isExamen && bonModule && (!debut || now >= debut) && (!fin || now <= fin)) {
@@ -1363,7 +1393,7 @@ async function renderEval(modId,quiz,tents) {
       if(fin) {
         const diff2=fin-now, hh2=Math.floor(diff2/3600000), mm2=Math.floor((diff2%3600000)/60000), ss2=Math.floor((diff2%60000)/1000)
         const lbl2=hh2>0?hh2+'h'+String(mm2).padStart(2,'0'):'⏰'+mm2+'m'+String(ss2).padStart(2,'0')+'s'
-        h+=`<div class="quiz-countdown-bubble active" id="cd-${q.id}" data-debut="${q.date_debut||''}" data-fin="${q.date_fin||''}" onclick="commencer('${q.id}')" title="Cliquez pour commencer">${lbl2}</div>`
+        h+=`<div class="quiz-countdown-bubble active" id="cd-${q.id}" data-debut="${q.date_debut||''}" data-fin="${q.date_fin||''}" onclick="commencer('${q.id}')" data-qid="${q.id}" title="Cliquez pour commencer">${lbl2}</div>`
       } else {
         h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> Commencer</button>`
       }
@@ -1400,7 +1430,8 @@ function demarrerCountdownTimer(){
         const diff=debut-now
         if(diff<=0){
           clearInterval(_cdTimer);_cdTimer=null
-          if(G.moduleActif!=null) ouvrirModule(G.moduleActif)
+          const mid=G.moduleActif!=null?G.moduleActif:G.modActif
+          if(mid!=null) setTimeout(function(){ ouvrirModule(mid) }, 1500)
           return
         }
         const jj=Math.floor(diff/86400000),hh=Math.floor((diff%86400000)/3600000),mm=Math.floor((diff%3600000)/60000),ss=Math.floor((diff%60000)/1000)
@@ -1409,7 +1440,8 @@ function demarrerCountdownTimer(){
         const diff=fin-now
         if(diff<=0){
           clearInterval(_cdTimer);_cdTimer=null
-          if(G.moduleActif!=null) ouvrirModule(G.moduleActif)
+          const mid=G.moduleActif!=null?G.moduleActif:G.modActif
+          if(mid!=null) setTimeout(function(){ ouvrirModule(mid) }, 1500)
           return
         }
         const hh=Math.floor(diff/3600000),mm=Math.floor((diff%3600000)/60000),ss=Math.floor((diff%60000)/1000)
