@@ -1430,8 +1430,9 @@ function demarrerCountdownTimer(){
         const diff=debut-now
         if(diff<=0){
           clearInterval(_cdTimer);_cdTimer=null
-          const mid=G.moduleActif!=null?G.moduleActif:G.modActif
-          if(mid!=null) setTimeout(function(){ ouvrirModule(mid) }, 1500)
+          // Examen débloqué : ouvrir directement le quiz sans F5
+          if(qid){ commencer(qid) }
+          else { const mid=G.moduleActif!=null?G.moduleActif:G.modActif; if(mid!=null) ouvrirModule(mid) }
           return
         }
         const jj=Math.floor(diff/86400000),hh=Math.floor((diff%86400000)/3600000),mm=Math.floor((diff%3600000)/60000),ss=Math.floor((diff%60000)/1000)
