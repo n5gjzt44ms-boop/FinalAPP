@@ -1040,7 +1040,7 @@ async function initApp() {
   if(!user) return
   const {data:p}=await db.from('profils').select('*').eq('id',user.id).single()
   if(!p){await db.auth.signOut();return}
-  G.profil=p;G.admin=p.role==='admin';G.ancien=p.role==='ancien'
+  G.profil=p;G.admin=p.role==='admin';G.ancien=p.role==='ancien';G.userEmail=user.email||''
   if(!G.profil.module_inscrit && p.module_inscrit) G.profil.module_inscrit=p.module_inscrit
   const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
   $('av').textContent=ini
@@ -2450,6 +2450,8 @@ async function ouvrirProfilAspirantAncien(aspirantId, nom) {
 function ouvrirMonProfil() {
   if(!G.admin && !G.ancien) return
   const p=G.profil
+  const EXEMPTS_ADMIN=['b.prudhomme@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
+  const estExemptAdmin=G.admin&&EXEMPTS_ADMIN.includes(G.userEmail)
   const modal=document.createElement('div');modal.id='modal-mon-profil'
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto'
   
@@ -2468,7 +2470,7 @@ function ouvrirMonProfil() {
         <div><label class="field-label">Ville de sédentarisation</label><input class="finput" id="mp-ville" value="${p.ville_sedentaire||''}" placeholder="Lyon, Paris..."/></div>
         <div><label class="field-label">Téléphone</label><input class="finput" id="mp-tel" value="${p.telephone||''}" placeholder="06 XX XX XX XX" type="tel"/></div>
       </div>
-      ${G.admin?`<div style="margin-bottom:1rem"><label class="field-label">Module dont vous êtes responsable</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${MODULES.map(m=>`<label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600"><input type="radio" name="mp-mod-admin" value="${m.id}" ${p.module_inscrit===m.id?'checked':''} style="accent-color:var(--r)"/><i class="ti ${m.icon}" style="color:${m.ic}"></i>${m.nom}</label>`).join('')}</div></div>`:`<div style="margin-bottom:1rem"><label class="field-label">Spécialités</label>
+      ${(G.admin&&!estExemptAdmin)?`<div style="margin-bottom:1rem"><label class="field-label">Module dont vous êtes responsable</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${MODULES.map(m=>`<label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600"><input type="radio" name="mp-mod-admin" value="${m.id}" ${p.module_inscrit===m.id?'checked':''} style="accent-color:var(--r)"/><i class="ti ${m.icon}" style="color:${m.ic}"></i>${m.nom}</label>`).join('')}</div></div>`:`<div style="margin-bottom:1rem"><label class="field-label">Spécialités</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="1" class="mp-spec" ${specsChecked(1)} style="accent-color:var(--r)"/> <i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="2" class="mp-spec" ${specsChecked(2)} style="accent-color:var(--r)"/> <i class="ti ti-droplets" style="color:#185FA5"></i> Hydraulique</label>
@@ -2516,10 +2518,11 @@ async function sauvegarderMonProfil() {
   const specs=G.admin?[]:[...document.querySelectorAll('.mp-spec:checked')].map(c=>parseInt(c.value))
   const modAdminEl=G.admin?document.querySelector('input[name="mp-mod-admin"]:checked'):null
   if(!ville||!tel){toast('Ville et téléphone obligatoires','err');return}
-  if(G.admin&&!modAdminEl){toast('Choisissez votre module','err');return}
+  const EXEMPTS_SAVE=['b.prudhomme@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
+  if(G.admin&&!EXEMPTS_SAVE.includes(G.userEmail)&&!modAdminEl){toast('Choisissez votre module','err');return}
   const btn=document.getElementById('btn-save-profil');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'
   const update={ville_sedentaire:ville,telephone:tel,reference:ref||null,profil_complet:true}
-  if(G.admin&&modAdminEl) update.module_inscrit=parseInt(modAdminEl.value)
+  if(G.admin&&modAdminEl&&!EXEMPTS_SAVE.includes(G.userEmail)) update.module_inscrit=parseInt(modAdminEl.value)
   else update.specialites=specs
   await db.from('profils').update(update).eq('id',G.profil.id)
   if(!G.admin){await db.from('mini_stages').delete().eq('ancien_id',G.profil.id);if(_stagesForm.length) await db.from('mini_stages').insert(_stagesForm.map(s=>({ancien_id:G.profil.id,module_id:s.module_id,periode:s.periode||null,description:s.description||null,actif:true})))}
