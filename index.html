@@ -913,6 +913,14 @@ const MODULES = [
   {id:4,num:'Module 4',nom:'Électrique & Automatisme',icon:'ti-bolt',bg:'#FAEEDA',ic:'#854F0B',desc:'Électrotechnique, câblage, variateurs, Grafcet, automates'}
 ]
 const FILIERES = {tp:'Engins TP',agr:'Engins agricoles',ind:'Maintenance industrielle',com:'Toutes filières'}
+// Admins superviseurs : ne gèrent aucun module en particulier, pas de contact à renseigner
+const ADMINS_SUPERVISEURS = ['b.prudhomme@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
+function estAdminSuperviseur(){
+  if(!G.admin) return false
+  const em=(G.userEmail||'').toLowerCase().trim()
+  if(ADMINS_SUPERVISEURS.some(x=>x.toLowerCase()===em)) return true
+  return G.profil&&G.profil.superviseur===true
+}
 
 const {createClient} = supabase
 const db = createClient(SB_URL, SB_KEY)
@@ -1075,8 +1083,7 @@ async function initApp() {
     return
   }
   // Admin : compléter module responsable + téléphone (sauf exempts)
-  const EMAILS_EXEMPTS_ADMIN=['b.prudhomme@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
-  if(G.admin && !EMAILS_EXEMPTS_ADMIN.includes(user.email) && (!p.module_inscrit || !p.telephone)) {
+  if(G.admin && !estAdminSuperviseur() && (!p.module_inscrit || !p.telephone)) {
     afficherFormulaireAdmin(user.email)
     return
   }
@@ -2450,8 +2457,7 @@ async function ouvrirProfilAspirantAncien(aspirantId, nom) {
 function ouvrirMonProfil() {
   if(!G.admin && !G.ancien) return
   const p=G.profil
-  const EXEMPTS_ADMIN=['b.prudhomme@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
-  const estExemptAdmin=G.admin&&EXEMPTS_ADMIN.includes(G.userEmail)
+  const estExemptAdmin=estAdminSuperviseur()
   const modal=document.createElement('div');modal.id='modal-mon-profil'
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto'
   
@@ -2518,11 +2524,10 @@ async function sauvegarderMonProfil() {
   const specs=G.admin?[]:[...document.querySelectorAll('.mp-spec:checked')].map(c=>parseInt(c.value))
   const modAdminEl=G.admin?document.querySelector('input[name="mp-mod-admin"]:checked'):null
   if(!ville||!tel){toast('Ville et téléphone obligatoires','err');return}
-  const EXEMPTS_SAVE=['b.prudhomme@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
-  if(G.admin&&!EXEMPTS_SAVE.includes(G.userEmail)&&!modAdminEl){toast('Choisissez votre module','err');return}
+  if(G.admin&&!estAdminSuperviseur()&&!modAdminEl){toast('Choisissez votre module','err');return}
   const btn=document.getElementById('btn-save-profil');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'
   const update={ville_sedentaire:ville,telephone:tel,reference:ref||null,profil_complet:true}
-  if(G.admin&&modAdminEl&&!EXEMPTS_SAVE.includes(G.userEmail)) update.module_inscrit=parseInt(modAdminEl.value)
+  if(G.admin&&modAdminEl&&!estAdminSuperviseur()) update.module_inscrit=parseInt(modAdminEl.value)
   else update.specialites=specs
   await db.from('profils').update(update).eq('id',G.profil.id)
   if(!G.admin){await db.from('mini_stages').delete().eq('ancien_id',G.profil.id);if(_stagesForm.length) await db.from('mini_stages').insert(_stagesForm.map(s=>({ancien_id:G.profil.id,module_id:s.module_id,periode:s.periode||null,description:s.description||null,actif:true})))}
@@ -2555,9 +2560,19 @@ function afficherFormulaireAdmin(email) {
       <label class="field-label">Numéro de téléphone</label>
       <input class="finput" id="admin-tel" type="tel" placeholder="06 XX XX XX XX" style="margin-top:4px;margin-bottom:1.2rem"/>
       <button class="btn btn-dark btn-full" onclick="sauvegarderProfilAdmin()"><i class="ti ti-check"></i> Valider</button>
+      <button class="btn btn-ghost btn-full" style="margin-top:.6rem;font-size:.78rem" onclick="marquerSuperviseur()">Je supervise tous les modules — passer cette étape</button>
     </div>
   </div>`
   document.body.appendChild(modal)
+}
+
+async function marquerSuperviseur() {
+  await db.from('profils').update({superviseur:true,profil_complet:true}).eq('id',G.profil.id)
+  G.profil.superviseur=true;G.profil.profil_complet=true
+  document.getElementById('modal-admin-profil')?.remove()
+  const savedD=localStorage.getItem('pm_page')||'dashboard'
+  const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module']
+  nav(okD.includes(savedD)?savedD:'dashboard')
 }
 
 async function sauvegarderProfilAdmin() {
