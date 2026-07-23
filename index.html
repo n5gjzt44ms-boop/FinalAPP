@@ -1083,7 +1083,7 @@ async function initApp() {
     return
   }
   // Admin : compléter module responsable + téléphone (sauf exempts)
-  if(G.admin && !estAdminSuperviseur() && (!p.module_inscrit || !p.telephone)) {
+  if(G.admin && !estAdminSuperviseur() && (!p.module_gacheur || !p.telephone)) {
     afficherFormulaireAdmin(user.email)
     return
   }
@@ -2467,7 +2467,7 @@ function ouvrirMonProfil() {
     <div style="background:var(--dark);padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between">
       <div>
         <div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">${G.admin?'Mon profil Gâcheur':'Mon profil Ancien'}</div>
-        <div style="font-size:.72rem;color:#555;margin-top:2px">${G.admin?'Visible par les aspirants (module + contact)':'Visible dans l\'annuaire des Anciens'}</div>
+        <div style="font-size:.72rem;color:#555;margin-top:2px">Visible par les aspirants dans l\'onglet Contacts</div>
       </div>
       <button onclick="document.getElementById('modal-mon-profil').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2rem"><i class="ti ti-x"></i></button>
     </div>
@@ -2476,14 +2476,15 @@ function ouvrirMonProfil() {
         <div><label class="field-label">Ville de sédentarisation</label><input class="finput" id="mp-ville" value="${p.ville_sedentaire||''}" placeholder="Lyon, Paris..."/></div>
         <div><label class="field-label">Téléphone</label><input class="finput" id="mp-tel" value="${p.telephone||''}" placeholder="06 XX XX XX XX" type="tel"/></div>
       </div>
-      ${(G.admin&&!estExemptAdmin)?`<div style="margin-bottom:1rem"><label class="field-label">Module dont vous êtes responsable</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${MODULES.map(m=>`<label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600"><input type="radio" name="mp-mod-admin" value="${m.id}" ${p.module_inscrit===m.id?'checked':''} style="accent-color:var(--r)"/><i class="ti ${m.icon}" style="color:${m.ic}"></i>${m.nom}</label>`).join('')}</div></div>`:`<div style="margin-bottom:1rem"><label class="field-label">Spécialités</label>
+      ${(G.admin&&!estExemptAdmin)?`<div style="margin-bottom:1rem"><label class="field-label">Module dont vous êtes responsable</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${MODULES.map(m=>`<label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600"><input type="radio" name="mp-mod-admin" value="${m.id}" ${p.module_gacheur===m.id?'checked':''} style="accent-color:var(--r)"/><i class="ti ${m.icon}" style="color:${m.ic}"></i>${m.nom}</label>`).join('')}</div></div>`:''}
+      <div style="margin-bottom:1rem"><label class="field-label">Spécialités <span style="font-weight:400;color:var(--t3);text-transform:none;letter-spacing:0">(annuaire des Anciens)</span></label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="1" class="mp-spec" ${specsChecked(1)} style="accent-color:var(--r)"/> <i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="2" class="mp-spec" ${specsChecked(2)} style="accent-color:var(--r)"/> <i class="ti ti-droplets" style="color:#185FA5"></i> Hydraulique</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="3" class="mp-spec" ${specsChecked(3)} style="accent-color:var(--r)"/> <i class="ti ti-tools" style="color:#5F5E5A"></i> Conception</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="4" class="mp-spec" ${specsChecked(4)} style="accent-color:var(--r)"/> <i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</label>
         </div>
-      </div>`}
+      </div>
       <div style="margin-bottom:1.2rem"><label class="field-label">Description / expérience</label><textarea class="ftextarea" id="mp-ref" rows="2" placeholder="Ex : 15 ans en hydraulique industrielle...">${p.reference||''}</textarea></div>
       
 
@@ -2521,16 +2522,16 @@ async function sauvegarderMonProfil() {
   const ville=document.getElementById('mp-ville')?.value?.trim()
   const tel=document.getElementById('mp-tel')?.value?.trim()
   const ref=document.getElementById('mp-ref')?.value?.trim()
-  const specs=G.admin?[]:[...document.querySelectorAll('.mp-spec:checked')].map(c=>parseInt(c.value))
+  const specs=[...document.querySelectorAll('.mp-spec:checked')].map(c=>parseInt(c.value))
   const modAdminEl=G.admin?document.querySelector('input[name="mp-mod-admin"]:checked'):null
   if(!ville||!tel){toast('Ville et téléphone obligatoires','err');return}
   if(G.admin&&!estAdminSuperviseur()&&!modAdminEl){toast('Choisissez votre module','err');return}
   const btn=document.getElementById('btn-save-profil');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'
-  const update={ville_sedentaire:ville,telephone:tel,reference:ref||null,profil_complet:true}
-  if(G.admin&&modAdminEl&&!estAdminSuperviseur()) update.module_inscrit=parseInt(modAdminEl.value)
-  else update.specialites=specs
+  const update={ville_sedentaire:ville,telephone:tel,reference:ref||null,specialites:specs,profil_complet:true}
+  if(G.admin&&modAdminEl&&!estAdminSuperviseur()) update.module_gacheur=parseInt(modAdminEl.value)
   await db.from('profils').update(update).eq('id',G.profil.id)
-  if(!G.admin){await db.from('mini_stages').delete().eq('ancien_id',G.profil.id);if(_stagesForm.length) await db.from('mini_stages').insert(_stagesForm.map(s=>({ancien_id:G.profil.id,module_id:s.module_id,periode:s.periode||null,description:s.description||null,actif:true})))}
+  await db.from('mini_stages').delete().eq('ancien_id',G.profil.id)
+  if(_stagesForm.length) await db.from('mini_stages').insert(_stagesForm.map(s=>({ancien_id:G.profil.id,module_id:s.module_id,periode:s.periode||null,description:s.description||null,actif:true})))
   G.profil={...G.profil,...update,specialites:specs}
   document.getElementById('modal-mon-profil')?.remove()
   toast('Profil enregistré ! Visible dans l\'annuaire.','ok')
@@ -2580,8 +2581,8 @@ async function sauvegarderProfilAdmin() {
   const tel=document.getElementById('admin-tel')?.value?.trim()
   if(!modEl){toast('Choisissez un module','err');return}
   if(!tel){toast('Téléphone obligatoire','err');return}
-  await db.from('profils').update({module_inscrit:parseInt(modEl.value),telephone:tel,profil_complet:true}).eq('id',G.profil.id)
-  G.profil.module_inscrit=parseInt(modEl.value);G.profil.telephone=tel;G.profil.profil_complet=true
+  await db.from('profils').update({module_gacheur:parseInt(modEl.value),telephone:tel,profil_complet:true}).eq('id',G.profil.id)
+  G.profil.module_gacheur=parseInt(modEl.value);G.profil.telephone=tel;G.profil.profil_complet=true
   document.getElementById('modal-admin-profil')?.remove()
   toast('Profil enregistré !','ok')
   // Reprendre la navigation normale
@@ -2592,14 +2593,14 @@ async function sauvegarderProfilAdmin() {
 
 async function chargerAnciens() {
   const [{data:anciens},{data:stages},{data:gacheurs}]=await Promise.all([
-    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites').in('role',['ancien']).eq('profil_complet',true).order('nom'),
+    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites').in('role',['ancien','admin']).eq('profil_complet',true).not('ville_sedentaire','is',null).order('nom'),
     db.from('mini_stages').select('*').eq('actif',true),
-    db.from('profils').select('nom,prenom,telephone,module_inscrit').eq('role','admin').eq('profil_complet',true).not('telephone','is',null).not('module_inscrit','is',null)
+    db.from('profils').select('nom,prenom,telephone,module_gacheur,superviseur').eq('role','admin').not('telephone','is',null).not('module_gacheur','is',null)
   ])
   // Afficher les gâcheurs
   const gEl=document.getElementById('gacheurs-grid')
   if(gEl){
-    const gmap=(gacheurs||[]).reduce((a,f)=>{if(f.module_inscrit){if(!a[f.module_inscrit])a[f.module_inscrit]=[];a[f.module_inscrit].push(f)}return a},{})
+    const gmap=(gacheurs||[]).filter(f=>f.superviseur!==true).reduce((a,f)=>{if(f.module_gacheur){if(!a[f.module_gacheur])a[f.module_gacheur]=[];a[f.module_gacheur].push(f)}return a},{})
     gEl.innerHTML=MODULES.map(m=>{
       const fs=gmap[m.id]||[]
       if(!fs.length) return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span style="flex:1;font-size:.82rem;font-weight:600">${m.nom}</span><span style="font-size:.72rem;color:var(--t3)">Non assigné</span></div>`
