@@ -477,7 +477,7 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="nav-icon" id="n-modules" data-tip="Modules" onclick="nav('modules')"><i class="ti ti-books"></i></div>
 
     <div class="nav-icon" id="n-carnet" data-tip="Carnet de bord" onclick="nav('carnet')"><i class="ti ti-notebook"></i></div>
-    <div class="nav-icon" id="n-anciens" data-tip="Annuaire des Anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i></div>
+    <div class="nav-icon" id="n-anciens" data-tip="Contacts" onclick="nav('anciens')"><i class="ti ti-users-group"></i></div>
 
 
     <div class="nav-sep" id="sep-admin" style="display:none"></div>
@@ -499,7 +499,7 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="bnav-item on" id="b-dashboard" onclick="nav('dashboard')"><i class="ti ti-layout-dashboard"></i>Accueil</div>
       <div class="bnav-item" id="b-modules" onclick="nav('modules')"><i class="ti ti-books"></i>Modules</div>
 
-      <div class="bnav-item" id="b-anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i>Anciens</div>
+      <div class="bnav-item" id="b-anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i>Contacts</div>
 
       <div class="bnav-item" id="b-carnet" onclick="nav('carnet')"><i class="ti ti-notebook"></i>Carnet</div>
     </div>
@@ -530,10 +530,7 @@ button,input,select,textarea{font-family:var(--ff)}
           <div class="card-body" id="d-activite"><p style="font-size:.82rem;color:var(--t3)">Aucune activité.</p></div>
         </div>
       </div>
-      <div class="card" style="margin-top:1rem">
-        <div class="card-head"><span class="card-title">Vos formateurs</span></div>
-        <div class="card-body" id="d-formateurs"><p style="font-size:.82rem;color:var(--t3)">Chargement...</p></div>
-      </div>
+
     </div>
 
     <!-- DASHBOARD ANCIEN -->
@@ -650,9 +647,18 @@ button,input,select,textarea{font-family:var(--ff)}
     <!-- ANNUAIRE DES ANCIENS (vue aspirant) -->
     <div class="vue" id="v-anciens">
       <div style="margin-bottom:1.2rem">
-        <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Anciens — Compagnons sédentaires</div>
-        <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Contactez un Ancien pour organiser un mini-stage ou obtenir des conseils.</p>
+        <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Contacts</div>
+        <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Vos Gâcheurs par module et les Compagnons sédentaires disponibles.</p>
       </div>
+
+      <!-- GÂCHEURS -->
+      <div class="card" style="margin-bottom:1.2rem">
+        <div class="card-head"><span class="card-title"><i class="ti ti-shield" style="color:var(--r)"></i> Gâcheurs</span></div>
+        <div class="card-body" id="gacheurs-grid"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+      </div>
+
+      <!-- ANCIENS -->
+      <div style="font-family:var(--fg);font-size:1rem;font-weight:700;margin-bottom:.8rem"><i class="ti ti-users-group" style="color:var(--t3)"></i> Compagnons sédentaires</div>
       <div style="display:flex;gap:6px;margin-bottom:.7rem;flex-wrap:wrap" id="filtres-anciens">
         <button class="btn btn-dark btn-sm" data-fid="0" onclick="filtrerAnciens(0)">Tous</button>
         <button class="btn btn-ghost btn-sm" data-fid="1" onclick="filtrerAnciens(1)"><i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</button>
@@ -1165,17 +1171,6 @@ async function loadDashboard() {
       </div>
     </div>`
   }).join('')
-  // Formateurs par module
-  const {data:formateurs}=await db.from('profils').select('nom,prenom,telephone,module_inscrit').eq('role','admin').eq('profil_complet',true).not('telephone','is',null).not('module_inscrit','is',null)
-  const fEl=$('d-formateurs')
-  if(fEl){
-    const fmap=(formateurs||[]).reduce((a,f)=>{if(f.module_inscrit&&f.telephone){if(!a[f.module_inscrit])a[f.module_inscrit]=[];a[f.module_inscrit].push(f)}return a},{})
-    fEl.innerHTML=MODULES.map(m=>{
-      const fs=fmap[m.id]||[]
-      if(!fs.length) return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div style="width:28px;height:28px;border-radius:8px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.8rem"></i></div><span style="flex:1;font-size:.82rem;font-weight:600;color:var(--t2)">${m.nom}</span><span style="font-size:.75rem;color:var(--t3)">Non assigné</span></div>`
-      return fs.map(f=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div style="width:28px;height:28px;border-radius:8px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.8rem"></i></div><div style="flex:1"><div style="font-size:.82rem;font-weight:600">${m.nom}</div><div style="font-size:.72rem;color:var(--t3)">${f.prenom||''} ${f.nom||''}</div></div><a href="tel:${f.telephone}" style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--vl);color:var(--v);font-size:.75rem;font-weight:700;text-decoration:none"><i class="ti ti-phone"></i>${f.telephone}</a></div>`).join('')
-    }).join('')
-  }
   $('d-activite').innerHTML=tents.slice(0,5).map(x=>`
     <div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)">
       <div style="width:8px;height:8px;border-radius:50%;background:${x.valide?'var(--v)':'var(--r)'};margin-top:5px;flex-shrink:0"></div>
@@ -2463,7 +2458,7 @@ function ouvrirMonProfil() {
   modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:520px;overflow:hidden">
     <div style="background:var(--dark);padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between">
       <div>
-        <div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">${G.admin?'Mon profil formateur':'Mon profil Ancien'}</div>
+        <div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">${G.admin?'Mon profil Gâcheur':'Mon profil Ancien'}</div>
         <div style="font-size:.72rem;color:#555;margin-top:2px">${G.admin?'Visible par les aspirants (module + contact)':'Visible dans l\'annuaire des Anciens'}</div>
       </div>
       <button onclick="document.getElementById('modal-mon-profil').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2rem"><i class="ti ti-x"></i></button>
@@ -2542,7 +2537,7 @@ function afficherFormulaireAdmin(email) {
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
   modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:480px;overflow:hidden">
     <div style="background:var(--dark);padding:1rem 1.4rem">
-      <div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">Bienvenue, formateur</div>
+      <div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">Bienvenue !</div>
       <div style="font-size:.72rem;color:#555;margin-top:2px">Indiquez votre module et votre numéro — les aspirants pourront vous contacter</div>
     </div>
     <div style="padding:1.4rem">
@@ -2578,12 +2573,23 @@ async function sauvegarderProfilAdmin() {
 }
 
 async function chargerAnciens() {
-  const [{data:anciens},{data:stages}]=await Promise.all([
-    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites').in('role',['ancien','admin']).eq('profil_complet',true).order('nom'),
-    db.from('mini_stages').select('*').eq('actif',true)
+  const [{data:anciens},{data:stages},{data:gacheurs}]=await Promise.all([
+    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites').in('role',['ancien']).eq('profil_complet',true).order('nom'),
+    db.from('mini_stages').select('*').eq('actif',true),
+    db.from('profils').select('nom,prenom,telephone,module_inscrit').eq('role','admin').eq('profil_complet',true).not('telephone','is',null).not('module_inscrit','is',null)
   ])
+  // Afficher les gâcheurs
+  const gEl=document.getElementById('gacheurs-grid')
+  if(gEl){
+    const gmap=(gacheurs||[]).reduce((a,f)=>{if(f.module_inscrit){if(!a[f.module_inscrit])a[f.module_inscrit]=[];a[f.module_inscrit].push(f)}return a},{})
+    gEl.innerHTML=MODULES.map(m=>{
+      const fs=gmap[m.id]||[]
+      if(!fs.length) return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span style="flex:1;font-size:.82rem;font-weight:600">${m.nom}</span><span style="font-size:.72rem;color:var(--t3)">Non assigné</span></div>`
+      return fs.map(f=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><div style="flex:1"><div style="font-size:.82rem;font-weight:600">${m.nom}</div><div style="font-size:.72rem;color:var(--t3)">${f.prenom||''} ${f.nom||''}</div></div><a href="tel:${f.telephone}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--vl);color:var(--v);font-size:.75rem;font-weight:700;text-decoration:none"><i class="ti ti-phone"></i> ${f.telephone}</a></div>`).join('')
+    }).join('')
+  }
+  // Anciens (hors admins)
   _anciensAll=(anciens||[]).map(a=>({...a,stages:(stages||[]).filter(s=>s.ancien_id===a.id)}))
-  // Peupler le select ville
   const sel=document.getElementById('tri-ville-anciens')
   if(sel){
     const villes=[...new Set(_anciensAll.map(a=>a.ville_sedentaire).filter(Boolean))].sort()
