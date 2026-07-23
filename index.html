@@ -530,6 +530,10 @@ button,input,select,textarea{font-family:var(--ff)}
           <div class="card-body" id="d-activite"><p style="font-size:.82rem;color:var(--t3)">Aucune activité.</p></div>
         </div>
       </div>
+      <div class="card" style="margin-top:1rem">
+        <div class="card-head"><span class="card-title">Vos formateurs</span></div>
+        <div class="card-body" id="d-formateurs"><p style="font-size:.82rem;color:var(--t3)">Chargement...</p></div>
+      </div>
     </div>
 
     <!-- DASHBOARD ANCIEN -->
@@ -649,12 +653,19 @@ button,input,select,textarea{font-family:var(--ff)}
         <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Anciens — Compagnons sédentaires</div>
         <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Contactez un Ancien pour organiser un mini-stage ou obtenir des conseils.</p>
       </div>
-      <div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap" id="filtres-anciens">
+      <div style="display:flex;gap:6px;margin-bottom:.7rem;flex-wrap:wrap" id="filtres-anciens">
         <button class="btn btn-dark btn-sm" data-fid="0" onclick="filtrerAnciens(0)">Tous</button>
         <button class="btn btn-ghost btn-sm" data-fid="1" onclick="filtrerAnciens(1)"><i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</button>
         <button class="btn btn-ghost btn-sm" data-fid="2" onclick="filtrerAnciens(2)"><i class="ti ti-droplets" style="color:#185FA5"></i> Hydraulique</button>
         <button class="btn btn-ghost btn-sm" data-fid="3" onclick="filtrerAnciens(3)"><i class="ti ti-tools" style="color:#5F5E5A"></i> Conception</button>
         <button class="btn btn-ghost btn-sm" data-fid="4" onclick="filtrerAnciens(4)"><i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem">
+        <i class="ti ti-map-pin" style="color:var(--amber);font-size:.9rem"></i>
+        <span style="font-size:.72rem;color:var(--t3);font-weight:600">Ville :</span>
+        <select id="tri-ville-anciens" onchange="filtrerAnciensVille()" style="padding:4px 10px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.78rem;font-family:var(--ff);flex:1;max-width:240px">
+          <option value="">Toutes les villes</option>
+        </select>
       </div>
       <div class="grid2" id="anciens-grid"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
     </div>
@@ -734,10 +745,10 @@ button,input,select,textarea{font-family:var(--ff)}
               </div>
             </div>
             <div class="field-row" style="margin-bottom:.9rem">
-              <div><label class="field-label">Filière</label>
-                <select class="fselect" id="mq-fil">
-                  <option value="tp">Engins TP</option><option value="agr">Engins agricoles</option>
-                  <option value="ind">Maintenance industrielle</option><option value="com">Toutes filières</option>
+              <div><label class="field-label">Visibilité</label>
+                <select class="fselect" id="mq-vis">
+                  <option value="prive">Privé — visible admins seulement (test)</option>
+                  <option value="publie">Publié — visible par tout le monde</option>
                 </select>
               </div>
               <div><label class="field-label">Type</label>
@@ -759,7 +770,7 @@ button,input,select,textarea{font-family:var(--ff)}
               <span style="font-size:.82rem;font-weight:600" id="mq-total">0 question</span>
               <span style="font-size:.72rem;color:var(--t3)">Score ramené sur 20 · Seuil 14/20</span>
             </div>
-            <button class="btn btn-r btn-full" onclick="pubQuizManuel()"><i class="ti ti-check"></i> Publier le quiz</button>
+            <button class="btn btn-r btn-full" onclick="pubQuizManuel()"><i class="ti ti-check"></i> Créer le quiz</button>
           </div>
         </div>
         <div class="card">
@@ -890,10 +901,10 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SEUIL = 14
 const DOMAINE = '@compagnons-du-devoir.fr'
 const MODULES = [
-  {id:1,num:'Module 1',nom:'Thermique',icon:'ti-engine',bg:'#FCEBEB',ic:'#E24B4A',desc:'Thermodynamique, ponts thermiques, chauffage'},
+  {id:1,num:'Module 1',nom:'Thermique & Mécanique',icon:'ti-engine',bg:'#FCEBEB',ic:'#E24B4A',desc:'Moteurs thermiques, distribution, injection, mécanique générale (roulements, boîtes, freinage...)'},
   {id:2,num:'Module 2',nom:'Hydraulique',icon:'ti-droplets',bg:'#E6F1FB',ic:'#185FA5',desc:'Circuits hydrauliques, diagnostic, maintenance'},
-  {id:3,num:'Module 3',nom:'Conception & Construction',icon:'ti-tools',bg:'#F1EFE8',ic:'#5F5E5A',desc:'CAO, SolidWorks, CadWorks, plans, normes'},
-  {id:4,num:'Module 4',nom:'Électrique',icon:'ti-bolt',bg:'#FAEEDA',ic:'#854F0B',desc:'Électrotechnique, câblage, automatismes'}
+  {id:3,num:'Module 3',nom:'Conception & Construction',icon:'ti-tools',bg:'#F1EFE8',ic:'#5F5E5A',desc:'Dessin technique, tolérances, soudage, matériaux, pliage'},
+  {id:4,num:'Module 4',nom:'Électrique & Automatisme',icon:'ti-bolt',bg:'#FAEEDA',ic:'#854F0B',desc:'Électrotechnique, câblage, variateurs, Grafcet, automates'}
 ]
 const FILIERES = {tp:'Engins TP',agr:'Engins agricoles',ind:'Maintenance industrielle',com:'Toutes filières'}
 
@@ -1057,6 +1068,12 @@ async function initApp() {
     afficherQuestionnaireAncien()
     return
   }
+  // Admin : compléter module responsable + téléphone (sauf exempts)
+  const EMAILS_EXEMPTS_ADMIN=['b.prudhomme@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
+  if(G.admin && !EMAILS_EXEMPTS_ADMIN.includes(user.email) && (!p.module_inscrit || !p.telephone)) {
+    afficherFormulaireAdmin(user.email)
+    return
+  }
 
   // Dashboard selon rôle
   if(G.ancien) {
@@ -1105,7 +1122,7 @@ function nav(page) {
   const v=$('v-'+page);if(v) v.classList.add('on')
   const n=$('n-'+page);if(n) n.classList.add('on')
   const b=$('b-'+page);if(b) b.classList.add('on')
-  if(page==='dashboard') loadDashboard()
+  if(page==='dashboard'){loadDashboard();chargerAnnonces()}
   if(page==='dashboard-ancien') loadDashboardAncien()
   if(page!=='modules'&&_cdTimer){clearInterval(_cdTimer);_cdTimer=null}
   if(page==='modules') loadModules()
@@ -1134,17 +1151,31 @@ async function loadDashboard() {
   if($('k-pts')) $('k-pts').textContent=pd?.points_total||0
   const sEl=document.getElementById('streak-topbar')
   if(sEl){const s=pd?.streak_semaines||0;sEl.innerHTML=s>0?`<i class="ti ti-flame" style="color:${pd?.streak_pause?'var(--t3)':'var(--r)'}"></i>${s}`:''}
+  const {data:qxD}=await db.from('quiz').select('id,module_id').eq('actif',true).eq('mode_examen',true)
+  const allExD=qxD||[]
   $('d-modules').innerHTML=MODULES.map(m=>{
-    const tm=tents.filter(x=>x.quiz?.module_id===m.id)
-    const pct=tm.length?Math.round(tm.filter(x=>x.valide).length/tm.length*100):0
+    const exM=allExD.filter(x=>x.module_id===m.id)
+    const exVal=exM.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
+    const pct=exM.length?Math.round(exVal/exM.length*100):0
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord);cursor:pointer" onclick="ouvrirModule(${m.id})">
       <div style="width:34px;height:34px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.9rem"></i></div>
       <div style="flex:1;min-width:0">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:.82rem;font-weight:600">${m.nom}</span><span style="font-family:var(--fg);font-size:.82rem;font-weight:700;color:${pct===100?'var(--v)':'var(--t2)'}">${pct}%</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:.82rem;font-weight:600">${m.nom}</span><span style="font-family:var(--fg);font-size:.82rem;font-weight:700;color:${pct===100?'var(--v)':'var(--t2)'}">${exM.length?exVal+'/'+exM.length+' examens':'—'}</span></div>
         <div class="pbar"><div class="pfill ${pct===100?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div>
       </div>
     </div>`
   }).join('')
+  // Formateurs par module
+  const {data:formateurs}=await db.from('profils').select('nom,prenom,telephone,module_inscrit').eq('role','admin').eq('profil_complet',true).not('telephone','is',null).not('module_inscrit','is',null)
+  const fEl=$('d-formateurs')
+  if(fEl){
+    const fmap=(formateurs||[]).reduce((a,f)=>{if(f.module_inscrit&&f.telephone){if(!a[f.module_inscrit])a[f.module_inscrit]=[];a[f.module_inscrit].push(f)}return a},{})
+    fEl.innerHTML=MODULES.map(m=>{
+      const fs=fmap[m.id]||[]
+      if(!fs.length) return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div style="width:28px;height:28px;border-radius:8px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.8rem"></i></div><span style="flex:1;font-size:.82rem;font-weight:600;color:var(--t2)">${m.nom}</span><span style="font-size:.75rem;color:var(--t3)">Non assigné</span></div>`
+      return fs.map(f=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div style="width:28px;height:28px;border-radius:8px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.8rem"></i></div><div style="flex:1"><div style="font-size:.82rem;font-weight:600">${m.nom}</div><div style="font-size:.72rem;color:var(--t3)">${f.prenom||''} ${f.nom||''}</div></div><a href="tel:${f.telephone}" style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--vl);color:var(--v);font-size:.75rem;font-weight:700;text-decoration:none"><i class="ti ti-phone"></i>${f.telephone}</a></div>`).join('')
+    }).join('')
+  }
   $('d-activite').innerHTML=tents.slice(0,5).map(x=>`
     <div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)">
       <div style="width:8px;height:8px;border-radius:50%;background:${x.valide?'var(--v)':'var(--r)'};margin-top:5px;flex-shrink:0"></div>
@@ -1196,12 +1227,17 @@ async function loadDashboardAncien() {
 
 // ─── MODULES ───────────────────────────────────────────────────────────────
 async function loadModules() {
-  const {data:t}=await db.from('tentatives').select('*, quiz(module_id)').eq('aspirant_id',G.profil.id)
-  const tents=t||[]
+  const [{data:t},{data:qx}]=await Promise.all([
+    db.from('tentatives').select('*, quiz(module_id)').eq('aspirant_id',G.profil.id),
+    db.from('quiz').select('id,module_id').eq('actif',true).eq('mode_examen',true)
+  ])
+  const tents=t||[],allEx=qx||[]
   $('v-modules-grid').innerHTML=MODULES.map(m=>{
     const tm=tents.filter(x=>x.quiz?.module_id===m.id)
-    const pct=tm.length?Math.round(tm.filter(x=>x.valide).length/tm.length*100):0
-    const termine=tm.length>0&&tm.every(x=>x.valide)
+    const exM=allEx.filter(x=>x.module_id===m.id)
+    const exVal=exM.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
+    const pct=exM.length?Math.round(exVal/exM.length*100):0
+    const termine=exM.length>0&&exVal===exM.length
     const encours=tm.length>0&&!termine
     return `<div class="card" style="cursor:pointer" onclick="ouvrirModule(${m.id})">
       <div style="padding:1.1rem">
@@ -1212,7 +1248,7 @@ async function loadModules() {
           <span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}">${termine?'Complété':encours?'En cours':'À faire'}</span>
         </div>
         <p style="font-size:.78rem;color:var(--t2);margin-bottom:10px;line-height:1.5">${m.desc}</p>
-        <div style="display:flex;align-items:center;gap:10px"><div class="pbar" style="flex:1"><div class="pfill ${termine?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700;color:${termine?'var(--v)':'var(--t2)'}">${pct}%</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div class="pbar" style="flex:1"><div class="pfill ${termine?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700;color:${termine?'var(--v)':'var(--t2)'}">${exM.length?exVal+'/'+exM.length+' examens':'—'}</span></div>
       </div>
     </div>`
   }).join('')
@@ -1226,16 +1262,21 @@ async function ouvrirModule(id) {
   nav('module')
   const [{data:t},{data:q}]=await Promise.all([
     db.from('tentatives').select('*, quiz(id,module_id,mode_examen)').eq('aspirant_id',G.profil.id),
-    db.from('quiz').select('*').eq('module_id',id).eq('actif',true).order('niveau')
+    G.admin?db.from('quiz').select('*').eq('module_id',id).order('niveau'):db.from('quiz').select('*').eq('module_id',id).eq('actif',true).order('niveau')
   ])
   const tents=(t||[]).filter(x=>x.quiz?.module_id===id),quiz=q||[]
-  const pct=quiz.length?Math.round(tents.filter(x=>x.valide).length/quiz.length*100):0
+  const examens=quiz.filter(x=>x.mode_examen&&x.actif!==false)
+  const exValides=examens.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
+  const moduleValide=examens.length>0&&exValides===examens.length
+  const pct=examens.length?Math.round(exValides/examens.length*100):0
   $('m-header').innerHTML=`<div style="display:flex;align-items:center;gap:14px;padding:1.1rem;border-bottom:1px solid var(--bord)">
     <div style="width:50px;height:50px;border-radius:14px;background:${m.bg};display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic}"></i></div>
     <div style="flex:1"><div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${m.num}</div>
     <div style="font-family:var(--fg);font-size:1.15rem;font-weight:700;letter-spacing:-.3px;margin-bottom:6px">${m.nom}</div>
     <div style="display:flex;align-items:center;gap:10px;max-width:300px"><div class="pbar" style="flex:1"><div class="pfill ${pct===100?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div>
-    <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${pct}% — ${tents.filter(x=>x.valide).length}/${quiz.length} validé${tents.filter(x=>x.valide).length>1?'s':''}</span></div></div>
+    <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${examens.length?exValides+'/'+examens.length+' examen'+(examens.length>1?'s':'')+' validé'+(exValides>1?'s':''):'Aucun examen planifié'}</span>
+    ${moduleValide?'<span class="badge badge-v" style="font-size:.65rem;font-weight:800">MODULE VALIDÉ</span>':''}</div>
+    <div style="font-size:.68rem;color:var(--t3);margin-top:4px">Seuls les examens comptent pour la validation du module — les exercices servent à s'entraîner.</div></div>
   </div>`
   await renderCours(id)
   await renderEval(id,quiz,tents)
@@ -1376,7 +1417,7 @@ async function renderEval(modId,quiz,tents) {
       <div class="quiz-row-head">
         <div class="quiz-row-ico" style="background:${ibg};color:${t?.valide?'var(--v)':t?'var(--r)':'var(--t3)'}"><i class="ti ${ic}"></i></div>
         <div style="flex:1;min-width:0"><div class="quiz-row-name">${q.titre}</div>
-        <div class="quiz-row-meta">${FILIERES[q.filiere]||''} ${isExamen?'· Examen'+crd:' · Exercice repassable'}</div></div>
+        <div class="quiz-row-meta">${q.actif?'':'<span style="background:rgba(139,92,246,.15);color:#8b5cf6;padding:1px 7px;border-radius:20px;font-weight:700;font-size:.62rem">PRIVÉ</span> '}${isExamen?'Examen'+crd:'Exercice repassable'}</div></div>
         <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">`
     if(t) h+=`<span style="font-family:var(--fg);font-size:.875rem;font-weight:700;color:${t.valide?'var(--v)':'var(--r)'};">${G.admin?t.score+'/20':''}</span>`
     if(t) h+=`<button class="btn btn-ghost btn-sm" onclick="voirRes('${t.id}')">Résultats</button>`
@@ -1704,7 +1745,12 @@ async function loadSuivi() {
     db.from('quiz').select('*').eq('actif',true).order('module_id').order('niveau')
   ])
   const tents=t||[],allQ=aq||[]
-  $('v-suivi-body').innerHTML=MODULES.map(m=>{const qm=allQ.filter(q=>q.module_id===m.id);return `<div class="card"><div class="card-head"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span class="card-title">${m.nom}</span></div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${tents.filter(x=>x.quiz?.module_id===m.id&&x.valide).length}/${qm.length}</span></div><div class="card-body">${qm.length?qm.map(q=>{const tent=tents.find(x=>x.quiz_id===q.id);return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)"><i class="ti ${tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:1rem;flex-shrink:0"></i><span style="flex:1;font-size:.82rem;font-weight:500">${q.titre}</span><span style="font-family:var(--fg);font-size:.82rem;font-weight:700;color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${tent?tent.score+'/20':'—'}</span></div>`}).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'}</div></div>`}).join('')
+  $('v-suivi-body').innerHTML=MODULES.map(m=>{
+    const qm=allQ.filter(q=>q.module_id===m.id)
+    const exM=qm.filter(q=>q.mode_examen)
+    const exVal=exM.filter(q=>tents.some(x=>x.quiz_id===q.id&&x.valide)).length
+    const modValide=exM.length>0&&exVal===exM.length
+    return `<div class="card"><div class="card-head"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span class="card-title">${m.nom}</span>${modValide?'<span class="badge badge-v" style="font-size:.6rem;font-weight:800">VALIDÉ</span>':''}</div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${exM.length?exVal+'/'+exM.length+' examens':'—'}</span></div><div class="card-body">${qm.length?qm.map(q=>{const tent=tents.find(x=>x.quiz_id===q.id);const statut=tent?.valide?'Validé':tent?'Non validé':'—';return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)"><i class="ti ${tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:1rem;flex-shrink:0"></i><span style="flex:1;font-size:.82rem;font-weight:500">${q.titre}${q.mode_examen?' <span style="background:var(--rl);color:var(--r);padding:0 6px;border-radius:20px;font-weight:700;font-size:.6rem">EXAMEN</span>':''}</span><span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${statut}</span></div>`}).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'}</div></div>`}).join('')
 }
 
 // ─── RÉVISION ──────────────────────────────────────────────────────────────
@@ -1813,7 +1859,7 @@ async function uploadImageQuestion(idx,input) {
 }
 
 async function pubQuizManuel() {
-  const titre=$('mq-titre').value.trim(),modId=parseInt($('mq-mod').value),fil=$('mq-fil').value
+  const titre=$('mq-titre').value.trim(),modId=parseInt($('mq-mod').value),fil='com',estPublie=($('mq-vis')?.value||'prive')==='publie'
   if(!titre){toast('Donnez un titre','err');return}
   if(!mqQuestions.length){toast('Ajoutez au moins une question','err');return}
   for(let i=0;i<mqQuestions.length;i++){const q=mqQuestions[i];if(!q.enonce.trim()){toast('Question '+(i+1)+' : énoncé vide','err');return};if(q.type==='qcm'&&q.options.some(o=>!o.trim())){toast('Question '+(i+1)+' : remplissez les 4 options','err');return}}
@@ -1825,16 +1871,16 @@ async function pubQuizManuel() {
   const {data:ex}=await db.from('quiz').select('niveau').eq('module_id',modId).order('niveau',{ascending:false}).limit(1)
   const niveau=ex?.length?ex[0].niveau+1:1
   const totalPts=mqQuestions.reduce((a,q)=>a+(parseFloat(q.points)||2),0)
-  const {data:quizCree,error}=await db.from('quiz').insert({module_id:modId,titre,filiere:fil,niveau,total_points:totalPts,seuil:SEUIL,actif:true,created_by:user.id,mode_examen:isExamen,date_debut:dateDebut?new Date(dateDebut).toISOString():null,date_fin:dateFin?new Date(dateFin).toISOString():null}).select().single()
-  if(error){toast('Erreur : '+error.message,'err');btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Publier le quiz';return}
+  const {data:quizCree,error}=await db.from('quiz').insert({module_id:modId,titre,filiere:fil,niveau,total_points:totalPts,seuil:SEUIL,actif:estPublie,created_by:user.id,mode_examen:isExamen,date_debut:dateDebut?new Date(dateDebut).toISOString():null,date_fin:dateFin?new Date(dateFin).toISOString():null}).select().single()
+  if(error){toast('Erreur : '+error.message,'err');btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer le quiz';return}
   await db.from('questions').insert(mqQuestions.map((q,i)=>({quiz_id:quizCree.id,enonce:q.enonce,options:q.type==='vf'?['Vrai','Faux']:(q.options||[]),bonne_reponse:q.bonne||0,points:parseFloat(q.points)||2,competence:q.competence||null,type_question:q.type||'qcm',reponse_type:q.reponse_type||null,image_url:q.imageUrl||null,ordre:i})))
-  toast('Quiz publié !','ok');mqQuestions=[];$('mq-titre').value='';renderQuestions();loadQuizAdmin()
-  btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Publier le quiz'
+  toast(estPublie?'Quiz publié pour tout le monde !':'Quiz créé en privé (admins seulement)','ok');mqQuestions=[];$('mq-titre').value='';renderQuestions();loadQuizAdmin()
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer le quiz'
 }
 
 async function loadQuizAdmin() {
   const sel=$('fil-mod-quiz');if(!sel) return;const m=parseInt(sel.value)
-  const {data,error}=await db.from('quiz').select('*').eq('module_id',m).eq('actif',true).order('niveau')
+  const {data,error}=await db.from('quiz').select('*').eq('module_id',m).order('niveau')
   if(error){$('quiz-admin-body').innerHTML='<p style="font-size:.78rem;color:var(--r)">Erreur : '+error.message+'</p>';return}
   const el=$('quiz-admin-body');if(!el) return
   el.innerHTML=(data||[]).length?(data||[]).map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--bord)">
@@ -1842,16 +1888,18 @@ async function loadQuizAdmin() {
     <div style="flex:1">
       <div style="font-size:.82rem;font-weight:600">${x.titre}</div>
       <div style="font-size:.7rem;color:var(--t3);margin-top:2px">
-        <span style="background:${x.mode_examen?'var(--rl)':'rgba(234,168,0,.12)'};color:${x.mode_examen?'var(--r)':'var(--amber)'};padding:1px 7px;border-radius:20px;font-weight:600;font-size:.65rem">${x.mode_examen?'EXAMEN':'EXERCICE'}</span>
+        <span style="background:${x.mode_examen?'var(--rl)':'rgba(234,168,0,.12)'};color:${x.mode_examen?'var(--r)':'var(--amber)'};padding:1px 7px;border-radius:20px;font-weight:600;font-size:.65rem">${x.mode_examen?'EXAMEN':'EXERCICE'}</span> <span style="background:${x.actif?'rgba(59,109,17,.15)':'rgba(139,92,246,.15)'};color:${x.actif?'var(--v)':'#8b5cf6'};padding:1px 7px;border-radius:20px;font-weight:700;font-size:.62rem">${x.actif?'PUBLIÉ':'PRIVÉ'}</span>
         ${x.mode_examen&&x.date_debut?` <span style="font-size:.65rem;color:var(--t3)">Du ${new Date(x.date_debut).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})} au ${x.date_fin?new Date(x.date_fin).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'?'}</span>`:''}
       </div>
     </div>
+    <button class="btn btn-ghost btn-sm" onclick="togglePubQuiz('${x.id}',${x.actif})" title="${x.actif?'Rendre privé':'Publier pour tous'}" style="color:${x.actif?'#8b5cf6':'var(--v)'};font-size:.68rem;font-weight:700;white-space:nowrap">${x.actif?'Rendre privé':'Publier'}</button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="editerQuiz('${x.id}')" title="Modifier"><i class="ti ti-pencil"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="dupliquerQuiz('${x.id}')"><i class="ti ti-copy"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="delQuiz('${x.id}')"><i class="ti ti-trash"></i></button>
   </div>`).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz pour ce module.</p>'
 }
 
+async function togglePubQuiz(id,actuel){const {error}=await db.from('quiz').update({actif:!actuel}).eq('id',id);if(error){toast('Erreur : '+error.message,'err');return};toast(!actuel?'Quiz publié pour tout le monde !':'Quiz repassé en privé (admins seulement)','ok');loadQuizAdmin()}
 async function delQuiz(id){if(!confirm('Supprimer ce quiz et ses questions ?'))return;await db.from('tentatives').delete().eq('quiz_id',id);await db.from('questions').delete().eq('quiz_id',id);const {error}=await db.from('quiz').delete().eq('id',id);if(error)await db.from('quiz').update({actif:false}).eq('id',id);toast('Quiz supprimé !','ok');loadQuizAdmin()}
 
 async function dupliquerQuiz(id) {
@@ -2415,8 +2463,8 @@ function ouvrirMonProfil() {
   modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:520px;overflow:hidden">
     <div style="background:var(--dark);padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between">
       <div>
-        <div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">Mon profil Ancien</div>
-        <div style="font-size:.72rem;color:#555;margin-top:2px">Visible dans l'annuaire des Anciens</div>
+        <div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">${G.admin?'Mon profil formateur':'Mon profil Ancien'}</div>
+        <div style="font-size:.72rem;color:#555;margin-top:2px">${G.admin?'Visible par les aspirants (module + contact)':'Visible dans l\'annuaire des Anciens'}</div>
       </div>
       <button onclick="document.getElementById('modal-mon-profil').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.2rem"><i class="ti ti-x"></i></button>
     </div>
@@ -2425,14 +2473,14 @@ function ouvrirMonProfil() {
         <div><label class="field-label">Ville de sédentarisation</label><input class="finput" id="mp-ville" value="${p.ville_sedentaire||''}" placeholder="Lyon, Paris..."/></div>
         <div><label class="field-label">Téléphone</label><input class="finput" id="mp-tel" value="${p.telephone||''}" placeholder="06 XX XX XX XX" type="tel"/></div>
       </div>
-      <div style="margin-bottom:1rem"><label class="field-label">Spécialités</label>
+      ${G.admin?`<div style="margin-bottom:1rem"><label class="field-label">Module dont vous êtes responsable</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">${MODULES.map(m=>`<label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600"><input type="radio" name="mp-mod-admin" value="${m.id}" ${p.module_inscrit===m.id?'checked':''} style="accent-color:var(--r)"/><i class="ti ${m.icon}" style="color:${m.ic}"></i>${m.nom}</label>`).join('')}</div></div>`:`<div style="margin-bottom:1rem"><label class="field-label">Spécialités</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="1" class="mp-spec" ${specsChecked(1)} style="accent-color:var(--r)"/> <i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="2" class="mp-spec" ${specsChecked(2)} style="accent-color:var(--r)"/> <i class="ti ti-droplets" style="color:#185FA5"></i> Hydraulique</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="3" class="mp-spec" ${specsChecked(3)} style="accent-color:var(--r)"/> <i class="ti ti-tools" style="color:#5F5E5A"></i> Conception</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="4" class="mp-spec" ${specsChecked(4)} style="accent-color:var(--r)"/> <i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</label>
         </div>
-      </div>
+      </div>`}
       <div style="margin-bottom:1.2rem"><label class="field-label">Description / expérience</label><textarea class="ftextarea" id="mp-ref" rows="2" placeholder="Ex : 15 ans en hydraulique industrielle...">${p.reference||''}</textarea></div>
       
 
@@ -2470,13 +2518,17 @@ async function sauvegarderMonProfil() {
   const ville=document.getElementById('mp-ville')?.value?.trim()
   const tel=document.getElementById('mp-tel')?.value?.trim()
   const ref=document.getElementById('mp-ref')?.value?.trim()
-  const specs=[...document.querySelectorAll('.mp-spec:checked')].map(c=>parseInt(c.value))
+  const specs=G.admin?[]:[...document.querySelectorAll('.mp-spec:checked')].map(c=>parseInt(c.value))
+  const modAdminEl=G.admin?document.querySelector('input[name="mp-mod-admin"]:checked'):null
   if(!ville||!tel){toast('Ville et téléphone obligatoires','err');return}
+  if(G.admin&&!modAdminEl){toast('Choisissez votre module','err');return}
   const btn=document.getElementById('btn-save-profil');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'
-  await db.from('profils').update({ville_sedentaire:ville,telephone:tel,reference:ref||null,specialites:specs,profil_complet:true}).eq('id',G.profil.id)
-  await db.from('mini_stages').delete().eq('ancien_id',G.profil.id)
-  if(_stagesForm.length) await db.from('mini_stages').insert(_stagesForm.map(s=>({ancien_id:G.profil.id,module_id:s.module_id,periode:s.periode||null,description:s.description||null,actif:true})))
-  G.profil={...G.profil,ville_sedentaire:ville,telephone:tel,reference:ref,specialites:specs,profil_complet:true}
+  const update={ville_sedentaire:ville,telephone:tel,reference:ref||null,profil_complet:true}
+  if(G.admin&&modAdminEl) update.module_inscrit=parseInt(modAdminEl.value)
+  else update.specialites=specs
+  await db.from('profils').update(update).eq('id',G.profil.id)
+  if(!G.admin){await db.from('mini_stages').delete().eq('ancien_id',G.profil.id);if(_stagesForm.length) await db.from('mini_stages').insert(_stagesForm.map(s=>({ancien_id:G.profil.id,module_id:s.module_id,periode:s.periode||null,description:s.description||null,actif:true})))}
+  G.profil={...G.profil,...update,specialites:specs}
   document.getElementById('modal-mon-profil')?.remove()
   toast('Profil enregistré ! Visible dans l\'annuaire.','ok')
   btn.disabled=false
@@ -2485,23 +2537,76 @@ async function sauvegarderMonProfil() {
 // ─── ANCIENS ───────────────────────────────────────────────────────────────
 let _anciensAll=[]
 
+function afficherFormulaireAdmin(email) {
+  const modal=document.createElement('div');modal.id='modal-admin-profil'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:480px;overflow:hidden">
+    <div style="background:var(--dark);padding:1rem 1.4rem">
+      <div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">Bienvenue, formateur</div>
+      <div style="font-size:.72rem;color:#555;margin-top:2px">Indiquez votre module et votre numéro — les aspirants pourront vous contacter</div>
+    </div>
+    <div style="padding:1.4rem">
+      <div style="font-size:.75rem;color:var(--t3);margin-bottom:1rem">Compte : ${email}</div>
+      <label class="field-label">Module dont vous êtes responsable</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.2rem;margin-top:4px">
+        ${MODULES.map(m=>`<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600">
+          <input type="radio" name="admin-mod" value="${m.id}" style="accent-color:var(--r)"/>
+          <i class="ti ${m.icon}" style="color:${m.ic}"></i> ${m.nom}
+        </label>`).join('')}
+      </div>
+      <label class="field-label">Numéro de téléphone</label>
+      <input class="finput" id="admin-tel" type="tel" placeholder="06 XX XX XX XX" style="margin-top:4px;margin-bottom:1.2rem"/>
+      <button class="btn btn-dark btn-full" onclick="sauvegarderProfilAdmin()"><i class="ti ti-check"></i> Valider</button>
+    </div>
+  </div>`
+  document.body.appendChild(modal)
+}
+
+async function sauvegarderProfilAdmin() {
+  const modEl=document.querySelector('input[name="admin-mod"]:checked')
+  const tel=document.getElementById('admin-tel')?.value?.trim()
+  if(!modEl){toast('Choisissez un module','err');return}
+  if(!tel){toast('Téléphone obligatoire','err');return}
+  await db.from('profils').update({module_inscrit:parseInt(modEl.value),telephone:tel,profil_complet:true}).eq('id',G.profil.id)
+  G.profil.module_inscrit=parseInt(modEl.value);G.profil.telephone=tel;G.profil.profil_complet=true
+  document.getElementById('modal-admin-profil')?.remove()
+  toast('Profil enregistré !','ok')
+  // Reprendre la navigation normale
+  const savedD=localStorage.getItem('pm_page')||'dashboard'
+  const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module']
+  nav(okD.includes(savedD)?savedD:'dashboard')
+}
+
 async function chargerAnciens() {
   const [{data:anciens},{data:stages}]=await Promise.all([
     db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites').in('role',['ancien','admin']).eq('profil_complet',true).order('nom'),
     db.from('mini_stages').select('*').eq('actif',true)
   ])
   _anciensAll=(anciens||[]).map(a=>({...a,stages:(stages||[]).filter(s=>s.ancien_id===a.id)}))
+  // Peupler le select ville
+  const sel=document.getElementById('tri-ville-anciens')
+  if(sel){
+    const villes=[...new Set(_anciensAll.map(a=>a.ville_sedentaire).filter(Boolean))].sort()
+    sel.innerHTML='<option value="">Toutes les villes</option>'+villes.map(v=>`<option value="${v}">${v}</option>`).join('')
+  }
   afficherAnciens(_anciensAll)
 }
 
+function _getFiltre(){
+  const moduleId=parseInt(document.querySelector('#filtres-anciens button.btn-dark')?.dataset?.fid||'0')
+  const ville=(document.getElementById('tri-ville-anciens')?.value||'').toLowerCase()
+  let r=moduleId===0?_anciensAll:_anciensAll.filter(a=>(a.specialites||[]).map(Number).includes(moduleId)||a.stages.some(s=>s.module_id===moduleId))
+  if(ville) r=r.filter(a=>(a.ville_sedentaire||'').toLowerCase().includes(ville))
+  return r
+}
 function filtrerAnciens(moduleId) {
   document.querySelectorAll('#filtres-anciens button').forEach(btn=>{
     const fid=parseInt(btn.dataset.fid)
     btn.className=fid===moduleId?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'
   })
-  const filtres=moduleId===0?_anciensAll:_anciensAll.filter(a=>(a.specialites||[]).map(Number).includes(moduleId)||a.stages.some(s=>s.module_id===moduleId))
-  afficherAnciens(filtres)
+  afficherAnciens(_getFiltre())
 }
+function filtrerAnciensVille(){afficherAnciens(_getFiltre())}
 
 function afficherAnciens(anciens) {
   const el=$('anciens-grid');if(!el) return
@@ -3046,6 +3151,11 @@ async function editerQuiz(quizId) {
       +'<option value="exercice"'+(quiz.mode_examen?'':' selected')+'>Exercice — repassable librement</option>'
       +'<option value="examen"'+(quiz.mode_examen?' selected':'')+'>Examen — avec créneau horaire</option>'
       +'</select>'
+      +'<label style="font-size:.72rem;font-weight:700;color:var(--t2);white-space:nowrap;margin-left:8px">Visibilité :</label>'
+      +'<select id="eq-vis" style="padding:5px 10px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.8rem;font-family:var(--ff)">'
+      +'<option value="prive"'+(quiz.actif?'':' selected')+'>Privé — admins seulement</option>'
+      +'<option value="publie"'+(quiz.actif?' selected':'')+'>Publié — tout le monde</option>'
+      +'</select>'
       +'</div>'
       +'<div id="eq-dates-zone" style="display:'+(quiz.mode_examen?'flex':'none')+';gap:.6rem;flex-wrap:wrap;width:100%;align-items:center">'
       +'<div style="flex:1;min-width:140px"><div style="font-size:.65rem;color:var(--t3);font-weight:700;text-transform:uppercase;margin-bottom:3px">Début</div>'
@@ -3084,9 +3194,12 @@ async function editerQuiz(quizId) {
     const dateFinEl=document.getElementById('eq-date-fin')
     const dateDebutVal=dateDebutEl&&dateDebutEl.value?new Date(dateDebutEl.value).toISOString():null
     const dateFinVal=dateFinEl&&dateFinEl.value?new Date(dateFinEl.value).toISOString():null
+    const visEl=document.getElementById('eq-vis')
+    const estPublie=visEl?visEl.value==='publie':quiz.actif
     await db.from('quiz').update({
       titre:titre,
       mode_examen:isExamen,
+      actif:estPublie,
       date_debut:isExamen?dateDebutVal:null,
       date_fin:isExamen?dateFinVal:null
     }).eq('id',qzId)
