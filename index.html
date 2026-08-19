@@ -2877,6 +2877,72 @@ function filtrerComptes(role) {
 }
 
 
+// ─── FICHE COMPTE + CHANGEMENT DE ROLE ──────────────────────────────────────
+function ouvrirFicheCompte(id, roleActuel) {
+  const p=_tousComptes.find(x=>x.id===id)
+  if(!p){toast('Compte introuvable','err');return}
+  const peutModifier=estAdminSuperviseur()
+  const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
+  const modMap={1:'Thermique & Mécanique',2:'Hydraulique',3:'Conception & Construction',4:'Électrique & Automatisme'}
+  const modal=document.createElement('div');modal.id='modal-fiche-compte'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto'
+  modal.onclick=function(e){if(e.target===modal)modal.remove()}
+  modal.innerHTML='<div style="background:var(--card);border-radius:20px;width:100%;max-width:460px;overflow:hidden;margin:auto">'
+    +'<div style="background:var(--dark);padding:1.1rem 1.4rem;display:flex;align-items:center;gap:12px">'
+      +'<div style="width:44px;height:44px;border-radius:12px;background:var(--r);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-weight:700;flex-shrink:0">'+ini+'</div>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">'+((p.prenom||'')+' '+(p.nom||'')).trim()+'</div>'
+        +'<div style="font-size:.72rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(p.email||'—')+'</div>'
+      +'</div>'
+      +'<button onclick="document.getElementById(\'modal-fiche-compte\').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem"><i class="ti ti-x"></i></button>'
+    +'</div>'
+    +'<div style="padding:1.3rem">'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.2rem">'
+        +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Rôle actuel</div><div style="font-size:.85rem;font-weight:600;margin-top:3px">'+(p.role||'—')+'</div></div>'
+        +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Téléphone</div><div style="font-size:.85rem;font-weight:600;margin-top:3px">'+(p.telephone||'—')+'</div></div>'
+        +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Ville</div><div style="font-size:.85rem;font-weight:600;margin-top:3px">'+(p.ville_sedentaire||'—')+'</div></div>'
+        +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Module gâcheur</div><div style="font-size:.85rem;font-weight:600;margin-top:3px">'+(p.superviseur?'Superviseur':(modMap[p.module_gacheur]||'—'))+'</div></div>'
+      +'</div>'
+      +(peutModifier?(
+        '<div style="border-top:1px solid var(--bord);padding-top:1.1rem">'
+        +'<label class="field-label">Changer le rôle</label>'
+        +'<select class="fselect" id="fc-role" style="margin-top:4px">'
+          +'<option value="aspirant"'+(p.role==='aspirant'?' selected':'')+'>Aspirant — suit la formation</option>'
+          +'<option value="ancien"'+(p.role==='ancien'?' selected':'')+'>Ancien — Compagnon sédentaire</option>'
+          +'<option value="admin"'+(p.role==='admin'?' selected':'')+'>Admin — Gâcheur (crée les contenus)</option>'
+        +'</select>'
+        +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Un Admin peut créer les cours, les exercices et les examens. La personne devra se reconnecter pour voir son nouvel espace.</div>'
+        +'<button class="btn btn-r btn-full" style="margin-top:1rem" id="fc-btn" onclick="changerRoleCompte(\''+p.id+'\')"><i class="ti ti-check"></i> Enregistrer le rôle</button>'
+        +'</div>'
+      ):'<div style="border-top:1px solid var(--bord);padding-top:1rem;font-size:.75rem;color:var(--t3);line-height:1.5">Seuls les superviseurs peuvent modifier les rôles.</div>')
+    +'</div>'
+  +'</div>'
+  document.body.appendChild(modal)
+}
+
+async function changerRoleCompte(id) {
+  const sel=document.getElementById('fc-role');if(!sel) return
+  const nouveauRole=sel.value
+  const p=_tousComptes.find(x=>x.id===id)
+  if(p&&p.role===nouveauRole){toast('Ce rôle est déjà celui du compte','err');return}
+  const btn=document.getElementById('fc-btn')
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'}
+  const maj={role:nouveauRole}
+  // Passage en admin : on repart d'un profil propre côté gâcheur
+  if(nouveauRole==='admin'){maj.module_inscrit=null}
+  // Sortie du rôle admin : on nettoie les champs de gâcheur
+  if(p&&p.role==='admin'&&nouveauRole!=='admin'){maj.module_gacheur=null;maj.superviseur=false}
+  const {error}=await db.from('profils').update(maj).eq('id',id)
+  if(error){
+    toast('Erreur : '+error.message,'err')
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Enregistrer le rôle'}
+    return
+  }
+  toast('Rôle mis à jour : '+nouveauRole,'ok')
+  document.getElementById('modal-fiche-compte')?.remove()
+  chargerTousComptes()
+}
+
 // ─── RECHERCHE GLOBALE ──────────────────────────────────────────────────────
 async function rechercheGlobale(q) {
   const el=$('search-results');if(!el) return
