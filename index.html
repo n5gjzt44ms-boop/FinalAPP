@@ -39,7 +39,7 @@ const GUIDES = {
   },
   ancien: {
     titre: "Guide Compagnon Ancien",
-    couleur: '#3C3489', fond: '#EEEDFE',
+    couleur: '#3C3489', fond: 'rgba(60,52,137,.10)',
     etapes: [
       {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Progression de tous les aspirants. Cliquez sur une ligne pour le detail complet."},
       {icon:'ti-books', titre:'Modules', texte:"Consultez le contenu des 4 modules pour connaitre le programme suivi par les aspirants."},
@@ -90,7 +90,7 @@ function ouvrirGuide() {
 }
 
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js">
 // ─── GUIDE UTILISATEUR ────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ const GUIDES = {
   },
   ancien: {
     titre: "Guide Compagnon Ancien",
-    couleur: '#3C3489', fond: '#EEEDFE',
+    couleur: '#3C3489', fond: 'rgba(60,52,137,.10)',
     etapes: [
       {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Progression de tous les aspirants. Cliquez sur une ligne pour le detail complet."},
       {icon:'ti-books', titre:'Modules', texte:"Consultez le contenu des 4 modules pour connaitre le programme suivi par les aspirants."},
@@ -176,25 +176,36 @@ function ouvrirGuide() {
 </script>
 <style>
 :root {
-  --r:#E24B4A; --r2:#A32D2D; --rl:#FCEBEB;
-  --v:#3B6D11; --vl:#EAF3DE;
-  --amber:#854F0B; --amberl:#FAEEDA;
-  --b:#185FA5; --bl:#E6F1FB;
-  --dark:#1A1A1A; --dark2:#2A2A2A;
-  --t1:#1A1A1A; --t2:#555; --t3:#999;
-  --bg:#F5F4F1; --card:#FFFFFF;
-  --bord:rgba(0,0,0,.07); --bord2:rgba(0,0,0,.12);
-  --ff:'Outfit',system-ui,sans-serif;
-  --fg:'Space Grotesk',system-ui,sans-serif;
+  --r:#E24B4A; --r2:#C13B3A; --rl:rgba(226,75,74,.10);
+  --v:#3B6D11; --vl:rgba(59,109,17,.10);
+  --amber:#854F0B; --amberl:rgba(133,79,11,.10);
+  --b:#185FA5; --bl:rgba(24,95,165,.10);
+  --m3:#8A8078;
+  --dark:#141414; --dark2:#2A2A2A;
+  --t1:#141414; --t2:#6B6B68; --t3:#A2A29D;
+  --bg:#EDECE9; --card:#FFFFFF; --card2:#FBFAF9;
+  --bord:rgba(0,0,0,.06); --bord2:rgba(0,0,0,.10);
+  --field:rgba(0,0,0,.045);
+  --ff:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --fg:'Inter',-apple-system,system-ui,sans-serif;
+  --sh-s:0 1px 2px rgba(0,0,0,.05);
+  --sh-m:0 1px 2px rgba(0,0,0,.04),0 8px 24px -12px rgba(0,0,0,.10);
+  --sh-r:0 6px 16px -8px rgba(226,75,74,.55);
   --sidebar-w:52px;
 }
 body.dark {
-  --t1:#F0EEE8; --t2:#AAA; --t3:#666;
-  --bg:#111111; --card:#1C1C1C;
-  --bord:rgba(255,255,255,.07); --bord2:rgba(255,255,255,.12);
-  --dark:#0A0A0A; --dark2:#222;
-  --rl:rgba(226,75,74,.15); --vl:rgba(59,109,17,.15);
-  --amberl:rgba(133,79,11,.2); --bl:rgba(24,95,165,.2);
+  --r:#FF6B5E; --r2:#E24B4A; --rl:rgba(255,107,94,.14);
+  --v:#7FB04A; --vl:rgba(127,176,74,.15);
+  --amber:#F0B23C; --amberl:rgba(240,178,60,.15);
+  --b:#4E9BE0; --bl:rgba(78,155,224,.15);
+  --m3:#A79C93;
+  --t1:#F4F3F1; --t2:#A2A29D; --t3:#7A7A80;
+  --bg:#0E0E10; --card:#1A1A1E; --card2:#1A1A1E;
+  --bord:rgba(255,255,255,.08); --bord2:rgba(255,255,255,.14);
+  --field:rgba(255,255,255,.06);
+  --dark:#000000; --dark2:#222;
+  --sh-s:0 1px 2px rgba(0,0,0,.35);
+  --sh-m:0 1px 2px rgba(0,0,0,.35),0 8px 24px -12px rgba(0,0,0,.7);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-font-smoothing:antialiased}
@@ -212,56 +223,56 @@ button,input,select,textarea{font-family:var(--ff)}
 .fadein{animation:fadein .2s ease}
 
 /* ── LOGIN ── */
-#vue-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;background:var(--dark)}
-.login-box{background:var(--card);border-radius:20px;padding:2.2rem;width:100%;max-width:400px;box-shadow:0 24px 80px rgba(0,0,0,.25)}
-.login-logo{font-family:var(--fg);font-size:2.4rem;font-weight:700;text-align:center;letter-spacing:-1.5px;margin-bottom:4px}
+#vue-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;background:var(--bg)}
+.login-box{background:var(--card2);border-radius:28px;padding:2.4rem;width:100%;max-width:400px;box-shadow:0 30px 60px -24px rgba(0,0,0,.28),0 0 0 1px rgba(0,0,0,.05)}
+.login-logo{font-family:var(--fg);font-size:2.4rem;font-weight:800;text-align:center;letter-spacing:-2px;margin-bottom:4px}
 .login-logo em{color:var(--r);font-style:normal}
 .login-tagline{text-align:center;font-size:.65rem;letter-spacing:3px;text-transform:uppercase;color:var(--t3);margin-bottom:1.8rem}
-.login-tabs{display:flex;gap:4px;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:1.4rem}
-.ltab{flex:1;padding:8px;background:none;border:none;font-size:.82rem;font-weight:500;color:var(--t3);cursor:pointer;border-radius:7px;transition:all .15s;font-family:var(--ff)}
-.ltab.on{background:var(--card);color:var(--t1);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.login-tabs{display:flex;gap:4px;background:var(--field);border-radius:14px;padding:4px;margin-bottom:1.4rem}
+.ltab{flex:1;padding:9px;background:none;border:none;font-size:.82rem;font-weight:600;color:var(--t3);cursor:pointer;border-radius:11px;transition:all .15s;font-family:var(--ff)}
+.ltab.on{background:var(--card);color:var(--t1);box-shadow:var(--sh-s)}
 
 /* ── FORMULAIRES ── */
 .field{margin-bottom:.9rem}
-.field label,.field-label{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--t3);font-weight:600;margin-bottom:5px}
+.field label,.field-label{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:600;margin-bottom:6px}
 .field input,.field select,.field textarea,.finput,.fselect,.ftextarea{
-  width:100%;padding:10px 14px;border:1.5px solid var(--bord2);border-radius:10px;
-  font-size:.9rem;outline:none;background:var(--card);color:var(--t1);
-  transition:border-color .15s;font-family:var(--ff)}
-.field input:focus,.finput:focus,.fselect:focus,.ftextarea:focus{border-color:var(--r)}
+  width:100%;padding:13px 16px;border:none;border-radius:14px;
+  font-size:.9rem;outline:none;background:var(--field);color:var(--t1);
+  box-shadow:0 0 0 1.5px transparent;transition:box-shadow .15s;font-family:var(--ff)}
+.field input:focus,.finput:focus,.fselect:focus,.ftextarea:focus{box-shadow:0 0 0 1.5px var(--r)}
 .ftextarea{resize:vertical;line-height:1.5}
 .field small,.field-hint{font-size:.68rem;color:var(--t3);margin-top:4px;display:block}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
 /* ── BOUTONS ── */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:10px;font-size:.875rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;font-family:var(--ff)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 22px;border-radius:14px;font-size:.875rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;font-family:var(--ff)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-r{background:var(--r);color:#fff}
+.btn-r{background:var(--r);color:#fff;box-shadow:var(--sh-r)}
 .btn-r:hover:not(:disabled){background:var(--r2)}
-.btn-dark{background:var(--dark);color:#fff}
+.btn-dark{background:var(--dark);color:#fff;box-shadow:0 6px 16px -8px rgba(0,0,0,.5)}
 .btn-dark:hover:not(:disabled){background:var(--dark2)}
 .btn-full{width:100%}
-.btn-ghost{background:transparent;color:var(--t2);border:1.5px solid var(--bord2);padding:7px 14px;font-size:.8rem;font-weight:500}
-.btn-ghost:hover{background:var(--bg);border-color:var(--bord2)}
-.btn-sm{padding:6px 12px;font-size:.78rem}
-.btn-icon{padding:7px;border-radius:8px}
+.btn-ghost{background:var(--field);color:var(--t1);border:none;padding:9px 16px;font-size:.8rem;font-weight:600}
+.btn-ghost:hover{background:var(--bord2)}
+.btn-sm{padding:8px 14px;font-size:.78rem;border-radius:11px}
+.btn-icon{padding:9px;border-radius:11px}
 
 /* ── ALERTES / BADGES ── */
-.alert{display:flex;align-items:flex-start;gap:8px;padding:10px 14px;border-radius:10px;font-size:.82rem;margin-bottom:1rem;line-height:1.5}
-.alert-err{background:var(--rl);color:var(--r2);border:1px solid var(--r)}
-.alert-ok{background:var(--vl);color:var(--v);border:1px solid var(--v)}
-.alert-info{background:var(--amberl);color:var(--amber);border:1px solid var(--amber)}
-.badge{display:inline-flex;align-items:center;gap:3px;font-size:.68rem;padding:3px 9px;border-radius:20px;font-weight:600;letter-spacing:.3px;white-space:nowrap}
-.badge-r{background:var(--r);color:#fff}
-.badge-rl{background:var(--rl);color:var(--r2)}
+.alert{display:flex;align-items:flex-start;gap:8px;padding:12px 16px;border-radius:14px;font-size:.82rem;margin-bottom:1rem;line-height:1.5}
+.alert-err{background:var(--rl);color:var(--r);border:none}
+.alert-ok{background:var(--vl);color:var(--v);border:none}
+.alert-info{background:var(--amberl);color:var(--amber);border:none}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;padding:5px 11px;border-radius:9px;font-weight:600;letter-spacing:0;white-space:nowrap}
+.badge-r{background:var(--rl);color:var(--r)}
+.badge-rl{background:var(--rl);color:var(--r)}
 .badge-v{background:var(--vl);color:var(--v)}
 .badge-a{background:var(--amberl);color:var(--amber)}
-.badge-g{background:var(--bg);color:var(--t3);border:1px solid var(--bord2)}
+.badge-g{background:var(--field);color:var(--t2)}
 .badge-dark{background:var(--dark);color:#fff}
-.badge-ancien{background:#EEEDFE;color:#3C3489}
+.badge-ancien{background:rgba(60,52,137,.10);color:#3C3489}
 
 /* ── TOAST ── */
-#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);padding:10px 22px;border-radius:20px;font-size:.82rem;font-weight:500;z-index:9999;opacity:0;pointer-events:none;white-space:nowrap;transition:opacity .25s;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);padding:13px 24px;border-radius:16px;font-size:.85rem;font-weight:600;z-index:9999;opacity:0;pointer-events:none;white-space:nowrap;transition:opacity .25s;box-shadow:0 12px 32px -12px rgba(0,0,0,.5)}
 #toast.show{opacity:1}
 #toast.ok{background:var(--dark);color:#fff}
 #toast.err{background:var(--r);color:#fff}
@@ -272,15 +283,15 @@ button,input,select,textarea{font-family:var(--ff)}
 #vue-app.on{display:block}
 
 /* Topbar */
-.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--card);border-bottom:1px solid var(--bord);display:flex;align-items:center;padding:0 1rem;gap:10px;z-index:500}
-.topbar-logo{font-family:var(--fg);font-size:1.3rem;font-weight:700;letter-spacing:-.5px;cursor:pointer;color:var(--t1)}
+.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:color-mix(in srgb,var(--card2) 86%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:none;box-shadow:0 1px 0 var(--bord);display:flex;align-items:center;padding:0 1rem;gap:10px;z-index:500}
+.topbar-logo{font-family:var(--fg);font-size:1.3rem;font-weight:800;letter-spacing:-.04em;cursor:pointer;color:var(--t1)}
 .topbar-logo em{color:var(--r);font-style:normal}
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
 .streak-top{display:flex;align-items:center;gap:4px;font-size:.78rem;font-weight:600;color:var(--t2)}
 
 /* Sidebar compacte */
 .sidebar{position:fixed;top:52px;left:0;bottom:0;width:var(--sidebar-w);background:var(--dark);display:flex;flex-direction:column;align-items:center;padding:.6rem 0;z-index:400;gap:2px}
-.nav-icon{position:relative;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s;flex-shrink:0}
+.nav-icon{position:relative;width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s;flex-shrink:0}
 .nav-icon i{font-size:1.1rem;color:#555;transition:color .15s}
 .nav-icon:hover i{color:#999}
 .nav-icon.on{background:var(--r)}
@@ -288,14 +299,14 @@ button,input,select,textarea{font-family:var(--ff)}
 .nav-icon[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 10px);background:var(--dark2);color:#fff;padding:4px 10px;border-radius:7px;font-size:.72rem;font-weight:500;white-space:nowrap;pointer-events:none;z-index:999}
 .nav-sep{width:24px;height:1px;background:#2A2A2A;margin:4px 0}
 .sidebar-foot{margin-top:auto;padding:.6rem 0;display:flex;flex-direction:column;align-items:center;gap:6px}
-.sidebar-avatar{width:32px;height:32px;border-radius:10px;background:var(--r);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;font-family:var(--fg);cursor:default}
+.sidebar-avatar{width:34px;height:34px;border-radius:11px;background:var(--r);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.74rem;font-weight:700;font-family:var(--fg);cursor:default}
 
 /* Bottom nav mobile */
-.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--bord);z-index:500;padding:6px 0 max(10px,env(safe-area-inset-bottom))}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:color-mix(in srgb,var(--card2) 86%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:none;box-shadow:0 -1px 0 var(--bord);z-index:500;padding:10px 0 max(8px,env(safe-area-inset-bottom))}
 .bnav-inner{display:flex;justify-content:space-around}
-.bnav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.6rem;font-weight:600;color:var(--t3);cursor:pointer;min-width:48px;text-align:center;letter-spacing:.3px;text-transform:uppercase}
-.bnav-item i{font-size:1.3rem}
-.bnav-item.on{color:var(--r)}
+.bnav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.66rem;font-weight:500;color:var(--t3);cursor:pointer;min-width:56px;text-align:center;letter-spacing:0;text-transform:none}
+.bnav-item i{font-size:1.42rem}
+.bnav-item.on{color:var(--r);font-weight:600}
 
 /* Main content */
 .main{margin-top:52px;margin-left:var(--sidebar-w);padding:1.6rem;min-height:calc(100vh - 52px)}
@@ -303,9 +314,9 @@ button,input,select,textarea{font-family:var(--ff)}
 .vue.on{display:block;animation:fadein .2s ease}
 
 /* ── COMPOSANTS UI ── */
-.card{background:var(--card);border:1px solid var(--bord);border-radius:14px;overflow:hidden;margin-bottom:1rem}
+.card{background:var(--card);border:none;border-radius:20px;overflow:hidden;margin-bottom:1rem;box-shadow:var(--sh-s)}
 .card-head{padding:.9rem 1.1rem;border-bottom:1px solid var(--bord);display:flex;align-items:center;justify-content:space-between;gap:8px}
-.card-title{font-size:.9rem;font-weight:600;letter-spacing:-.2px}
+.card-title{font-size:.95rem;font-weight:600;letter-spacing:-.02em}
 .card-body{padding:1.1rem}
 .card-foot{padding:.8rem 1.1rem;border-top:1px solid var(--bord);display:flex;justify-content:flex-end;gap:8px;background:var(--bg)}
 
@@ -316,14 +327,14 @@ button,input,select,textarea{font-family:var(--ff)}
 .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 
 /* KPI */
-.kpi{background:var(--card);border:1px solid var(--bord);border-radius:14px;padding:1rem 1.1rem}
+.kpi{background:var(--card);border:none;border-radius:20px;padding:1.1rem 1.2rem;box-shadow:var(--sh-s)}
 .kpi-val{font-family:var(--fg);font-size:1.9rem;font-weight:700;line-height:1;letter-spacing:-1px}
 .kpi-lbl{font-size:.72rem;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--t3);margin-top:4px}
 .kpi-dark{background:var(--dark);border-color:var(--dark)}
 .kpi-dark .kpi-lbl{color:#555}
 
 /* Progress */
-.pbar{height:4px;background:var(--bord2);border-radius:2px;overflow:hidden}
+.pbar{height:4px;background:var(--field);border-radius:2px;overflow:hidden}
 .pfill{height:100%;border-radius:2px;transition:width .5s}
 .pfill-r{background:var(--r)}
 .pfill-v{background:var(--v)}
@@ -333,14 +344,14 @@ button,input,select,textarea{font-family:var(--ff)}
 .res-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord);cursor:pointer;transition:opacity .12s}
 .res-row:last-child{border-bottom:none}
 .res-row:hover{opacity:.7}
-.res-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.res-ico{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
 .res-name{font-size:.875rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .res-meta{font-size:.7rem;color:var(--t3);margin-top:1px}
 
 /* Quiz */
-.quiz-row{border:1px solid var(--bord);border-radius:12px;overflow:hidden;margin-bottom:8px;background:var(--card)}
+.quiz-row{border:none;border-radius:18px;overflow:hidden;margin-bottom:10px;background:var(--card);box-shadow:var(--sh-s)}
 .quiz-row-head{display:flex;align-items:center;gap:10px;padding:10px 14px}
-.quiz-row-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.quiz-row-ico{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .quiz-row-name{font-size:.875rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .quiz-row-meta{font-size:.7rem;color:var(--t3);margin-top:1px}
 .quiz-countdown-bubble{
@@ -365,7 +376,7 @@ button,input,select,textarea{font-family:var(--ff)}
 @keyframes pulseActive{0%{box-shadow:0 0 0 0 rgba(226,75,74,.4)}70%{box-shadow:0 0 0 8px rgba(226,75,74,0)}100%{box-shadow:0 0 0 0 rgba(226,75,74,0)}}
 .quiz-lock{display:flex;align-items:center;gap:5px;padding:6px 14px;background:var(--bg);border-top:1px solid var(--bord);font-size:.7rem;color:var(--t3)}
 .quiz-q{font-size:1.05rem;font-weight:600;line-height:1.5;margin-bottom:1.1rem;letter-spacing:-.2px}
-.quiz-opt{width:100%;padding:12px 16px;background:var(--card);border:1.5px solid var(--bord2);border-radius:10px;font-size:.9rem;cursor:pointer;text-align:left;font-family:var(--ff);display:flex;align-items:center;gap:10px;margin-bottom:8px;transition:all .12s;color:var(--t1);font-weight:500}
+.quiz-opt{width:100%;min-height:56px;padding:15px 18px;background:var(--card);border:none;box-shadow:0 0 0 1.5px var(--bord2);border-radius:16px;font-size:.92rem;cursor:pointer;text-align:left;font-family:var(--ff);display:flex;align-items:center;gap:12px;margin-bottom:10px;transition:all .12s;color:var(--t1);font-weight:500}
 .quiz-opt:hover:not(:disabled){border-color:var(--r);background:var(--rl)}
 .quiz-opt.sel{border-color:var(--r);background:var(--rl)}
 .quiz-opt.ok{border-color:var(--v);background:var(--vl);color:var(--v)}
@@ -433,7 +444,7 @@ button,input,select,textarea{font-family:var(--ff)}
           <label id="role-ancien-lbl" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600;background:var(--card);color:var(--t1)"><input type="radio" name="r-role-special" value="ancien" onchange="setRoleSpecial('ancien')" style="accent-color:#3C3489"/> <i class="ti ti-star" style="color:#3C3489"></i> Ancien sédentaire</label>
         </div>
       </div>
-      <div class="alert hidden" id="banner-ancien" style="background:#EEEDFE;border:1px solid #3C3489;color:#3C3489"><i class="ti ti-star"></i> Vous créez un compte <strong>Compagnon Ancien</strong>. Bienvenue !</div>
+      <div class="alert hidden" id="banner-ancien" style="background:rgba(60,52,137,.10);border:1px solid #3C3489;color:#3C3489"><i class="ti ti-star"></i> Vous créez un compte <strong>Compagnon Ancien</strong>. Bienvenue !</div>
       <div class="field-row">
         <div class="field"><label>Prénom</label><input type="text" id="r-prenom" placeholder="Jean"/></div>
         <div class="field"><label>Nom</label><input type="text" id="r-nom" placeholder="Dupont"/></div>
@@ -663,7 +674,7 @@ button,input,select,textarea{font-family:var(--ff)}
         <button class="btn btn-dark btn-sm" data-fid="0" onclick="filtrerAnciens(0)">Tous</button>
         <button class="btn btn-ghost btn-sm" data-fid="1" onclick="filtrerAnciens(1)"><i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</button>
         <button class="btn btn-ghost btn-sm" data-fid="2" onclick="filtrerAnciens(2)"><i class="ti ti-droplets" style="color:#185FA5"></i> Hydraulique</button>
-        <button class="btn btn-ghost btn-sm" data-fid="3" onclick="filtrerAnciens(3)"><i class="ti ti-tools" style="color:#5F5E5A"></i> Conception</button>
+        <button class="btn btn-ghost btn-sm" data-fid="3" onclick="filtrerAnciens(3)"><i class="ti ti-tools" style="color:var(--m3)"></i> Conception</button>
         <button class="btn btn-ghost btn-sm" data-fid="4" onclick="filtrerAnciens(4)"><i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem">
@@ -907,10 +918,10 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SEUIL = 14
 const DOMAINE = '@compagnons-du-devoir.fr'
 const MODULES = [
-  {id:1,num:'Module 1',nom:'Thermique & Mécanique',icon:'ti-engine',bg:'#FCEBEB',ic:'#E24B4A',desc:'Moteurs thermiques, distribution, injection, mécanique générale (roulements, boîtes, freinage...)'},
-  {id:2,num:'Module 2',nom:'Hydraulique',icon:'ti-droplets',bg:'#E6F1FB',ic:'#185FA5',desc:'Circuits hydrauliques, diagnostic, maintenance'},
-  {id:3,num:'Module 3',nom:'Conception & Construction',icon:'ti-tools',bg:'#F1EFE8',ic:'#5F5E5A',desc:'Dessin technique, tolérances, soudage, matériaux, pliage'},
-  {id:4,num:'Module 4',nom:'Électrique & Automatisme',icon:'ti-bolt',bg:'#FAEEDA',ic:'#854F0B',desc:'Électrotechnique, câblage, variateurs, Grafcet, automates'}
+  {id:1,num:'Module 1',nom:'Thermique & Mécanique',icon:'ti-engine',bg:'var(--rl)',ic:'var(--r)',desc:'Moteurs thermiques, distribution, injection, mécanique générale (roulements, boîtes, freinage...)'},
+  {id:2,num:'Module 2',nom:'Hydraulique',icon:'ti-droplets',bg:'var(--bl)',ic:'var(--b)',desc:'Circuits hydrauliques, diagnostic, maintenance'},
+  {id:3,num:'Module 3',nom:'Conception & Construction',icon:'ti-tools',bg:'rgba(138,128,120,.12)',ic:'var(--m3)',desc:'Dessin technique, tolérances, soudage, matériaux, pliage'},
+  {id:4,num:'Module 4',nom:'Électrique & Automatisme',icon:'ti-bolt',bg:'var(--amberl)',ic:'var(--amber)',desc:'Électrotechnique, câblage, variateurs, Grafcet, automates'}
 ]
 const FILIERES = {tp:'Engins TP',agr:'Engins agricoles',ind:'Maintenance industrielle',com:'Toutes filières'}
 // Admins superviseurs : ne gèrent aucun module en particulier, pas de contact à renseigner
@@ -1299,11 +1310,11 @@ async function renderCours(modId) {
   const {data:res}=await db.from('ressources').select('*, dossier:dossier_id(id,nom)').eq('module_id',modId).order('ordre')
   const {data:dossiers}=await db.from('dossiers').select('*').eq('module_id',modId).order('nom')
   const r=res||[], d=dossiers||[]
-  const TYPO={pdf:{bg:'#FCEBEB',ic:'#E24B4A',icon:'ti-file-type-pdf',lbl:'PDF'},doc:{bg:'#E6F1FB',ic:'#185FA5',icon:'ti-file-type-doc',lbl:'Word'},cad:{bg:'#EAF3DE',ic:'#3B6D11',icon:'ti-vector',lbl:'CAO'}}
-  const DOSSIER_ICONS={'Composants':{icon:'ti-components',bg:'#E6F1FB',ic:'#185FA5'},
+  const TYPO={pdf:{bg:'var(--rl)',ic:'#E24B4A',icon:'ti-file-type-pdf',lbl:'PDF'},doc:{bg:'var(--bl)',ic:'#185FA5',icon:'ti-file-type-doc',lbl:'Word'},cad:{bg:'#EAF3DE',ic:'#3B6D11',icon:'ti-vector',lbl:'CAO'}}
+  const DOSSIER_ICONS={'Composants':{icon:'ti-components',bg:'var(--bl)',ic:'#185FA5'},
     'Schématisation':{icon:'ti-vector',bg:'#EAF3DE',ic:'#3B6D11'},
-    'Calculs':{icon:'ti-calculator',bg:'#FAEEDA',ic:'#854F0B'},
-    'Dépannage':{icon:'ti-tool',bg:'#FCEBEB',ic:'#E24B4A'}}
+    'Calculs':{icon:'ti-calculator',bg:'var(--amberl)',ic:'#854F0B'},
+    'Dépannage':{icon:'ti-tool',bg:'var(--rl)',ic:'#E24B4A'}}
 
   if(!r.length && !d.length){$('o-cours').innerHTML='<p style="font-size:.82rem;color:var(--t3)">Aucune ressource disponible.</p>';return}
 
@@ -1419,7 +1430,7 @@ async function renderEval(modId,quiz,tents) {
       <div class="quiz-row-head">
         <div class="quiz-row-ico" style="background:${ibg};color:${t?.valide?'var(--v)':t?'var(--r)':'var(--t3)'}"><i class="ti ${ic}"></i></div>
         <div style="flex:1;min-width:0"><div class="quiz-row-name">${q.titre}</div>
-        <div class="quiz-row-meta">${q.actif?'':'<span style="background:rgba(139,92,246,.15);color:#8b5cf6;padding:1px 7px;border-radius:20px;font-weight:700;font-size:.62rem">PRIVÉ</span> '}${isExamen?'Examen'+crd:'Exercice repassable'}</div></div>
+        <div class="quiz-row-meta">${q.actif?'':'<span style="background:rgba(160,140,255,.14);color:#A08CFF;padding:1px 7px;border-radius:20px;font-weight:700;font-size:.62rem">PRIVÉ</span> '}${isExamen?'Examen'+crd:'Exercice repassable'}</div></div>
         <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">`
     if(t) h+=`<span style="font-family:var(--fg);font-size:.875rem;font-weight:700;color:${t.valide?'var(--v)':'var(--r)'};">${G.admin?t.score+'/20':''}</span>`
     if(t) h+=`<button class="btn btn-ghost btn-sm" onclick="voirRes('${t.id}')">Résultats</button>`
@@ -1890,11 +1901,11 @@ async function loadQuizAdmin() {
     <div style="flex:1">
       <div style="font-size:.82rem;font-weight:600">${x.titre}</div>
       <div style="font-size:.7rem;color:var(--t3);margin-top:2px">
-        <span style="background:${x.mode_examen?'var(--rl)':'rgba(234,168,0,.12)'};color:${x.mode_examen?'var(--r)':'var(--amber)'};padding:1px 7px;border-radius:20px;font-weight:600;font-size:.65rem">${x.mode_examen?'EXAMEN':'EXERCICE'}</span> <span style="background:${x.actif?'rgba(59,109,17,.15)':'rgba(139,92,246,.15)'};color:${x.actif?'var(--v)':'#8b5cf6'};padding:1px 7px;border-radius:20px;font-weight:700;font-size:.62rem">${x.actif?'PUBLIÉ':'PRIVÉ'}</span>
+        <span style="background:${x.mode_examen?'var(--rl)':'var(--amberl)'};color:${x.mode_examen?'var(--r)':'var(--amber)'};padding:1px 7px;border-radius:20px;font-weight:600;font-size:.65rem">${x.mode_examen?'EXAMEN':'EXERCICE'}</span> <span style="background:${x.actif?'var(--vl)':'rgba(160,140,255,.14)'};color:${x.actif?'var(--v)':'#A08CFF'};padding:1px 7px;border-radius:20px;font-weight:700;font-size:.62rem">${x.actif?'PUBLIÉ':'PRIVÉ'}</span>
         ${x.mode_examen&&x.date_debut?` <span style="font-size:.65rem;color:var(--t3)">Du ${new Date(x.date_debut).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})} au ${x.date_fin?new Date(x.date_fin).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'?'}</span>`:''}
       </div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="togglePubQuiz('${x.id}',${x.actif})" title="${x.actif?'Rendre privé':'Publier pour tous'}" style="color:${x.actif?'#8b5cf6':'var(--v)'};font-size:.68rem;font-weight:700;white-space:nowrap">${x.actif?'Rendre privé':'Publier'}</button>
+    <button class="btn btn-ghost btn-sm" onclick="togglePubQuiz('${x.id}',${x.actif})" title="${x.actif?'Rendre privé':'Publier pour tous'}" style="color:${x.actif?'#A08CFF':'var(--v)'};font-size:.68rem;font-weight:700;white-space:nowrap">${x.actif?'Rendre privé':'Publier'}</button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="editerQuiz('${x.id}')" title="Modifier"><i class="ti ti-pencil"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="dupliquerQuiz('${x.id}')"><i class="ti ti-copy"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="delQuiz('${x.id}')"><i class="ti ti-trash"></i></button>
@@ -2481,7 +2492,7 @@ function ouvrirMonProfil() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="1" class="mp-spec" ${specsChecked(1)} style="accent-color:var(--r)"/> <i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="2" class="mp-spec" ${specsChecked(2)} style="accent-color:var(--r)"/> <i class="ti ti-droplets" style="color:#185FA5"></i> Hydraulique</label>
-          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="3" class="mp-spec" ${specsChecked(3)} style="accent-color:var(--r)"/> <i class="ti ti-tools" style="color:#5F5E5A"></i> Conception</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="3" class="mp-spec" ${specsChecked(3)} style="accent-color:var(--r)"/> <i class="ti ti-tools" style="color:var(--m3)"></i> Conception</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="4" class="mp-spec" ${specsChecked(4)} style="accent-color:var(--r)"/> <i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</label>
         </div>
       </div>
@@ -2636,7 +2647,7 @@ function filtrerAnciensVille(){afficherAnciens(_getFiltre())}
 function afficherAnciens(anciens) {
   const el=$('anciens-grid');if(!el) return
   if(!anciens.length){el.innerHTML='<p style="font-size:.82rem;color:var(--t3)">Aucun Ancien disponible pour ce filtre.</p>';return}
-  const colors=['#FAEEDA','#E6F1FB','#FCEBEB','#EAF3DE','#EEEDFE']
+  const colors=['var(--amberl)','var(--bl)','var(--rl)','#EAF3DE','rgba(60,52,137,.10)']
   el.innerHTML=anciens.map(a=>{
     const ini=[(a.prenom||'')[0],(a.nom||'')[0]].join('').toUpperCase()||'?'
     const color=colors[a.nom?.charCodeAt(0)%colors.length]||colors[0]
@@ -2659,7 +2670,7 @@ function afficherAnciens(anciens) {
 function ouvrirProfilAncien(ancienId) {
   const a=_anciensAll.find(x=>x.id===ancienId);if(!a) return
   const ini=[(a.prenom||'')[0],(a.nom||'')[0]].join('').toUpperCase()||'?'
-  const colors=['#FAEEDA','#E6F1FB','#FCEBEB','#EAF3DE','#EEEDFE']
+  const colors=['var(--amberl)','var(--bl)','var(--rl)','#EAF3DE','rgba(60,52,137,.10)']
   const color=colors[a.nom?.charCodeAt(0)%colors.length]||colors[0]
   const specs=(a.specialites||[]).map(Number).map(sid=>{const m=MODULES.find(x=>x.id===sid);return m?`<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:${m.bg};color:${m.ic};font-size:.82rem;font-weight:600"><i class="ti ${m.icon}"></i>${m.nom}</span>`:''}).join('')
   const modal=document.createElement('div');modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
@@ -2737,7 +2748,7 @@ function afficherQuestionnaireAncien() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px" id="anc-specialites-wrap">
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500" id="spec-lbl-1"><input type="checkbox" value="1" class="anc-spec" style="accent-color:var(--r)"/> <i class="ti ti-engine" style="color:#E24B4A"></i> Thermique</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500" id="spec-lbl-2"><input type="checkbox" value="2" class="anc-spec" style="accent-color:var(--r)"/> <i class="ti ti-droplets" style="color:#185FA5"></i> Hydraulique</label>
-          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500" id="spec-lbl-3"><input type="checkbox" value="3" class="anc-spec" style="accent-color:var(--r)"/> <i class="ti ti-tools" style="color:#5F5E5A"></i> Conception</label>
+          <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500" id="spec-lbl-3"><input type="checkbox" value="3" class="anc-spec" style="accent-color:var(--r)"/> <i class="ti ti-tools" style="color:var(--m3)"></i> Conception</label>
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500" id="spec-lbl-4"><input type="checkbox" value="4" class="anc-spec" style="accent-color:var(--r)"/> <i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</label>
         </div>
       </div>
@@ -2859,7 +2870,7 @@ function filtrerComptes(role) {
     const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
     const r=ROLES[p.role]||{label:p.role||'—',badge:'badge-g'}
     const created=p.created_at?new Date(p.created_at).toLocaleDateString('fr-FR'):''
-    const ROLE_BG={aspirant:'var(--bl)',ancien:'#EEEDFE',admin:'var(--rl)'}
+    const ROLE_BG={aspirant:'var(--bl)',ancien:'rgba(60,52,137,.10)',admin:'var(--rl)'}
     const ROLE_TC={aspirant:'var(--b)',ancien:'#3C3489',admin:'var(--r)'}
     const bg=ROLE_BG[p.role]||'var(--bg)',tc=ROLE_TC[p.role]||'var(--t2)'
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord);cursor:pointer" onclick="ouvrirFicheCompte('${p.id}','${p.role}')" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background=''">
@@ -2975,7 +2986,7 @@ async function rechercheGlobale(q) {
   if(qz.length){wrap.insertAdjacentHTML('beforeend',lbl('Quiz'));qz.forEach(x=>{const m=MODULES.find(m=>m.id===x.module_id);wrap.appendChild(item(m?.icon||'ti-help',m?.bg||'var(--bg)',m?.ic||'var(--t3)',x.titre,m?.nom||'',()=>ouvrirModule(x.module_id)))})}
   if(res.length){wrap.insertAdjacentHTML('beforeend',lbl('Cours & Ressources'));res.forEach(x=>{const m=MODULES.find(m=>m.id===x.module_id);wrap.appendChild(item('ti-file','var(--rl)','var(--r)',x.titre,(m?.nom||'')+'  '+(x.type||'').toUpperCase(),()=>ouvrirModule(x.module_id)))})}
   if(asp.length&&(G.admin||G.ancien)){wrap.insertAdjacentHTML('beforeend',lbl('Aspirants'));asp.forEach(x=>{wrap.appendChild(item('ti-user','var(--bl)','var(--b)','Pays '+(x.nom||'')+' '+(x.prenom||''),'Aspirant',()=>{if(G.ancien)ouvrirProfilAspirantAncien(x.id,(x.nom||'')+' '+(x.prenom||''));else nav('aspirants')}))})}
-  if(anc.length){wrap.insertAdjacentHTML('beforeend',lbl('Anciens'));anc.forEach(x=>{wrap.appendChild(item('ti-star','#EEEDFE','#3C3489','Compagnon '+(x.nom||''),(x.ville_sedentaire||'Ancien'),()=>nav('anciens')))})}
+  if(anc.length){wrap.insertAdjacentHTML('beforeend',lbl('Anciens'));anc.forEach(x=>{wrap.appendChild(item('ti-star','rgba(60,52,137,.10)','#3C3489','Compagnon '+(x.nom||''),(x.ville_sedentaire||'Ancien'),()=>nav('anciens')))})}
   el.innerHTML='';el.appendChild(wrap)
 }
 
@@ -3107,7 +3118,7 @@ const GUIDES = {
   },
   ancien: {
     titre: "Guide Compagnon Ancien",
-    couleur: '#3C3489', fond: '#EEEDFE',
+    couleur: '#3C3489', fond: 'rgba(60,52,137,.10)',
     etapes: [
       {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Progression de tous les aspirants. Cliquez sur une ligne pour le detail complet."},
       {icon:'ti-books', titre:'Modules', texte:"Consultez le contenu des 4 modules pour connaitre le programme suivi par les aspirants."},
