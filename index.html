@@ -91,6 +91,13 @@ function ouvrirGuide() {
 
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<meta name="theme-color" content="#EDECE9"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="ProgMéca"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23141414'/%3E%3Ctext x='90' y='118' font-family='system-ui,sans-serif' font-size='86' font-weight='800' fill='%23E24B4A' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23141414'/%3E%3Ctext x='32' y='44' font-family='system-ui,sans-serif' font-size='34' font-weight='800' fill='%23E24B4A' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js">
 // ─── GUIDE UTILISATEUR ────────────────────────────────────────────────────────
@@ -434,6 +441,7 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="field"><label>Adresse e-mail</label><input type="email" id="l-email" placeholder="prenom.nom@compagnons-du-devoir.fr" onkeydown="if(event.key==='Enter')login()"/></div>
       <div class="field"><label>Mot de passe</label><input type="password" id="l-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"/></div>
       <button class="btn btn-dark btn-full" id="btn-login" onclick="login()"><i class="ti ti-login"></i> Se connecter</button>
+      <div style="text-align:center;margin-top:.9rem"><span onclick="motDePasseOublie()" style="font-size:.78rem;color:var(--t3);cursor:pointer;text-decoration:underline">Mot de passe oublié ?</span></div>
       
     </div>
     <div id="f-register" class="hidden">
@@ -525,6 +533,7 @@ button,input,select,textarea{font-family:var(--ff)}
         <div style="font-size:.78rem;color:var(--t3);margin-top:2px" id="d-date"></div>
       </div>
       <div id="annonces-dashboard" style="margin-bottom:1rem"></div>
+      <div id="d-rappel"></div>
       <div id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
       <div id="d-activite"></div>
 
@@ -794,7 +803,7 @@ button,input,select,textarea{font-family:var(--ff)}
       <div style="max-width:580px">
         <div style="margin-bottom:1.2rem"><div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Annonces</div></div>
         <div class="card" style="margin-bottom:1rem">
-          <div class="card-head"><span class="card-title">Nouvelle annonce</span></div>
+          <div class="card-head"><span class="card-title" id="an-form-titre">Nouvelle annonce</span><button class="btn btn-ghost btn-sm" id="an-annuler" style="display:none" onclick="annulerEditionAnnonce()">Annuler</button></div>
           <div class="card-body">
             <div style="margin-bottom:.9rem"><label class="field-label">Titre</label><input class="finput" id="an-titre" placeholder="Rappel examen demain"/></div>
             <div style="margin-bottom:.9rem"><label class="field-label">Message</label><textarea class="ftextarea" id="an-msg" rows="3" placeholder="Votre message..."></textarea></div>
@@ -810,7 +819,7 @@ button,input,select,textarea{font-family:var(--ff)}
                 </select>
               </div>
             </div>
-            <button class="btn btn-r" onclick="publierAnnonce()"><i class="ti ti-speakerphone"></i> Publier</button>
+            <button class="btn btn-r" id="an-btn" onclick="publierAnnonce()"><i class="ti ti-speakerphone"></i> Publier</button>
           </div>
         </div>
         <div class="card"><div class="card-head"><span class="card-title">Annonces actives</span></div><div class="card-body" id="annonces-liste"><p style="font-size:.78rem;color:var(--t3)">Chargement...</p></div></div>
@@ -1012,6 +1021,15 @@ async function login() {
   await initApp()
 }
 
+async function motDePasseOublie() {
+  const email=$('l-email').value.trim()
+  if(!email){msgLogin('Saisis d\'abord ton adresse e-mail ci-dessus, puis reclique sur ce lien.');return}
+  if(!email.endsWith(DOMAINE)){msgLogin('Adresse '+DOMAINE+' requise.');return}
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]})
+  if(error){msgLogin('Erreur : '+error.message);return}
+  msgLogin('Un lien de réinitialisation vient d\'être envoyé à '+email+'. Pense à regarder dans les indésirables.','ok')
+}
+
 async function register() {
   const email=$('r-email').value.trim(),pwd=$('r-pwd').value
   const prenom=$('r-prenom').value.trim(),nom=$('r-nom').value.trim()
@@ -1040,6 +1058,16 @@ async function logout() {
 }
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
+// Manifeste d'installation (généré à la volée, aucun fichier séparé requis)
+;(function(){try{
+  const mf={name:'ProgMéca',short_name:'ProgMéca',start_url:'.',display:'standalone',
+    background_color:'#EDECE9',theme_color:'#EDECE9',orientation:'portrait',
+    icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%23141414'/%3E%3Ctext x='256' y='340' font-family='system-ui,sans-serif' font-size='250' font-weight='800' fill='%23E24B4A' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml',purpose:'any'}]}
+  const l=document.createElement('link');l.rel='manifest'
+  l.href=URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:'application/json'}))
+  document.head.appendChild(l)
+}catch(e){}})()
+
 async function initApp() {
   const {data:{user}}=await db.auth.getUser()
   if(!user) return
@@ -1156,8 +1184,32 @@ async function loadDashboard() {
   const {data:pd}=await db.from('profils').select('points_total,streak_semaines,streak_pause').eq('id',G.profil.id).single()
   const sEl=document.getElementById('streak-topbar')
   if(sEl){const s=pd?.streak_semaines||0;sEl.innerHTML=s>0?`<i class="ti ti-flame" style="color:${pd?.streak_pause?'var(--t3)':'var(--r)'}"></i>${s}`:''}
-  const {data:qxD}=await db.from('quiz').select('id,module_id').eq('actif',true).eq('mode_examen',true)
+  const {data:qxD}=await db.from('quiz').select('id,module_id,titre,date_debut,date_fin').eq('actif',true).eq('mode_examen',true)
   const allExD=qxD||[]
+  // Rappel du prochain examen (module d'inscription, non encore passé)
+  const rapEl=$('d-rappel')
+  if(rapEl){
+    const maintenant=new Date()
+    const prochains=allExD.filter(function(q){
+      if(G.profil.module_inscrit&&q.module_id!==G.profil.module_inscrit) return false
+      if(!q.date_debut) return false
+      if(tents.some(function(t){return t.quiz_id===q.id})) return false
+      return new Date(q.date_debut)>maintenant
+    }).sort(function(a,b){return new Date(a.date_debut)-new Date(b.date_debut)})
+    if(prochains.length){
+      const p0=prochains[0],d=new Date(p0.date_debut)
+      const jours=Math.ceil((d-maintenant)/86400000)
+      const quand=jours<=0?"aujourd'hui":jours===1?'demain':'dans '+jours+' jours'
+      const urgent=jours<=2
+      rapEl.innerHTML='<div class="card" style="margin-bottom:1rem;border-left:3px solid '+(urgent?'var(--r)':'var(--amber)')+'">'
+        +'<div style="display:flex;align-items:center;gap:12px;padding:14px 16px">'
+        +'<i class="ti ti-calendar-event" style="color:'+(urgent?'var(--r)':'var(--amber)')+';font-size:1.3rem;flex-shrink:0"></i>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:.9rem;font-weight:600">Examen '+quand+'</div>'
+        +'<div style="font-size:.76rem;color:var(--t2);margin-top:2px">'+p0.titre+' — '+d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+'</div>'
+        +'</div></div></div>'
+    } else rapEl.innerHTML=''
+  }
   const monMod=G.profil.module_inscrit
   $('d-modules').innerHTML=MODULES.map(m=>{
     const exM=allExD.filter(x=>x.module_id===m.id)
@@ -1406,11 +1458,17 @@ async function ouvrirRes(id,path,url) {
 async function renderEval(modId,quiz,tents) {
   G.moduleActif=modId
   if(!quiz.length){$('o-eval').innerHTML='<p style="font-size:.82rem;color:var(--t3)">Aucun quiz pour ce module.</p>';return}
+  // Rattrapages accordés à cet aspirant
+  try{
+    const {data:mr}=await db.from('rattrapages').select('quiz_id').eq('aspirant_id',G.profil.id)
+    _mesRattrapages=(mr||[]).map(function(x){return x.quiz_id})
+  }catch(e){_mesRattrapages=[]}
   let h=''
   quiz.forEach(q=>{
     const t=tents.find(x=>x.quiz_id===q.id)
+    const aRattrapage=_mesRattrapages.indexOf(q.id)>=0
     const now=new Date(),debut=q.date_debut?new Date(q.date_debut):null,fin=q.date_fin?new Date(q.date_fin):null
-    const horsCreneaux=q.mode_examen&&((debut&&now<debut)||(fin&&now>fin))
+    const horsCreneaux=q.mode_examen&&!aRattrapage&&((debut&&now<debut)||(fin&&now>fin))
     const isExamen=!!q.mode_examen
     // Bloquer examen si mauvais module ou pas inscrit
     const bonModule=G.admin||!isExamen||(G.profil.module_inscrit===modId)
@@ -1433,6 +1491,8 @@ async function renderEval(modId,quiz,tents) {
       const diff=debut-now, jj=Math.floor(diff/86400000), hh=Math.floor((diff%86400000)/3600000), mm=Math.floor((diff%3600000)/60000), ss=Math.floor((diff%60000)/1000)
       const lbl=jj>=1?'J-'+jj:hh>0?hh+'h'+String(mm).padStart(2,'0')+'m':mm>0?mm+'m'+String(ss).padStart(2,'0')+'s':'⚠'+String(ss).padStart(2,'0')+'s'
       h+=`<div class="quiz-countdown-bubble pending" id="cd-${q.id}" data-debut="${q.date_debut||''}" data-fin="${q.date_fin||''}" data-qid="${q.id}" title="Démarre le ${debut.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}">${lbl}</div>`
+    } else if(!t && isExamen && aRattrapage && bonModule) {
+      h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> Rattrapage</button>`
     } else if(!t && isExamen && fin && now > fin && bonModule) {
       h+=`<div style="font-size:.72rem;color:var(--t3);font-weight:600">Clôturé</div>`
     } else if(!t && isExamen && bonModule && (!debut || now >= debut) && (!fin || now <= fin)) {
@@ -1450,6 +1510,7 @@ async function renderEval(modId,quiz,tents) {
     h+=`</div></div>`
     if(isExamen&&t) h+=`<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide?'Validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR'):(G.admin?'Score définitif : '+t.score+'/20':'Examen passé — non validé')}</div>`
     if(!bonModule&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-lock"></i> Réservé aux aspirants inscrits en ${MODULES.find(m=>m.id===modId)?.nom}</div>`}
+    if(aRattrapage&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--v);background:var(--vl)"><i class="ti ti-unlock"></i> Rattrapage autorisé — tu peux passer cet examen</div>`}
     h+='</div>'
   })
   const toutOk=quiz.length>0&&quiz.every(q=>tents.find(t=>t.quiz_id===q.id&&t.valide))
@@ -1652,6 +1713,8 @@ async function terminer() {
     fichiers_libres:Object.keys(G.fichiersLibres).length?G.fichiersLibres:null
   }).select().single()
   if(tentErr){toast('Erreur sauvegarde : '+tentErr.message,'err');return}
+  // Le rattrapage est à usage unique : on le retire une fois l'examen passé
+  if(G.quizActif.mode_examen){try{await db.from('rattrapages').delete().eq('quiz_id',G.quizActif.id).eq('aspirant_id',G.profil.id)}catch(e){}}
   G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
   if(!aDesLibres){await calculerEtAttribuerPoints(Math.round(sur20),20,G.quizActif.id);await mettreAJourStreak()}
   afficheRes()
@@ -1984,17 +2047,53 @@ async function chargerAnnonces() {
   el.innerHTML=actives.map(a=>{const c=C[a.type]||C.info;const age=Math.floor((now-new Date(a.created_at))/3600000);const ageStr=age<1?'À l\'instant':age<24?'Il y a '+age+'h':'Il y a '+Math.floor(age/24)+'j';return `<div style="border-radius:12px;padding:10px 16px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;border:1.5px solid ${c.border};background:${c.bg}"><i class="ti ${c.icon}" style="color:${c.border};flex-shrink:0;margin-top:1px"></i><div style="flex:1"><div style="font-size:.82rem;font-weight:700;color:${c.color}">${a.titre}</div><div style="font-size:.75rem;color:${c.color};opacity:.9">${a.message}</div></div><span style="font-size:.68rem;color:${c.color};white-space:nowrap;opacity:.7">${ageStr}</span></div>`}).join('')
 }
 
+let _annoncesAdmin=[]
 async function chargerAnnoncesAdmin() {
   const {data}=await db.from('annonces').select('*').order('created_at',{ascending:false});const now=new Date(),el=$('annonces-liste');if(!el) return
+  _annoncesAdmin=data||[]
   if(!data?.length){el.innerHTML='<p style="font-size:.78rem;color:var(--t3)">Aucune annonce.</p>';return}
-  el.innerHTML=data.map(a=>{const active=!a.expire_at||new Date(a.expire_at)>now;return `<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--bord)"><div style="flex:1"><div style="font-size:.82rem;font-weight:600">${a.titre}</div><div style="font-size:.72rem;color:var(--t3)">${a.type} · ${active?'Active':'Expirée'} · ${new Date(a.created_at).toLocaleDateString('fr-FR')}</div></div><button class="btn btn-ghost btn-sm btn-icon" onclick="supprimerAnnonce('${a.id}')"><i class="ti ti-trash"></i></button></div>`}).join('')
+  el.innerHTML=data.map(a=>{const active=!a.expire_at||new Date(a.expire_at)>now;return `<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--bord)"><div style="flex:1"><div style="font-size:.82rem;font-weight:600">${a.titre}</div><div style="font-size:.72rem;color:var(--t3)">${a.type} · ${active?'Active':'Expirée'} · ${new Date(a.created_at).toLocaleDateString('fr-FR')}</div></div><button class="btn btn-ghost btn-sm btn-icon" onclick="editerAnnonce('${a.id}')" title="Modifier"><i class="ti ti-pencil"></i></button><button class="btn btn-ghost btn-sm btn-icon" onclick="supprimerAnnonce('${a.id}')" title="Supprimer"><i class="ti ti-trash"></i></button></div>`}).join('')
+}
+
+let _annonceEnEdition=null
+
+function editerAnnonce(id){
+  const a=_annoncesAdmin.find(x=>x.id===id)
+  if(!a){toast('Annonce introuvable','err');return}
+  _annonceEnEdition=id
+  $('an-titre').value=a.titre||''
+  $('an-msg').value=a.message||''
+  $('an-type').value=a.type||'info'
+  $('an-duree').value='0'
+  $('an-form-titre').textContent='Modifier l\'annonce'
+  $('an-btn').innerHTML='<i class="ti ti-check"></i> Enregistrer les modifications'
+  $('an-annuler').style.display=''
+  $('an-titre').scrollIntoView({behavior:'smooth',block:'center'})
+}
+
+function annulerEditionAnnonce(){
+  _annonceEnEdition=null
+  $('an-titre').value='';$('an-msg').value='';$('an-type').value='info';$('an-duree').value='24'
+  $('an-form-titre').textContent='Nouvelle annonce'
+  $('an-btn').innerHTML='<i class="ti ti-speakerphone"></i> Publier'
+  $('an-annuler').style.display='none'
 }
 
 async function publierAnnonce() {
   const titre=$('an-titre').value.trim(),msg=$('an-msg').value.trim(),type=$('an-type').value,duree=parseInt($('an-duree').value)
   if(!titre||!msg){toast('Titre et message requis','err');return}
-  const {data:{user}}=await db.auth.getUser()
   const expire_at=duree>0?new Date(Date.now()+duree*3600000).toISOString():null
+  if(_annonceEnEdition){
+    const maj={titre,message:msg,type}
+    if(duree>0) maj.expire_at=expire_at
+    const {error}=await db.from('annonces').update(maj).eq('id',_annonceEnEdition)
+    if(error){toast('Erreur : '+error.message,'err');return}
+    toast('Annonce modifiée !','ok')
+    annulerEditionAnnonce()
+    chargerAnnoncesAdmin()
+    return
+  }
+  const {data:{user}}=await db.auth.getUser()
   await db.from('annonces').insert({titre,message:msg,type,expire_at,created_by:user.id})
   toast('Annonce publiée !','ok');$('an-titre').value='';$('an-msg').value='';chargerAnnoncesAdmin()
 }
@@ -2067,21 +2166,56 @@ async function chargerRendusAdmin() {
 }
 
 // ─── ASPIRANTS ADMIN ───────────────────────────────────────────────────────
+let _rattrapages=[]
+let _mesRattrapages=[]
+
+async function ouvrirRattrapage(quizId,aspirantId){
+  const {error}=await db.from('rattrapages').insert({quiz_id:quizId,aspirant_id:aspirantId})
+  if(error){toast('Erreur : '+error.message,'err');return}
+  toast('Rattrapage ouvert — l aspirant peut passer l examen','ok')
+  loadAspirants()
+}
+
 async function loadAspirants() {
-  const [{data:asp},{data:tents},{data:allQ}]=await Promise.all([
+  const [{data:asp},{data:tents},{data:allQ},{data:ratt}]=await Promise.all([
     db.from('profils').select('*').eq('role','aspirant').order('nom'),
     db.from('tentatives').select('*'),
-    db.from('quiz').select('*').eq('actif',true)
+    db.from('quiz').select('*').eq('actif',true),
+    db.from('rattrapages').select('*')
   ])
   const a=asp||[],t=tents||[],q=allQ||[]
+  _rattrapages=ratt||[]
+  // ── Absents aux examens clôturés ──
+  const nowA=new Date()
+  let htmlAbsents=''
+  const examsClos=q.filter(function(x){return x.mode_examen&&x.date_fin&&new Date(x.date_fin)<nowA})
+  const lignesAbs=[]
+  examsClos.forEach(function(ex){
+    const attendus=a.filter(function(p){return !p.module_inscrit||p.module_inscrit===ex.module_id})
+    const absents=attendus.filter(function(p){return !t.some(function(x){return x.quiz_id===ex.id&&x.aspirant_id===p.id})})
+    absents.forEach(function(p){
+      const dejaAutorise=_rattrapages.some(function(r){return r.quiz_id===ex.id&&r.aspirant_id===p.id})
+      lignesAbs.push('<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--bord)">'
+        +'<i class="ti ti-user-x" style="color:var(--amber);flex-shrink:0"></i>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:.82rem;font-weight:600">'+(p.prenom||'')+' '+(p.nom||'')+'</div>'
+        +'<div style="font-size:.7rem;color:var(--t3)">'+ex.titre+'</div></div>'
+        +(dejaAutorise
+          ?'<span class="badge badge-v">Rattrapage ouvert</span>'
+          :'<button class="btn btn-ghost btn-sm" onclick="ouvrirRattrapage(\''+ex.id+'\',\''+p.id+'\')">Ouvrir le rattrapage</button>')
+        +'</div>')
+    })
+  })
+  if(lignesAbs.length){
+    htmlAbsents='<div class="card" style="margin-bottom:1rem"><div class="card-head"><span class="card-title"><i class="ti ti-user-x" style="color:var(--amber)"></i> Absents aux examens clôturés</span><span class="badge badge-a">'+lignesAbs.length+'</span></div><div class="card-body">'+lignesAbs.join('')+'</div></div>'
+  }
   const enAttenteTout=t.filter(x=>x.notes_libres!==null&&!x.note_admin)
   let htmlAttente=''
   if(enAttenteTout.length){
     const profilsMap=a.reduce((m,p)=>{m[p.id]=p;return m},{}),quizMap=q.reduce((m,qz)=>{m[qz.id]=qz;return m},{})
     htmlAttente=`<div class="card" style="margin-bottom:1rem;border-color:var(--r)"><div class="card-head" style="background:var(--rl)"><div style="display:flex;align-items:center;gap:8px"><i class="ti ti-clock" style="color:var(--r)"></i><span class="card-title" style="color:var(--r2)">${enAttenteTout.length} copie(s) en attente</span></div></div><div class="card-body">${enAttenteTout.map(tent=>{const p2=profilsMap[tent.aspirant_id]||{},qz=quizMap[tent.quiz_id]||{};return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div class="sidebar-avatar" style="flex-shrink:0;font-size:.7rem">${[(p2.prenom||'')[0],(p2.nom||'')[0]].join('').toUpperCase()||'?'}</div><div style="flex:1"><div style="font-size:.82rem;font-weight:700">Pays ${p2.prenom||''} ${p2.nom||''}</div><div style="font-size:.72rem;color:var(--t3)">${qz.titre||'—'} · ${new Date(tent.completed_at).toLocaleDateString('fr-FR')}</div></div><button class="btn btn-r btn-sm" onclick="ouvrirCorrectionAdmin('${tent.id}')"><i class="ti ti-pencil"></i> Corriger</button></div>`}).join('')}</div></div>`
   }
-  if(!a.length){$('asp-body').innerHTML=htmlAttente+'<p style="font-size:.78rem;color:var(--t3)">Aucun aspirant.</p>';return}
-  $('asp-body').innerHTML=htmlAttente+a.map(p=>{
+  if(!a.length){$('asp-body').innerHTML=htmlAttente+htmlAbsents+'<p style="font-size:.78rem;color:var(--t3)">Aucun aspirant.</p>';return}
+  $('asp-body').innerHTML=htmlAttente+htmlAbsents+a.map(p=>{
     const tp=t.filter(x=>x.aspirant_id===p.id),ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
     return `<div style="border-bottom:1px solid var(--bord);padding:.9rem 0">
       <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
@@ -2910,13 +3044,22 @@ function ouvrirFicheCompte(id, roleActuel) {
       +(peutModifier?(
         '<div style="border-top:1px solid var(--bord);padding-top:1.1rem">'
         +'<label class="field-label">Changer le rôle</label>'
-        +'<select class="fselect" id="fc-role" style="margin-top:4px">'
+        +'<select class="fselect" id="fc-role" style="margin-top:4px" onchange="document.getElementById(\'fc-zone-module\').style.display=(this.value===\'admin\'?\'\':\'none\')">'
           +'<option value="aspirant"'+(p.role==='aspirant'?' selected':'')+'>Aspirant — suit la formation</option>'
           +'<option value="ancien"'+(p.role==='ancien'?' selected':'')+'>Ancien — Compagnon sédentaire</option>'
           +'<option value="admin"'+(p.role==='admin'?' selected':'')+'>Admin — Gâcheur (crée les contenus)</option>'
         +'</select>'
         +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Un Admin peut créer les cours, les exercices et les examens. La personne devra se reconnecter pour voir son nouvel espace.</div>'
-        +'<button class="btn btn-r btn-full" style="margin-top:1rem" id="fc-btn" onclick="changerRoleCompte(\''+p.id+'\')"><i class="ti ti-check"></i> Enregistrer le rôle</button>'
+        +'<div id="fc-zone-module" style="margin-top:1rem;'+(p.role==='admin'?'':'display:none')+'">'
+          +'<label class="field-label">Module dont il est gâcheur</label>'
+          +'<select class="fselect" id="fc-module" style="margin-top:4px">'
+            +'<option value="">— Aucun module —</option>'
+            +MODULES.map(function(m){return '<option value="'+m.id+'"'+(p.module_gacheur===m.id&&!p.superviseur?' selected':'')+'>'+m.nom+'</option>'}).join('')
+            +'<option value="sup"'+(p.superviseur?' selected':'')+'>Superviseur — tous les modules</option>'
+          +'</select>'
+          +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Les aspirants verront ce gâcheur et son téléphone dans l\'onglet Contacts. Un superviseur n\'apparaît pas dans cette liste.</div>'
+        +'</div>'
+        +'<button class="btn btn-r btn-full" style="margin-top:1rem" id="fc-btn" onclick="changerRoleCompte(\''+p.id+'\')"><i class="ti ti-check"></i> Enregistrer</button>'
         +'</div>'
       ):'<div style="border-top:1px solid var(--bord);padding-top:1rem;font-size:.75rem;color:var(--t3);line-height:1.5">Seuls les superviseurs peuvent modifier les rôles.</div>')
     +'</div>'
@@ -2927,22 +3070,27 @@ function ouvrirFicheCompte(id, roleActuel) {
 async function changerRoleCompte(id) {
   const sel=document.getElementById('fc-role');if(!sel) return
   const nouveauRole=sel.value
+  const modSel=document.getElementById('fc-module')
   const p=_tousComptes.find(x=>x.id===id)
-  if(p&&p.role===nouveauRole){toast('Ce rôle est déjà celui du compte','err');return}
   const btn=document.getElementById('fc-btn')
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'}
   const maj={role:nouveauRole}
-  // Passage en admin : on repart d'un profil propre côté gâcheur
-  if(nouveauRole==='admin'){maj.module_inscrit=null}
-  // Sortie du rôle admin : on nettoie les champs de gâcheur
-  if(p&&p.role==='admin'&&nouveauRole!=='admin'){maj.module_gacheur=null;maj.superviseur=false}
+  if(nouveauRole==='admin'){
+    maj.module_inscrit=null
+    const v=modSel?modSel.value:''
+    if(v==='sup'){maj.superviseur=true;maj.module_gacheur=null}
+    else if(v){maj.superviseur=false;maj.module_gacheur=parseInt(v)}
+    else {maj.superviseur=false;maj.module_gacheur=null}
+  } else {
+    maj.module_gacheur=null;maj.superviseur=false
+  }
   const {error}=await db.from('profils').update(maj).eq('id',id)
   if(error){
     toast('Erreur : '+error.message,'err')
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Enregistrer le rôle'}
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Enregistrer'}
     return
   }
-  toast('Rôle mis à jour : '+nouveauRole,'ok')
+  toast('Compte mis à jour','ok')
   document.getElementById('modal-fiche-compte')?.remove()
   chargerTousComptes()
 }
