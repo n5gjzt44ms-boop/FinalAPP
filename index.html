@@ -525,22 +525,8 @@ button,input,select,textarea{font-family:var(--ff)}
         <div style="font-size:.78rem;color:var(--t3);margin-top:2px" id="d-date"></div>
       </div>
       <div id="annonces-dashboard" style="margin-bottom:1rem"></div>
-      <div class="grid4" id="d-kpis">
-        <div class="kpi"><div class="kpi-val" id="k-prog" style="color:var(--r)">—</div><div class="kpi-lbl">Progression</div></div>
-        <div class="kpi"><div class="kpi-val" id="k-val" style="color:var(--v)">—</div><div class="kpi-lbl">Quiz validés</div></div>
-        <div class="kpi"><div class="kpi-val" id="k-tot">—</div><div class="kpi-lbl">Quiz passés</div></div>
-        <div class="kpi kpi-dark"><div class="kpi-val" id="k-pts" style="color:var(--r)">0</div><div class="kpi-lbl" style="color:#555">Points</div></div>
-      </div>
-      <div class="grid2">
-        <div class="card">
-          <div class="card-head"><span class="card-title">Modules</span><button class="btn btn-ghost btn-sm" onclick="nav('modules')">Voir tout →</button></div>
-          <div class="card-body" id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><span class="card-title">Activité récente</span></div>
-          <div class="card-body" id="d-activite"><p style="font-size:.82rem;color:var(--t3)">Aucune activité.</p></div>
-        </div>
-      </div>
+      <div id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
+      <div id="d-activite"></div>
 
     </div>
 
@@ -1167,34 +1153,41 @@ function nav(page) {
 async function loadDashboard() {
   const {data:t}=await db.from('tentatives').select('*, quiz(module_id,titre)').eq('aspirant_id',G.profil.id).order('completed_at',{ascending:false})
   const tents=t||[]
-  const val=tents.filter(x=>x.valide).length
-  $('k-prog').textContent=tents.length?Math.round(val/tents.length*100)+'%':'0%'
-  $('k-val').textContent=val
-  $('k-tot').textContent=tents.length
   const {data:pd}=await db.from('profils').select('points_total,streak_semaines,streak_pause').eq('id',G.profil.id).single()
-  if($('k-pts')) $('k-pts').textContent=pd?.points_total||0
   const sEl=document.getElementById('streak-topbar')
   if(sEl){const s=pd?.streak_semaines||0;sEl.innerHTML=s>0?`<i class="ti ti-flame" style="color:${pd?.streak_pause?'var(--t3)':'var(--r)'}"></i>${s}`:''}
   const {data:qxD}=await db.from('quiz').select('id,module_id').eq('actif',true).eq('mode_examen',true)
   const allExD=qxD||[]
+  const monMod=G.profil.module_inscrit
   $('d-modules').innerHTML=MODULES.map(m=>{
     const exM=allExD.filter(x=>x.module_id===m.id)
     const exVal=exM.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
-    const pct=exM.length?Math.round(exVal/exM.length*100):0
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord);cursor:pointer" onclick="ouvrirModule(${m.id})">
-      <div style="width:34px;height:34px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.9rem"></i></div>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:.82rem;font-weight:600">${m.nom}</span><span style="font-family:var(--fg);font-size:.82rem;font-weight:700;color:${pct===100?'var(--v)':'var(--t2)'}">${exM.length?exVal+'/'+exM.length+' examens':'—'}</span></div>
-        <div class="pbar"><div class="pfill ${pct===100?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div>
+    const fini=exM.length>0&&exVal===exM.length
+    const inscrit=monMod===m.id
+    // Pastilles : une par examen du module
+    const pastilles=exM.length?exM.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join(''):''
+    const etat=!exM.length?'<span style="font-size:.8rem;color:var(--t3)">Bientôt disponible</span>'
+      :fini?'<span class="badge badge-v"><i class="ti ti-check"></i> Validé</span>'
+      :`<span style="font-size:.82rem;font-weight:600;color:var(--t2)">${exVal} sur ${exM.length}</span>`
+    return `<div class="card" style="cursor:pointer;margin-bottom:10px" onclick="ouvrirModule(${m.id})">
+      <div style="display:flex;align-items:center;gap:14px;padding:16px 18px">
+        <div style="width:46px;height:46px;border-radius:14px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:1.25rem"></i></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.98rem;font-weight:600;letter-spacing:-.01em">${m.nom}${inscrit?' <span class="badge badge-rl" style="font-size:.62rem;vertical-align:middle">MON MODULE</span>':''}</div>
+          <div style="display:flex;align-items:center;gap:7px;margin-top:7px">${pastilles}<span style="margin-left:${pastilles?'4px':'0'}">${etat}</span></div>
+        </div>
+        <i class="ti ti-chevron-right" style="color:var(--t3);font-size:1.1rem;flex-shrink:0"></i>
       </div>
     </div>`
   }).join('')
-  $('d-activite').innerHTML=tents.slice(0,5).map(x=>`
-    <div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)">
-      <div style="width:8px;height:8px;border-radius:50%;background:${x.valide?'var(--v)':'var(--r)'};margin-top:5px;flex-shrink:0"></div>
-      <div><div style="font-size:.82rem;font-weight:600">${x.quiz?.titre||'—'}</div>
-      <div style="font-size:.7rem;color:var(--t3)">${x.valide?'✓ Validé':'✗ Non validé'} · ${x.score}/20 · ${new Date(x.completed_at).toLocaleDateString('fr-FR')}</div></div>
-    </div>`).join('')||'<p style="font-size:.82rem;color:var(--t3)">Aucune activité.</p>'
+  const recents=tents.slice(0,3)
+  $('d-activite').innerHTML=recents.length?`<div style="margin-top:1.4rem">
+    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:600;margin-bottom:.7rem">Derniers passages</div>
+    ${recents.map(x=>`<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--bord)">
+      <i class="ti ${x.valide?'ti-circle-check':'ti-circle-x'}" style="color:${x.valide?'var(--v)':'var(--t3)'};font-size:1.1rem;flex-shrink:0"></i>
+      <span style="flex:1;font-size:.85rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.quiz?.titre||'—'}</span>
+      <span style="font-size:.72rem;color:var(--t3);flex-shrink:0">${new Date(x.completed_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span>
+    </div>`).join('')}</div>`:''
 }
 
 // ─── DASHBOARD ANCIEN ──────────────────────────────────────────────────────
@@ -1258,10 +1251,10 @@ async function loadModules() {
           <div style="width:48px;height:48px;border-radius:14px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:1.4rem"></i></div>
           <div style="flex:1"><div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${m.num}</div>
           <div style="font-family:var(--fg);font-size:1rem;font-weight:700;letter-spacing:-.3px">${m.nom}</div></div>
-          <span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}">${termine?'Complété':encours?'En cours':'À faire'}</span>
+          <span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}">${termine?'Validé':encours?'En cours':'À faire'}</span>
         </div>
         <p style="font-size:.78rem;color:var(--t2);margin-bottom:10px;line-height:1.5">${m.desc}</p>
-        <div style="display:flex;align-items:center;gap:10px"><div class="pbar" style="flex:1"><div class="pfill ${termine?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700;color:${termine?'var(--v)':'var(--t2)'}">${exM.length?exVal+'/'+exM.length+' examens':'—'}</span></div>
+        <div style="display:flex;align-items:center;gap:8px">${exM.length?exM.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')+`<span style="font-size:.82rem;font-weight:600;color:${termine?'var(--v)':'var(--t2)'};margin-left:4px">${termine?'Module validé':exVal+' sur '+exM.length}</span>`:'<span style="font-size:.8rem;color:var(--t3)">Examens à venir</span>'}</div>
       </div>
     </div>`
   }).join('')
@@ -1286,7 +1279,7 @@ async function ouvrirModule(id) {
     <div style="width:50px;height:50px;border-radius:14px;background:${m.bg};display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic}"></i></div>
     <div style="flex:1"><div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${m.num}</div>
     <div style="font-family:var(--fg);font-size:1.15rem;font-weight:700;letter-spacing:-.3px;margin-bottom:6px">${m.nom}</div>
-    <div style="display:flex;align-items:center;gap:10px;max-width:300px"><div class="pbar" style="flex:1"><div class="pfill ${pct===100?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div>
+    <div style="display:flex;align-items:center;gap:8px;max-width:300px">${examens.length?examens.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exValides?'var(--v)':'var(--field)'};display:inline-block"></span>`).join(''):''}
     <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${examens.length?exValides+'/'+examens.length+' examen'+(examens.length>1?'s':'')+' validé'+(exValides>1?'s':''):'Aucun examen planifié'}</span>
     ${moduleValide?'<span class="badge badge-v" style="font-size:.65rem;font-weight:800">MODULE VALIDÉ</span>':''}</div>
     <div style="font-size:.68rem;color:var(--t3);margin-top:4px">Seuls les examens comptent pour la validation du module — les exercices servent à s'entraîner.</div></div>
@@ -1455,7 +1448,7 @@ async function renderEval(modId,quiz,tents) {
       h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> ${t&&!isExamen?'Repasser':'Commencer'}</button>`
     }
     h+=`</div></div>`
-    if(isExamen&&t) h+=`<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide?'Validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR'):'Score définitif : '+t.score+'/20'}</div>`
+    if(isExamen&&t) h+=`<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide?'Validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR'):(G.admin?'Score définitif : '+t.score+'/20':'Examen passé — non validé')}</div>`
     if(!bonModule&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-lock"></i> Réservé aux aspirants inscrits en ${MODULES.find(m=>m.id===modId)?.nom}</div>`}
     h+='</div>'
   })
