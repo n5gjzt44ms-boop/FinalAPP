@@ -1054,7 +1054,13 @@ async function register() {
 
 async function logout() {
   await db.auth.signOut()
-  $('vue-app').classList.remove('on');sh('vue-login')
+  // Purge complète : sinon le menu du compte précédent reste visible
+  // pour la personne suivante sur le même appareil.
+  try{
+    localStorage.removeItem('pm_page')
+    localStorage.removeItem('pm_module')
+  }catch(e){}
+  window.location.reload()
 }
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
@@ -1086,10 +1092,15 @@ async function initApp() {
   else if(G.ancien){badge.textContent='Ancien';badge.className='badge badge-ancien'}
   else{badge.textContent='Aspirant';badge.className='badge badge-g'}
 
-  // Navigation selon le rôle
+  // Navigation selon le rôle — on repart toujours d'un menu vierge
+  const MENUS_ADMIN=['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin','stats-admin']
+  const sep=document.getElementById('sep-admin')
   if(G.admin){
-    document.getElementById('sep-admin').style.display=''
-    ;['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin','stats-admin'].forEach(id=>sh('n-'+id))
+    if(sep) sep.style.display=''
+    MENUS_ADMIN.forEach(id=>sh('n-'+id))
+  } else {
+    if(sep) sep.style.display='none'
+    MENUS_ADMIN.forEach(id=>hi('n-'+id))
   }
   // Enregistrer la dernière connexion (fire and forget)
   db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
@@ -1153,7 +1164,19 @@ async function initApp() {
 }
 
 // ─── NAVIGATION ────────────────────────────────────────────────────────────
+// Pages réservées aux admins (gâcheurs)
+const PAGES_ADMIN=['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin','stats-admin']
+const PAGES_ANCIEN=['dashboard-ancien','annuaire']
+
 function nav(page) {
+  // Verrou : un non-admin ne peut pas ouvrir une page d'administration
+  if(PAGES_ADMIN.indexOf(page)>=0 && !G.admin){
+    toast('Cette page est réservée aux gâcheurs','err')
+    page='dashboard'
+  }
+  if(PAGES_ANCIEN.indexOf(page)>=0 && !G.ancien && !G.admin){
+    page='dashboard'
+  }
   localStorage.setItem('pm_page',page)
   document.querySelectorAll('.vue').forEach(v=>v.classList.remove('on'))
   document.querySelectorAll('.nav-icon,.bnav-item').forEach(n=>n.classList.remove('on'))
@@ -1928,6 +1951,7 @@ async function uploadImageQuestion(idx,input) {
 }
 
 async function pubQuizManuel() {
+  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}
   const titre=$('mq-titre').value.trim(),modId=parseInt($('mq-mod').value),fil='com',estPublie=($('mq-vis')?.value||'prive')==='publie'
   if(!titre){toast('Donnez un titre','err');return}
   if(!mqQuestions.length){toast('Ajoutez au moins une question','err');return}
@@ -1968,8 +1992,10 @@ async function loadQuizAdmin() {
   </div>`).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz pour ce module.</p>'
 }
 
-async function togglePubQuiz(id,actuel){const {error}=await db.from('quiz').update({actif:!actuel}).eq('id',id);if(error){toast('Erreur : '+error.message,'err');return};toast(!actuel?'Quiz publié pour tout le monde !':'Quiz repassé en privé (admins seulement)','ok');loadQuizAdmin()}
-async function delQuiz(id){if(!confirm('Supprimer ce quiz et ses questions ?'))return;await db.from('tentatives').delete().eq('quiz_id',id);await db.from('questions').delete().eq('quiz_id',id);const {error}=await db.from('quiz').delete().eq('id',id);if(error)await db.from('quiz').update({actif:false}).eq('id',id);toast('Quiz supprimé !','ok');loadQuizAdmin()}
+async function togglePubQuiz(id,actuel){
+  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}const {error}=await db.from('quiz').update({actif:!actuel}).eq('id',id);if(error){toast('Erreur : '+error.message,'err');return};toast(!actuel?'Quiz publié pour tout le monde !':'Quiz repassé en privé (admins seulement)','ok');loadQuizAdmin()}
+async function delQuiz(id){
+  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}if(!confirm('Supprimer ce quiz et ses questions ?'))return;await db.from('tentatives').delete().eq('quiz_id',id);await db.from('questions').delete().eq('quiz_id',id);const {error}=await db.from('quiz').delete().eq('id',id);if(error)await db.from('quiz').update({actif:false}).eq('id',id);toast('Quiz supprimé !','ok');loadQuizAdmin()}
 
 async function dupliquerQuiz(id) {
   const [{data:orig},{data:qs}]=await Promise.all([db.from('quiz').select('*').eq('id',id).single(),db.from('questions').select('*').eq('quiz_id',id).order('ordre')])
@@ -2080,6 +2106,7 @@ function annulerEditionAnnonce(){
 }
 
 async function publierAnnonce() {
+  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}
   const titre=$('an-titre').value.trim(),msg=$('an-msg').value.trim(),type=$('an-type').value,duree=parseInt($('an-duree').value)
   if(!titre||!msg){toast('Titre et message requis','err');return}
   const expire_at=duree>0?new Date(Date.now()+duree*3600000).toISOString():null
@@ -2098,7 +2125,8 @@ async function publierAnnonce() {
   toast('Annonce publiée !','ok');$('an-titre').value='';$('an-msg').value='';chargerAnnoncesAdmin()
 }
 
-async function supprimerAnnonce(id){await db.from('annonces').delete().eq('id',id);toast('Annonce supprimée');chargerAnnoncesAdmin()}
+async function supprimerAnnonce(id){
+  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}await db.from('annonces').delete().eq('id',id);toast('Annonce supprimée');chargerAnnoncesAdmin()}
 
 // ─── TRAVAUX PRATIQUES ─────────────────────────────────────────────────────
 async function chargerDevoirs() {
@@ -2170,6 +2198,7 @@ let _rattrapages=[]
 let _mesRattrapages=[]
 
 async function ouvrirRattrapage(quizId,aspirantId){
+  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}
   const {error}=await db.from('rattrapages').insert({quiz_id:quizId,aspirant_id:aspirantId})
   if(error){toast('Erreur : '+error.message,'err');return}
   toast('Rattrapage ouvert — l aspirant peut passer l examen','ok')
@@ -3017,6 +3046,7 @@ function filtrerComptes(role) {
 
 // ─── FICHE COMPTE + CHANGEMENT DE ROLE ──────────────────────────────────────
 function ouvrirFicheCompte(id, roleActuel) {
+  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}
   const p=_tousComptes.find(x=>x.id===id)
   if(!p){toast('Compte introuvable','err');return}
   const peutModifier=estAdminSuperviseur()
@@ -3068,6 +3098,7 @@ function ouvrirFicheCompte(id, roleActuel) {
 }
 
 async function changerRoleCompte(id) {
+  if(!estAdminSuperviseur()){toast('Action réservée aux superviseurs','err');return}
   const sel=document.getElementById('fc-role');if(!sel) return
   const nouveauRole=sel.value
   const modSel=document.getElementById('fc-module')
