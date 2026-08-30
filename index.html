@@ -6,7 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<title>ProgMéca</title>
+<title>ProgMéca — Formation théorique des Compagnons du Devoir</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231A1A1A'/><text x='16' y='23' text-anchor='middle' font-family='system-ui,sans-serif' font-weight='700' font-size='20' fill='%23E24B4A'>P</text></svg>"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
 // ─── GUIDE UTILISATEUR ────────────────────────────────────────────────────────
@@ -92,6 +92,21 @@ function ouvrirGuide() {
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <meta name="theme-color" content="#EDECE9"/>
+<meta name="description" content="ProgMéca — plateforme de suivi de la formation théorique des Compagnons du Devoir : cours, exercices et examens en mécanique, hydraulique, conception et électrotechnique."/>
+<meta name="keywords" content="ProgMéca, Progmeca, Compagnons du Devoir, formation théorique, mécanique, hydraulique, électrotechnique, conception"/>
+<meta name="author" content="Compagnons du Devoir"/>
+<meta name="robots" content="index, follow"/>
+<link rel="canonical" href="https://progmeca.fr/"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="ProgMéca"/>
+<meta property="og:title" content="ProgMéca — Formation théorique des Compagnons du Devoir"/>
+<meta property="og:description" content="Cours, exercices et examens en ligne pour les quatre modules de la formation théorique : mécanique, hydraulique, conception et électrotechnique."/>
+<meta property="og:locale" content="fr_FR"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="ProgMéca — Formation théorique des Compagnons du Devoir"/>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"ProgMéca","alternateName":["Progmeca","Prog Méca"],"applicationCategory":"EducationalApplication","inLanguage":"fr-FR","description":"Plateforme de suivi de la formation théorique des Compagnons du Devoir : cours, exercices et examens en mécanique, hydraulique, conception et électrotechnique.","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="ProgMéca"/>
@@ -430,7 +445,7 @@ button,input,select,textarea{font-family:var(--ff)}
 <!-- ─── LOGIN ─────────────────────────────────────────────────────────────── -->
 <div id="vue-login">
   <div class="login-box">
-    <div class="login-logo">Prog<em>Méca</em></div>
+    <h1 class="login-logo" style="font-family:var(--fg);font-size:2.4rem;font-weight:800;text-align:center;letter-spacing:-2px;margin-bottom:4px">Prog<em style="font-style:normal;color:var(--r)">Méca</em></h1>
     <div class="login-tagline">Compagnons du Devoir</div>
     <div id="msg-login"></div>
     <div class="login-tabs">
@@ -521,6 +536,7 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="bnav-item" id="b-anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i>Contacts</div>
 
       <div class="bnav-item" id="b-carnet" onclick="nav('carnet')"><i class="ti ti-notebook"></i>Carnet</div>
+      <div class="bnav-item hidden" id="b-gerer" onclick="ouvrirMenuAdmin()"><i class="ti ti-settings"></i>Gérer</div>
     </div>
   </nav>
 
@@ -866,6 +882,18 @@ button,input,select,textarea{font-family:var(--ff)}
           </div>
         </div>
       </div>
+      <div style="display:flex;gap:6px;margin-bottom:.7rem;flex-wrap:wrap" id="filtres-aspirants">
+        <button class="btn btn-dark btn-sm" data-am="0" onclick="filtrerAspirants(0)">Tous</button>
+        <button class="btn btn-ghost btn-sm" data-am="1" onclick="filtrerAspirants(1)"><i class="ti ti-engine" style="color:var(--r)"></i> Thermique</button>
+        <button class="btn btn-ghost btn-sm" data-am="2" onclick="filtrerAspirants(2)"><i class="ti ti-droplets" style="color:var(--b)"></i> Hydraulique</button>
+        <button class="btn btn-ghost btn-sm" data-am="3" onclick="filtrerAspirants(3)"><i class="ti ti-tools" style="color:var(--m3)"></i> Conception</button>
+        <button class="btn btn-ghost btn-sm" data-am="4" onclick="filtrerAspirants(4)"><i class="ti ti-bolt" style="color:var(--amber)"></i> Électrique</button>
+        <button class="btn btn-ghost btn-sm" data-am="9" onclick="filtrerAspirants(9)">Sans module</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="copierMailsAspirants()"><i class="ti ti-mail"></i> Copier les adresses e-mail</button>
+        <span style="font-size:.72rem;color:var(--t3)" id="asp-compteur"></span>
+      </div>
       <div class="card"><div class="card-head"><span class="card-title">Tous les aspirants</span></div><div class="card-body" id="asp-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div></div>
     </div>
 
@@ -1098,9 +1126,11 @@ async function initApp() {
   if(G.admin){
     if(sep) sep.style.display=''
     MENUS_ADMIN.forEach(id=>sh('n-'+id))
+    sh('b-gerer')
   } else {
     if(sep) sep.style.display='none'
     MENUS_ADMIN.forEach(id=>hi('n-'+id))
+    hi('b-gerer')
   }
   // Enregistrer la dernière connexion (fire and forget)
   db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
@@ -1122,6 +1152,10 @@ async function initApp() {
   if(G.admin && !estAdminSuperviseur() && (!p.module_gacheur || !p.telephone)) {
     afficherFormulaireAdmin(user.email)
     return
+  }
+  // Aspirant : demander le téléphone (peut être reporté)
+  if(!G.admin && !G.ancien && !p.telephone && !localStorage.getItem('pm_tel_plus_tard')) {
+    afficherFormulaireTelephone()
   }
 
   // Dashboard selon rôle
@@ -2244,29 +2278,108 @@ async function loadAspirants() {
     htmlAttente=`<div class="card" style="margin-bottom:1rem;border-color:var(--r)"><div class="card-head" style="background:var(--rl)"><div style="display:flex;align-items:center;gap:8px"><i class="ti ti-clock" style="color:var(--r)"></i><span class="card-title" style="color:var(--r2)">${enAttenteTout.length} copie(s) en attente</span></div></div><div class="card-body">${enAttenteTout.map(tent=>{const p2=profilsMap[tent.aspirant_id]||{},qz=quizMap[tent.quiz_id]||{};return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div class="sidebar-avatar" style="flex-shrink:0;font-size:.7rem">${[(p2.prenom||'')[0],(p2.nom||'')[0]].join('').toUpperCase()||'?'}</div><div style="flex:1"><div style="font-size:.82rem;font-weight:700">Pays ${p2.prenom||''} ${p2.nom||''}</div><div style="font-size:.72rem;color:var(--t3)">${qz.titre||'—'} · ${new Date(tent.completed_at).toLocaleDateString('fr-FR')}</div></div><button class="btn btn-r btn-sm" onclick="ouvrirCorrectionAdmin('${tent.id}')"><i class="ti ti-pencil"></i> Corriger</button></div>`}).join('')}</div></div>`
   }
   if(!a.length){$('asp-body').innerHTML=htmlAttente+htmlAbsents+'<p style="font-size:.78rem;color:var(--t3)">Aucun aspirant.</p>';return}
-  $('asp-body').innerHTML=htmlAttente+htmlAbsents+a.map(p=>{
-    const tp=t.filter(x=>x.aspirant_id===p.id),ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
-    return `<div style="border-bottom:1px solid var(--bord);padding:.9rem 0">
-      <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
-        <div class="sidebar-avatar" style="flex-shrink:0">${ini}</div>
-        <div style="flex:1"><div style="font-size:.875rem;font-weight:700">Pays ${p.prenom||''} ${p.nom||''}</div><div style="font-size:.7rem;color:var(--t3)">${p.email}</div></div>
-        <span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:var(--t3)">${tp.filter(x=>x.valide).length}/${tp.length}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px">
-        ${MODULES.map(m=>{const qm=q.filter(x=>x.module_id===m.id);return `<div style="background:var(--bg);border:1px solid var(--bord);border-radius:10px;padding:7px 10px">
-          <div style="font-size:.68rem;font-weight:700;margin-bottom:5px;color:var(--t2);display:flex;align-items:center;gap:4px"><i class="ti ${m.icon}" style="color:${m.ic}"></i>${m.nom}</div>
-          ${qm.map(q2=>{const t2=tp.find(x=>x.quiz_id===q2.id);return `<div style="display:flex;justify-content:space-between;font-size:.7rem;padding:3px 0">
-            <span style="color:var(--t2)">Niv.${q2.niveau}</span>
-            <div style="display:flex;align-items:center;gap:5px">
-              <span style="font-family:var(--fg);font-weight:700;color:${t2?.valide?'var(--v)':t2?'var(--r)':'var(--t3)'}">${t2?t2.score+'/20':'—'}</span>
-              ${t2&&!t2.valide?`<button title="Débloquer" onclick="debloquer('${t2.id}','${p.prenom||''} ${p.nom||''}')" style="background:none;border:none;cursor:pointer;font-size:.72rem;color:var(--t3)"><i class="ti ti-lock-open"></i></button>`:''}
-              ${t2&&t2.notes_libres!==null&&!t2.note_admin?`<button title="Corriger" onclick="ouvrirCorrectionAdmin('${t2.id}')" style="background:var(--rl);border:1px solid var(--r);border-radius:5px;cursor:pointer;font-size:.7rem;color:var(--r2);padding:1px 4px"><i class="ti ti-pencil"></i></button>`:''}
-            </div>
-          </div>`}).join('')}
-          ${!qm.length?'<span style="font-size:.7rem;color:var(--t3)">—</span>':''}
-        </div>`}).join('')}
-      </div>
-    </div>`
+  // On mémorise pour le filtre et la copie des adresses
+  _aspAll=a;_aspTents=t;_aspQuiz=q;_aspEntetes=htmlAttente+htmlAbsents
+  afficherAspirants()
+}
+
+let _aspAll=[],_aspTents=[],_aspQuiz=[],_aspEntetes='',_aspFiltre=0,_aspOuverts={}
+
+function filtrerAspirants(modId){
+  _aspFiltre=modId
+  document.querySelectorAll('#filtres-aspirants button').forEach(function(b){
+    b.className=parseInt(b.dataset.am)===modId?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'
+  })
+  afficherAspirants()
+}
+
+function _aspFiltres(){
+  if(_aspFiltre===0) return _aspAll
+  if(_aspFiltre===9) return _aspAll.filter(function(p){return !p.module_inscrit})
+  return _aspAll.filter(function(p){return p.module_inscrit===_aspFiltre})
+}
+
+function basculerAspirant(id){
+  _aspOuverts[id]=!_aspOuverts[id]
+  afficherAspirants()
+}
+
+async function copierMailsAspirants(){
+  const liste=_aspFiltres().map(function(p){return p.email}).filter(Boolean)
+  if(!liste.length){toast('Aucune adresse à copier','err');return}
+  const txt=liste.join('; ')
+  try{
+    await navigator.clipboard.writeText(txt)
+    toast(liste.length+' adresse'+(liste.length>1?'s':'')+' copiée'+(liste.length>1?'s':'')+' !','ok')
+  }catch(e){
+    // Repli si le presse-papier est refusé par le navigateur
+    const ta=document.createElement('textarea')
+    ta.value=txt;ta.style.cssText='position:fixed;top:20%;left:5%;width:90%;height:40%;z-index:99999;font-size:.8rem;padding:10px'
+    document.body.appendChild(ta);ta.select()
+    try{document.execCommand('copy');toast(liste.length+' adresses copiées !','ok')}
+    catch(e2){toast('Sélectionne le texte et copie-le manuellement','err');return}
+    setTimeout(function(){ta.remove()},300)
+  }
+}
+
+function afficherAspirants(){
+  const el=$('asp-body');if(!el) return
+  const a=_aspFiltres(),t=_aspTents,q=_aspQuiz
+  const cptEl=$('asp-compteur')
+  if(cptEl) cptEl.textContent=a.length+' aspirant'+(a.length>1?'s':'')+(_aspFiltre&&_aspFiltre!==9?' — '+(MODULES.find(function(m){return m.id===_aspFiltre})||{}).nom:'')
+  if(!a.length){el.innerHTML=_aspEntetes+'<p style="font-size:.78rem;color:var(--t3)">Aucun aspirant pour ce filtre.</p>';return}
+  el.innerHTML=_aspEntetes+a.map(function(p){
+    const tp=t.filter(function(x){return x.aspirant_id===p.id})
+    const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
+    const ouvert=!!_aspOuverts[p.id]
+    const mod=MODULES.find(function(m){return m.id===p.module_inscrit})
+    // Compteur d'examens du module d'inscription
+    const exM=q.filter(function(x){return x.mode_examen&&x.module_id===p.module_inscrit})
+    const exVal=exM.filter(function(x){return tp.some(function(tt){return tt.quiz_id===x.id&&tt.valide})}).length
+    const aCorriger=tp.some(function(x){return x.notes_libres!==null&&!x.note_admin})
+
+    let detail=''
+    if(ouvert){
+      detail='<div style="padding:2px 0 12px 42px">'
+        +'<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:.72rem;color:var(--t2)">'
+          +(p.telephone?'<a href="tel:'+p.telephone+'" style="color:var(--v);font-weight:600;text-decoration:none"><i class="ti ti-phone"></i> '+p.telephone+'</a>':'<span style="color:var(--t3)"><i class="ti ti-phone-off"></i> Pas de téléphone</span>')
+          +'<a href="mailto:'+p.email+'" style="color:var(--b);text-decoration:none"><i class="ti ti-mail"></i> '+p.email+'</a>'
+        +'</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">'
+        +MODULES.map(function(m){
+          const qm=q.filter(function(x){return x.module_id===m.id})
+          if(!qm.length) return ''
+          return '<div style="background:var(--field);border-radius:12px;padding:9px 11px">'
+            +'<div style="font-size:.68rem;font-weight:700;margin-bottom:6px;color:var(--t2);display:flex;align-items:center;gap:4px"><i class="ti '+m.icon+'" style="color:'+m.ic+'"></i>'+m.nom+'</div>'
+            +qm.map(function(q2){
+              const t2=tp.find(function(x){return x.quiz_id===q2.id})
+              const enAtt=t2&&t2.notes_libres!==null&&!t2.note_admin
+              return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:.7rem;padding:3px 0">'
+                +'<span style="color:var(--t2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(q2.mode_examen?'<b>Examen</b> ':'')+(q2.titre||('Niv.'+q2.niveau))+'</span>'
+                +'<div style="display:flex;align-items:center;gap:5px;flex-shrink:0">'
+                +'<span style="font-family:var(--fg);font-weight:700;color:'+(t2&&t2.valide?'var(--v)':t2?'var(--r)':'var(--t3)')+'">'+(t2?(enAtt?'⏳':t2.score+'/20'):'—')+'</span>'
+                +(t2&&!t2.valide?'<button title="Débloquer une 2e tentative" onclick="debloquer(\''+t2.id+'\',\''+((p.prenom||'')+' '+(p.nom||'')).replace(/'/g,"")+'\')" style="background:none;border:none;cursor:pointer;font-size:.72rem;color:var(--r2);padding:1px 3px"><i class="ti ti-lock-open"></i></button>':'')
+                +(enAtt?'<button title="Corriger" onclick="ouvrirCorrectionAdmin(\''+t2.id+'\')" style="background:var(--rl);border:none;border-radius:6px;cursor:pointer;font-size:.7rem;color:var(--r);padding:2px 5px"><i class="ti ti-pencil"></i></button>':'')
+                +'</div></div>'
+            }).join('')
+            +'</div>'
+        }).join('')
+        +'</div></div>'
+    }
+
+    return '<div style="border-bottom:1px solid var(--bord)">'
+      +'<div onclick="basculerAspirant(\''+p.id+'\')" style="display:flex;align-items:center;gap:10px;padding:12px 0;cursor:pointer">'
+        +'<div class="sidebar-avatar" style="flex-shrink:0">'+ini+'</div>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:.875rem;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap">Pays '+(p.prenom||'')+' '+(p.nom||'')
+          +(aCorriger?'<span class="badge badge-a" style="font-size:.6rem">À corriger</span>':'')+'</div>'
+          +'<div style="font-size:.7rem;color:var(--t3);margin-top:2px">'+(mod?mod.nom:'Pas encore inscrit')+'</div>'
+        +'</div>'
+        +'<span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:'+(exM.length&&exVal===exM.length?'var(--v)':'var(--t3)')+';flex-shrink:0">'+(exM.length?exVal+'/'+exM.length:'—')+'</span>'
+        +'<i class="ti ti-chevron-'+(ouvert?'up':'down')+'" style="color:var(--t3);flex-shrink:0"></i>'
+      +'</div>'
+      +detail
+    +'</div>'
   }).join('')
 }
 
@@ -2621,6 +2734,38 @@ async function ouvrirProfilAspirantAncien(aspirantId, nom) {
 }
 
 // ─── MON PROFIL ANCIEN (pour admin et ancien existants) ───────────────────────
+function ouvrirMenuAdmin() {
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  const items=[
+    {p:'quiz-admin',i:'ti-help-circle',t:'Gérer les quiz',d:'Créer, modifier, publier'},
+    {p:'ressources',i:'ti-upload',t:'Ressources et devoirs',d:'Cours, documents, travaux'},
+    {p:'aspirants',i:'ti-users',t:'Aspirants',d:'Suivi, corrections, rattrapages'},
+    {p:'annonces-admin',i:'ti-speakerphone',t:'Annonces',d:'Informer tout le monde'},
+    {p:'inscriptions-admin',i:'ti-calendar',t:'Inscriptions',d:'Ouvrir les périodes'},
+    {p:'comptes-admin',i:'ti-list-check',t:'Tous les comptes',d:'Rôles et coordonnées'},
+    {p:'anciens-admin',i:'ti-star',t:'Anciens',d:'Annuaire des sédentaires'},
+    {p:'stats-admin',i:'ti-chart-bar',t:'Statistiques',d:'Vue d ensemble'}
+  ]
+  const modal=document.createElement('div');modal.id='modal-menu-admin'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;display:flex;align-items:flex-end;justify-content:center'
+  modal.onclick=function(e){if(e.target===modal)modal.remove()}
+  modal.innerHTML='<div style="background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;padding-bottom:max(1rem,env(safe-area-inset-bottom))">'
+    +'<div style="padding:1rem 1.3rem .6rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card)">'
+      +'<span style="font-family:var(--fg);font-size:1.05rem;font-weight:700">Administration</span>'
+      +'<button onclick="document.getElementById(\'modal-menu-admin\').remove()" style="background:var(--field);border:none;border-radius:50%;width:32px;height:32px;color:var(--t2);cursor:pointer"><i class="ti ti-x"></i></button>'
+    +'</div>'
+    +'<div style="padding:0 1rem 1rem">'
+    +items.map(function(it){
+      return '<div onclick="document.getElementById(\'modal-menu-admin\').remove();nav(\''+it.p+'\')" style="display:flex;align-items:center;gap:13px;padding:14px 12px;border-radius:16px;cursor:pointer" onmousedown="this.style.background=\'var(--field)\'" onmouseup="this.style.background=\'\'">'
+        +'<div style="width:40px;height:40px;border-radius:13px;background:var(--field);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+it.i+'" style="color:var(--r);font-size:1.15rem"></i></div>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:.92rem;font-weight:600">'+it.t+'</div><div style="font-size:.74rem;color:var(--t3);margin-top:1px">'+it.d+'</div></div>'
+        +'<i class="ti ti-chevron-right" style="color:var(--t3)"></i>'
+      +'</div>'
+    }).join('')
+    +'</div></div>'
+  document.body.appendChild(modal)
+}
+
 function ouvrirMonProfil() {
   if(!G.admin && !G.ancien) return
   const p=G.profil
@@ -2707,6 +2852,39 @@ async function sauvegarderMonProfil() {
 
 // ─── ANCIENS ───────────────────────────────────────────────────────────────
 let _anciensAll=[]
+
+function afficherFormulaireTelephone() {
+  const modal=document.createElement('div');modal.id='modal-tel-aspirant'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.innerHTML='<div style="background:var(--card);border-radius:24px;width:100%;max-width:400px;overflow:hidden">'
+    +'<div style="padding:1.6rem 1.5rem 1.3rem;text-align:center">'
+      +'<div style="width:52px;height:52px;border-radius:16px;background:var(--rl);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem"><i class="ti ti-phone" style="color:var(--r);font-size:1.4rem"></i></div>'
+      +'<div style="font-family:var(--fg);font-size:1.1rem;font-weight:700;letter-spacing:-.02em">Ton numéro de téléphone</div>'
+      +'<p style="font-size:.82rem;color:var(--t2);margin-top:8px;line-height:1.5">Il permet à ton gâcheur de te joindre rapidement en cas de besoin (changement de créneau d\'examen, information urgente).</p>'
+      +'<input class="finput" id="tel-aspirant" type="tel" inputmode="tel" placeholder="06 XX XX XX XX" style="margin-top:1.2rem;text-align:center" onkeydown="if(event.key===\'Enter\')enregistrerTelephoneAspirant()"/>'
+      +'<button class="btn btn-r btn-full" style="margin-top:1rem" onclick="enregistrerTelephoneAspirant()"><i class="ti ti-check"></i> Enregistrer</button>'
+      +'<button class="btn btn-ghost btn-full" style="margin-top:.6rem;font-size:.78rem" onclick="reporterTelephone()">Plus tard</button>'
+    +'</div>'
+  +'</div>'
+  document.body.appendChild(modal)
+  setTimeout(function(){const i=document.getElementById('tel-aspirant');if(i)i.focus()},150)
+}
+
+async function enregistrerTelephoneAspirant() {
+  const tel=(document.getElementById('tel-aspirant')||{}).value
+  const v=(tel||'').trim()
+  if(v.replace(/[^0-9]/g,'').length<9){toast('Numéro incomplet','err');return}
+  const {error}=await db.from('profils').update({telephone:v}).eq('id',G.profil.id)
+  if(error){toast('Erreur : '+error.message,'err');return}
+  G.profil.telephone=v
+  document.getElementById('modal-tel-aspirant')?.remove()
+  toast('Merci !','ok')
+}
+
+function reporterTelephone() {
+  try{localStorage.setItem('pm_tel_plus_tard','1')}catch(e){}
+  document.getElementById('modal-tel-aspirant')?.remove()
+}
 
 function afficherFormulaireAdmin(email) {
   const modal=document.createElement('div');modal.id='modal-admin-profil'
