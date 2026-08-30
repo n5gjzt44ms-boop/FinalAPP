@@ -1162,7 +1162,7 @@ async function initApp() {
   if(G.ancien) {
     ;['n-carnet'].forEach(id=>hi(id))
     const savedA=localStorage.getItem('pm_page')
-    const okA=['dashboard-ancien','modules','annuaire']
+    const okA=['dashboard-ancien','modules','annuaire','anciens']
     nav(savedA&&okA.includes(savedA)?savedA:'dashboard-ancien')
   } else if(G.admin) {
     const savedD=localStorage.getItem('pm_page')
@@ -1180,7 +1180,7 @@ async function initApp() {
     }
   } else {
     const savedP=localStorage.getItem('pm_page')
-    const okP=['dashboard','modules','module','suivi','carnet']
+    const okP=['dashboard','modules','module','suivi','carnet','anciens']
     chargerAnnonces()
     verifierInscription()
     if(savedP&&okP.includes(savedP)){
