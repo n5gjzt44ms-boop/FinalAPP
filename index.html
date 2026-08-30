@@ -778,12 +778,17 @@ button,input,select,textarea{font-family:var(--ff)}
         <div class="card" style="margin-bottom:1rem">
           <div class="card-head">
             <div><div class="card-title">Créer un quiz</div><div style="font-size:.7rem;color:var(--t3)">Points libres · Score / 20 · Seuil 14/20</div></div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="mq-sauve-etat" style="font-size:.68rem;color:var(--t3)"></span>
+              <button class="btn btn-ghost btn-sm" onclick="nouveauBrouillon()" title="Repartir d'un quiz vierge"><i class="ti ti-plus"></i> Nouveau</button>
+            </div>
           </div>
           <div class="card-body">
+            <div id="mq-brouillon" style="display:none;background:var(--vl);border-radius:14px;padding:.8rem 1rem;margin-bottom:1rem"></div>
             <div class="field-row" style="margin-bottom:.9rem">
-              <div><label class="field-label">Titre</label><input class="finput" id="mq-titre" placeholder="Quiz Hydraulique niveau 1"/></div>
+              <div><label class="field-label">Titre</label><input class="finput" id="mq-titre" placeholder="Quiz Hydraulique niveau 1" oninput="sauverBrouillon()"/></div>
               <div><label class="field-label">Module</label>
-                <select class="fselect" id="mq-mod">
+                <select class="fselect" id="mq-mod" onchange="sauverBrouillon()">
                   <option value="1">Module 1 — Thermique</option><option value="2">Module 2 — Hydraulique</option>
                   <option value="3">Module 3 — Conception</option><option value="4">Module 4 — Électrique</option>
                 </select>
@@ -791,7 +796,7 @@ button,input,select,textarea{font-family:var(--ff)}
             </div>
             <div class="field-row" style="margin-bottom:.9rem">
               <div><label class="field-label">Visibilité</label>
-                <select class="fselect" id="mq-vis">
+                <select class="fselect" id="mq-vis" onchange="sauverBrouillon()">
                   <option value="prive">Privé — visible admins seulement (test)</option>
                   <option value="publie">Publié — visible par tout le monde</option>
                 </select>
@@ -1240,7 +1245,7 @@ function nav(page) {
   if(page==='modules') loadModules()
   if(page==='suivi') loadSuivi()
   if(page==='ressources') loadResAdmin()
-  if(page==='quiz-admin') loadQuizAdmin()
+  if(page==='quiz-admin'){loadQuizAdmin();chargerBrouillons();recupererLocal()}
   if(page==='aspirants') loadAspirants()
   if(page==='annonces-admin') chargerAnnoncesAdmin()
   if(page==='carnet') chargerCarnet()
@@ -1984,10 +1989,173 @@ async function renommerDossier(id,nomActuel){const n=prompt('Nouveau nom :',nomA
 
 // ─── QUIZ ADMIN ────────────────────────────────────────────────────────────
 let mqQuestions=[]
-document.addEventListener('DOMContentLoaded',()=>{const sel=$('mq-mode-type');if(sel)sel.addEventListener('change',()=>{const cw=document.getElementById('mq-creneau-wrap');if(cw)cw.style.display=sel.value==='examen'?'':' none'})})
 
-function ajouterQuestion(){mqQuestions.push({type:'qcm',enonce:'',options:['','','',''],bonne:0,competence:'',reponse_type:'',points:2,imageUrl:''});renderQuestions()}
-function supprimerQuestion(idx){mqQuestions.splice(idx,1);renderQuestions()}
+// ─── BROUILLONS SYNCHRONISES (table Supabase) ──────────────────────────────
+const MQ_CLE='pm_brouillon_local'      // filet de secours hors connexion
+let _brouillonId=null                   // brouillon en cours d edition
+let _brouillonsListe=[]
+let _sauveTimer=null
+let _sauveEnCours=false
+
+function _etatFormulaire(){
+  const t=($('mq-mode-type')||{}).value||''
+  return {
+    titre:(($('mq-titre')||{}).value||'').trim(),
+    module_id:parseInt(($('mq-mod')||{}).value||'0')||null,
+    visibilite:($('mq-vis')||{}).value||'prive',
+    mode_examen:t==='examen',
+    date_debut:(($('mq-date-debut')||{}).value||'')||null,
+    date_fin:(($('mq-date-fin')||{}).value||'')||null,
+    questions:mqQuestions
+  }
+}
+
+// Sauvegarde differee : on attend 2s d inactivite pour ne pas saturer le reseau
+function sauverBrouillon(){
+  clearTimeout(_sauveTimer)
+  _sauveTimer=setTimeout(sauverBrouillonMaintenant,2000)
+  try{localStorage.setItem(MQ_CLE,JSON.stringify(_etatFormulaire()))}catch(e){}
+}
+
+async function sauverBrouillonMaintenant(){
+  if(_sauveEnCours) return
+  const e=_etatFormulaire()
+  if(!e.titre&&!e.questions.length) return
+  _sauveEnCours=true
+  const ind=document.getElementById('mq-sauve-etat')
+  if(ind) ind.textContent='Enregistrement...'
+  try{
+    const donnees={
+      auteur_id:G.profil.id,
+      titre:e.titre||null,
+      module_id:e.module_id,
+      visibilite:e.visibilite,
+      mode_examen:e.mode_examen,
+      date_debut:e.date_debut?new Date(e.date_debut).toISOString():null,
+      date_fin:e.date_fin?new Date(e.date_fin).toISOString():null,
+      questions:e.questions
+    }
+    if(_brouillonId){
+      const {error}=await db.from('brouillons').update(donnees).eq('id',_brouillonId)
+      if(error) throw error
+    } else {
+      const {data,error}=await db.from('brouillons').insert(donnees).select().single()
+      if(error) throw error
+      _brouillonId=data.id
+    }
+    if(ind) ind.textContent='Enregistre a '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
+    try{localStorage.removeItem(MQ_CLE)}catch(e2){}
+  }catch(err){
+    if(ind) ind.textContent='Hors ligne — sauvegarde sur cet appareil'
+  }
+  _sauveEnCours=false
+}
+
+async function chargerBrouillons(){
+  const el=document.getElementById('mq-brouillon')
+  if(!el) return
+  try{
+    const {data,error}=await db.from('brouillons').select('*').eq('auteur_id',G.profil.id).order('updated_at',{ascending:false})
+    if(error) throw error
+    _brouillonsListe=data||[]
+  }catch(e){_brouillonsListe=[]}
+
+  if(!_brouillonsListe.length){el.style.display='none';return}
+  el.style.display=''
+  el.innerHTML='<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:600;margin-bottom:.6rem">Brouillons en cours — accessibles depuis tous vos appareils</div>'
+    +_brouillonsListe.map(function(b){
+      const n=(b.questions||[]).length
+      const d=new Date(b.updated_at)
+      const encours=b.id===_brouillonId
+      const mod=MODULES.find(function(m){return m.id===b.module_id})
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--bord)">'
+        +'<i class="ti ti-file-pencil" style="color:'+(encours?'var(--r)':'var(--t3)')+';flex-shrink:0"></i>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(b.titre||'Sans titre')+(encours?' <span class="badge badge-rl" style="font-size:.6rem">EN COURS</span>':'')+'</div>'
+          +'<div style="font-size:.7rem;color:var(--t3)">'+(mod?mod.nom+' — ':'')+n+' question'+(n>1?'s':'')+(b.mode_examen?' — Examen':'')+' — '+d.toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>'
+        +'</div>'
+        +(encours?'':'<button class="btn btn-ghost btn-sm" onclick="reprendreBrouillon(\''+b.id+'\')">Reprendre</button>')
+        +'<button class="btn btn-ghost btn-sm btn-icon" title="Supprimer" onclick="supprimerBrouillon(\''+b.id+'\')" style="color:var(--r)"><i class="ti ti-trash"></i></button>'
+        +'</div>'
+    }).join('')
+}
+
+async function reprendreBrouillon(id){
+  const b=_brouillonsListe.find(function(x){return x.id===id})
+  if(!b){toast('Brouillon introuvable','err');return}
+  clearTimeout(_sauveTimer)
+  _brouillonId=b.id
+  if($('mq-titre')) $('mq-titre').value=b.titre||''
+  if($('mq-mod')&&b.module_id) $('mq-mod').value=b.module_id
+  if($('mq-vis')&&b.visibilite) $('mq-vis').value=b.visibilite
+  if($('mq-mode-type')){
+    $('mq-mode-type').value=b.mode_examen?'examen':'exercice'
+    const cw=document.getElementById('mq-creneau-wrap')
+    if(cw) cw.style.display=b.mode_examen?'':'none'
+  }
+  if($('mq-date-debut')) $('mq-date-debut').value=b.date_debut?new Date(b.date_debut).toISOString().slice(0,16):''
+  if($('mq-date-fin')) $('mq-date-fin').value=b.date_fin?new Date(b.date_fin).toISOString().slice(0,16):''
+  mqQuestions=b.questions||[]
+  renderQuestions()
+  chargerBrouillons()
+  toast('Brouillon repris','ok')
+  const el=$('mq-titre');if(el) el.scrollIntoView({behavior:'smooth',block:'center'})
+}
+
+async function supprimerBrouillon(id){
+  if(!confirm('Supprimer definitivement ce brouillon ?')) return
+  const {error}=await db.from('brouillons').delete().eq('id',id)
+  if(error){toast('Erreur : '+error.message,'err');return}
+  if(_brouillonId===id){_brouillonId=null;mqQuestions=[];if($('mq-titre'))$('mq-titre').value='';renderQuestions()}
+  toast('Brouillon supprime','ok')
+  chargerBrouillons()
+}
+
+function nouveauBrouillon(){
+  clearTimeout(_sauveTimer)
+  _brouillonId=null;mqQuestions=[]
+  if($('mq-titre')) $('mq-titre').value=''
+  renderQuestions();chargerBrouillons()
+  const ind=document.getElementById('mq-sauve-etat');if(ind) ind.textContent=''
+}
+
+async function effacerBrouillon(){
+  clearTimeout(_sauveTimer)
+  if(_brouillonId){
+    try{await db.from('brouillons').delete().eq('id',_brouillonId)}catch(e){}
+    _brouillonId=null
+  }
+  try{localStorage.removeItem(MQ_CLE)}catch(e){}
+  const ind=document.getElementById('mq-sauve-etat');if(ind) ind.textContent=''
+  chargerBrouillons()
+}
+
+// Filet de secours : recuperer un travail laisse hors connexion
+function recupererLocal(){
+  let b=null
+  try{b=JSON.parse(localStorage.getItem(MQ_CLE)||'null')}catch(e){}
+  if(!b||(!b.titre&&!(b.questions||[]).length)) return
+  if(!confirm('Un quiz non enregistre a ete retrouve sur cet appareil. Le recuperer ?')) {try{localStorage.removeItem(MQ_CLE)}catch(e){};return}
+  if($('mq-titre')) $('mq-titre').value=b.titre||''
+  mqQuestions=b.questions||[]
+  renderQuestions();sauverBrouillonMaintenant()
+}
+
+// Sauvegarde de securite reguliere
+setInterval(function(){
+  const l=document.getElementById('mq-questions-list')
+  if(l&&(mqQuestions.length||(($('mq-titre')||{}).value||''))) sauverBrouillonMaintenant()
+},20000)
+
+window.addEventListener('beforeunload',function(e){
+  const v=document.getElementById('v-quiz-admin')
+  if(mqQuestions.length&&v&&v.classList.contains('on')){
+    try{localStorage.setItem(MQ_CLE,JSON.stringify(_etatFormulaire()))}catch(err){}
+  }
+})
+
+function ajouterQuestion(){mqQuestions.push({type:'qcm',enonce:'',options:['','','',''],bonne:0,competence:'',reponse_type:'',points:2,imageUrl:''});renderQuestions();sauverBrouillon()}
+function supprimerQuestion(idx){mqQuestions.splice(idx,1);renderQuestions();sauverBrouillon()}
 
 function renderQuestions() {
   const total=mqQuestions.length,totalPts=mqQuestions.reduce((a,q)=>a+(parseFloat(q.points)||2),0)
@@ -2003,7 +2171,7 @@ function renderQuestions() {
         <div><label class="field-label">Compétence</label><input class="finput" value="${q.competence}" placeholder="C2, S3..." onchange="mqQuestions[${i}].competence=this.value"/></div>
         <div><label class="field-label">Points</label><input class="finput" type="number" min="0.5" max="20" step="0.5" value="${q.points||2}" onchange="mqQuestions[${i}].points=parseFloat(this.value)||2;renderQuestions()" style="text-align:center"/></div>
       </div>
-      <div style="margin-bottom:.7rem"><label class="field-label">Énoncé</label><textarea class="ftextarea" rows="2" placeholder="Écrivez votre question..." onchange="mqQuestions[${i}].enonce=this.value">${q.enonce}</textarea></div>
+      <div style="margin-bottom:.7rem"><label class="field-label">Énoncé</label><textarea class="ftextarea" rows="2" placeholder="Écrivez votre question..." onchange="mqQuestions[${i}].enonce=this.value;sauverBrouillon()">${q.enonce}</textarea></div>
       <div style="margin-bottom:.7rem"><label class="field-label">Image (optionnel)</label>
         <div style="display:flex;align-items:center;gap:8px">
           <input class="finput" value="${q.imageUrl||''}" placeholder="URL image..." onchange="mqQuestions[${i}].imageUrl=this.value;renderQuestions()" style="flex:1"/>
@@ -2046,7 +2214,7 @@ async function pubQuizManuel() {
   const {data:quizCree,error}=await db.from('quiz').insert({module_id:modId,titre,filiere:fil,niveau,total_points:totalPts,seuil:SEUIL,actif:estPublie,created_by:user.id,mode_examen:isExamen,date_debut:dateDebut?new Date(dateDebut).toISOString():null,date_fin:dateFin?new Date(dateFin).toISOString():null}).select().single()
   if(error){toast('Erreur : '+error.message,'err');btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer le quiz';return}
   await db.from('questions').insert(mqQuestions.map((q,i)=>({quiz_id:quizCree.id,enonce:q.enonce,options:q.type==='vf'?['Vrai','Faux']:(q.options||[]),bonne_reponse:q.bonne||0,points:parseFloat(q.points)||2,competence:q.competence||null,type_question:q.type||'qcm',reponse_type:q.reponse_type||null,image_url:q.imageUrl||null,ordre:i})))
-  toast(estPublie?'Quiz publié pour tout le monde !':'Quiz créé en privé (admins seulement)','ok');mqQuestions=[];$('mq-titre').value='';renderQuestions();loadQuizAdmin()
+  toast(estPublie?'Quiz publié pour tout le monde !':'Quiz créé en privé (admins seulement)','ok');mqQuestions=[];$('mq-titre').value='';await effacerBrouillon();renderQuestions();loadQuizAdmin()
   btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer le quiz'
 }
 
