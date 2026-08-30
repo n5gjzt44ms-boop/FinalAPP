@@ -305,10 +305,10 @@ button,input,select,textarea{font-family:var(--ff)}
 #vue-app.on{display:block}
 
 /* Topbar */
-.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:color-mix(in srgb,var(--card2) 86%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:none;box-shadow:0 1px 0 var(--bord);display:flex;align-items:center;padding:0 1rem;gap:10px;z-index:500}
+.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:color-mix(in srgb,var(--card2) 86%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:none;box-shadow:0 1px 0 var(--bord);display:flex;align-items:center;padding:0 1rem;gap:10px;z-index:500;overflow:hidden;max-width:100vw}
 .topbar-logo{font-family:var(--fg);font-size:1.3rem;font-weight:800;letter-spacing:-.04em;cursor:pointer;color:var(--t1)}
 .topbar-logo em{color:var(--r);font-style:normal}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0}
 .streak-top{display:flex;align-items:center;gap:4px;font-size:.78rem;font-weight:600;color:var(--t2)}
 
 /* Sidebar compacte */
@@ -432,10 +432,26 @@ button,input,select,textarea{font-family:var(--ff)}
   :root{--sidebar-w:0px}
   .sidebar{display:none}
   .bottom-nav{display:block}
-  .main{margin-left:0;padding:1rem;padding-bottom:80px}
+  .main{margin-left:0;padding:1rem;padding-bottom:90px}
   .hide-mob{display:none!important}
   .grid2{grid-template-columns:1fr}
+  .grid4{grid-template-columns:1fr 1fr}
   .field-row{grid-template-columns:1fr}
+  /* Barre du haut : ne garder que l'essentiel pour que rien ne soit coupé */
+  .topbar{padding:0 .7rem;gap:6px}
+  .topbar-right{gap:4px}
+  #search-wrap{display:none!important}
+  .show-mob{display:inline-flex!important}
+  #top-badge{display:none!important}
+  .streak-top{display:none!important}
+  .topbar-logo{font-size:1.15rem}
+  .topbar .btn-icon{padding:7px}
+  /* Rien ne doit dépasser la largeur de l'écran */
+  html,body{overflow-x:hidden;max-width:100vw}
+  .card,.kpi,.quiz-row{max-width:100%}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  pre,code{white-space:pre-wrap;word-break:break-word}
+  img{max-width:100%;height:auto}
 }
 @media(min-width:700px){.bottom-nav{display:none!important}}
 </style>
@@ -492,6 +508,7 @@ button,input,select,textarea{font-family:var(--ff)}
     <span class="badge badge-dark" id="top-badge">Aspirant</span>
     <div class="topbar-right">
       <div class="streak-top" id="streak-topbar"></div>
+      <button class="btn btn-ghost btn-sm btn-icon show-mob" id="btn-search-mob" onclick="ouvrirRechercheMobile()" title="Rechercher" style="display:none"><i class="ti ti-search"></i></button>
       <button class="btn btn-ghost btn-sm btn-icon" id="btn-dark" onclick="toggleDark()" title="Mode sombre"><i class="ti ti-moon"></i></button>
       <button class="btn btn-ghost btn-sm btn-icon" onclick="ouvrirGuide()" title="Aide"><i class="ti ti-help-circle"></i></button>
 
@@ -2734,6 +2751,29 @@ async function ouvrirProfilAspirantAncien(aspirantId, nom) {
 }
 
 // ─── MON PROFIL ANCIEN (pour admin et ancien existants) ───────────────────────
+function ouvrirRechercheMobile() {
+  const modal=document.createElement('div');modal.id='modal-recherche'
+  modal.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:9998;padding:1rem;padding-top:max(1rem,env(safe-area-inset-top))'
+  modal.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem">'
+    +'<div style="flex:1;display:flex;align-items:center;gap:8px;background:var(--field);border-radius:14px;padding:11px 14px">'
+      +'<i class="ti ti-search" style="color:var(--t3)"></i>'
+      +'<input id="search-input-mob" placeholder="Rechercher un quiz, un cours…" style="flex:1;border:none;background:none;outline:none;font-size:.92rem;font-family:var(--ff);color:var(--t1)" oninput="rechercheMobile(this.value)"/>'
+    +'</div>'
+    +'<button onclick="document.getElementById(\'modal-recherche\').remove()" style="background:var(--field);border:none;border-radius:50%;width:36px;height:36px;color:var(--t2);cursor:pointer;flex-shrink:0"><i class="ti ti-x"></i></button>'
+  +'</div>'
+  +'<div id="search-results-mob"></div>'
+  document.body.appendChild(modal)
+  setTimeout(function(){const i=document.getElementById('search-input-mob');if(i)i.focus()},120)
+}
+
+function rechercheMobile(v){
+  const src=document.getElementById('search-input')
+  if(src){src.value=v;if(typeof rechercheGlobale==='function')rechercheGlobale(v)}
+  const dst=document.getElementById('search-results-mob')
+  const res=document.getElementById('search-results')
+  if(dst&&res) dst.innerHTML=res.innerHTML
+}
+
 function ouvrirMenuAdmin() {
   if(!G.admin){toast('Réservé aux gâcheurs','err');return}
   const items=[
