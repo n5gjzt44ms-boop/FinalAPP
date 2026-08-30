@@ -1523,10 +1523,38 @@ async function renderCours(modId) {
 }
 
 async function ouvrirRes(id,path,url) {
-  await db.from('consultations').upsert({aspirant_id:G.profil.id,ressource_id:id})
-  if(path){const {data}=await db.storage.from('ressources').createSignedUrl(path,3600);if(data?.signedUrl){window.open(data.signedUrl,'_blank');return}}
-  if(url){window.open(url,'_blank');return}
-  toast('Fichier non disponible','err')
+  // On ouvre l'onglet TOUT DE SUITE, pendant le clic : sinon les navigateurs
+  // mobiles (Safari en particulier) bloquent l'ouverture apres un await.
+  let onglet=null
+  if(path||url){
+    try{onglet=window.open('','_blank')}catch(e){onglet=null}
+    if(onglet){
+      try{onglet.document.write('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#6B6B68;background:#EDECE9">Ouverture du document...</body>')}catch(e){}
+    }
+  }
+  // L'enregistrement de la consultation ne doit jamais empecher l'ouverture
+  try{await db.from('consultations').upsert({aspirant_id:G.profil.id,ressource_id:id})}catch(e){}
+
+  let cible=url||null
+  if(path){
+    try{
+      const {data,error}=await db.storage.from('ressources').createSignedUrl(path,3600)
+      if(!error&&data&&data.signedUrl) cible=data.signedUrl
+    }catch(e){}
+  }
+
+  if(!cible){
+    if(onglet){try{onglet.close()}catch(e){}}
+    toast('Fichier non disponible','err')
+    return
+  }
+
+  if(onglet&&!onglet.closed){
+    try{onglet.location.href=cible;return}catch(e){}
+  }
+  // Repli : navigation directe si l'onglet a ete bloque
+  try{window.location.href=cible}
+  catch(e){toast('Impossible d ouvrir le document','err')}
 }
 
 async function renderEval(modId,quiz,tents) {
@@ -2206,7 +2234,15 @@ async function chargerDevoirs() {
   }).join('')
 }
 
-async function telechargerSujet(path){const {data}=await db.storage.from('ressources').createSignedUrl(path,3600);if(data?.signedUrl)window.open(data.signedUrl,'_blank')}
+async function telechargerSujet(path){
+  let onglet=null
+  try{onglet=window.open('','_blank')}catch(e){onglet=null}
+  let cible=null
+  try{const {data}=await db.storage.from('ressources').createSignedUrl(path,3600);if(data&&data.signedUrl)cible=data.signedUrl}catch(e){}
+  if(!cible){if(onglet){try{onglet.close()}catch(e){}}toast('Fichier non disponible','err');return}
+  if(onglet&&!onglet.closed){try{onglet.location.href=cible;return}catch(e){}}
+  window.location.href=cible
+}
 
 async function deposerRendu(devoirId,input) {
   const fichiers=Array.from(input.files);if(!fichiers.length) return
