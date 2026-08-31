@@ -305,10 +305,10 @@ button,input,select,textarea{font-family:var(--ff)}
 #vue-app.on{display:block}
 
 /* Topbar */
-.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:color-mix(in srgb,var(--card2) 86%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:none;box-shadow:0 1px 0 var(--bord);display:flex;align-items:center;padding:0 1rem;gap:10px;z-index:500;overflow:hidden;max-width:100vw}
-.topbar-logo{font-family:var(--fg);font-size:1.3rem;font-weight:800;letter-spacing:-.04em;cursor:pointer;color:var(--t1)}
+.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:color-mix(in srgb,var(--card2) 86%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:none;box-shadow:0 1px 0 var(--bord);display:flex;align-items:center;padding:0 1rem;gap:10px;z-index:500;max-width:100vw}
+.topbar-logo{font-family:var(--fg);font-size:1.3rem;font-weight:800;letter-spacing:-.04em;cursor:pointer;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .topbar-logo em{color:var(--r);font-style:normal}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0;min-width:0}
 .streak-top{display:flex;align-items:center;gap:4px;font-size:.78rem;font-weight:600;color:var(--t2)}
 
 /* Sidebar compacte */
@@ -517,7 +517,7 @@ button,input,select,textarea{font-family:var(--ff)}
           <i class="ti ti-search" style="font-size:.9rem;color:var(--t3)"></i>
           <input id="search-input" placeholder="Rechercher…" style="border:none;background:none;outline:none;font-size:.82rem;width:140px;font-family:var(--ff);color:var(--t1)" oninput="rechercheGlobale(this.value)" onfocus="sh('search-results')" onblur="setTimeout(()=>hi('search-results'),300)"/>
         </div>
-        <div id="search-results" class="hidden" style="position:absolute;top:calc(100% + 6px);right:0;width:320px;background:var(--card);border:1px solid var(--bord2);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:999;max-height:400px;overflow-y:auto;padding:8px"></div>
+        <div id="search-results" class="hidden" style="position:fixed;top:60px;right:12px;width:min(340px,calc(100vw - 24px));background:var(--card);border:1px solid var(--bord2);border-radius:16px;box-shadow:0 16px 40px -12px rgba(0,0,0,.28);z-index:9000;max-height:min(420px,70vh);overflow-y:auto;padding:8px"></div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="logout()"><i class="ti ti-logout"></i> <span class="hide-mob">Déconnexion</span></button>
     </div>
@@ -1112,6 +1112,16 @@ async function logout() {
   }catch(e){}
   window.location.reload()
 }
+
+// Fermer les resultats de recherche en cliquant ailleurs
+document.addEventListener('click',function(e){
+  const res=document.getElementById('search-results')
+  const wrap=document.getElementById('search-wrap')
+  if(!res||res.classList.contains('hidden')) return
+  if(wrap&&wrap.contains(e.target)) return
+  if(res.contains(e.target)) return
+  res.classList.add('hidden')
+})
 
 // ─── BOUTON RETOUR DU NAVIGATEUR ───────────────────────────────────────────
 window.addEventListener('popstate',function(ev){
@@ -3123,12 +3133,22 @@ function ouvrirRechercheMobile() {
   setTimeout(function(){const i=document.getElementById('search-input-mob');if(i)i.focus()},120)
 }
 
-function rechercheMobile(v){
-  const src=document.getElementById('search-input')
-  if(src){src.value=v;if(typeof rechercheGlobale==='function')rechercheGlobale(v)}
+async function rechercheMobile(v){
   const dst=document.getElementById('search-results-mob')
+  if(!dst) return
+  if(!v||v.length<2){dst.innerHTML='<p style="font-size:.8rem;color:var(--t3);text-align:center;padding:1.5rem 0">Tape au moins 2 lettres</p>';return}
+  dst.innerHTML='<div style="text-align:center;padding:1.5rem 0"><i class="ti ti-loader spin" style="font-size:1.4rem;color:var(--r)"></i></div>'
+  const src=document.getElementById('search-input')
+  if(src) src.value=v
+  if(typeof rechercheGlobale==='function'){
+    try{ await rechercheGlobale(v) }catch(e){}
+  }
   const res=document.getElementById('search-results')
-  if(dst&&res) dst.innerHTML=res.innerHTML
+  if(res){
+    dst.innerHTML=res.innerHTML||'<p style="font-size:.8rem;color:var(--t3);text-align:center;padding:1.5rem 0">Aucun résultat</p>'
+    // Le panneau du haut ne doit pas rester visible derriere la fenetre mobile
+    res.classList.add('hidden')
+  }
 }
 
 function ouvrirMenuAdmin() {
