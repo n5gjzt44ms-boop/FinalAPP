@@ -469,7 +469,7 @@ button,input,select,textarea{font-family:var(--ff)}
       <button class="ltab" onclick="authMode('register')">Créer un compte</button>
     </div>
     <div id="f-login">
-      <div class="field"><label>Adresse e-mail</label><input type="email" id="l-email" placeholder="prenom.nom@compagnons-du-devoir.fr" onkeydown="if(event.key==='Enter')login()"/></div>
+      <div class="field"><label>Adresse e-mail</label><input type="email" id="l-email" placeholder="ton adresse e-mail" onkeydown="if(event.key==='Enter')login()"/></div>
       <div class="field"><label>Mot de passe</label><input type="password" id="l-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"/></div>
       <button class="btn btn-dark btn-full" id="btn-login" onclick="login()"><i class="ti ti-login"></i> Se connecter</button>
       <div style="text-align:center;margin-top:.9rem"><span onclick="motDePasseOublie()" style="font-size:.78rem;color:var(--t3);cursor:pointer;text-decoration:underline">Mot de passe oublié ?</span></div>
@@ -488,7 +488,7 @@ button,input,select,textarea{font-family:var(--ff)}
         <div class="field"><label>Prénom</label><input type="text" id="r-prenom" placeholder="Jean"/></div>
         <div class="field"><label>Nom</label><input type="text" id="r-nom" placeholder="Dupont"/></div>
       </div>
-      <div class="field"><label>E-mail</label><input type="email" id="r-email" placeholder="prenom.nom@compagnons-du-devoir.fr"/><small>Adresse @compagnons-du-devoir.fr ou .com</small></div>
+      <div class="field"><label>E-mail</label><input type="email" id="r-email" placeholder="ton adresse e-mail"/><small>Ton adresse Compagnons si tu en as une, sinon ton adresse personnelle — tu pourras la changer plus tard.</small></div>
       <div class="field"><label>Mot de passe</label><input type="password" id="r-pwd" placeholder="8 caractères minimum"/></div>
       <div class="field hidden" id="f-role"><label>Rôle</label>
         <select class="fselect" id="r-role">
@@ -509,6 +509,7 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="topbar-right">
       <div class="streak-top" id="streak-topbar"></div>
       <button class="btn btn-ghost btn-sm btn-icon show-mob" id="btn-search-mob" onclick="ouvrirRechercheMobile()" title="Rechercher" style="display:none"><i class="ti ti-search"></i></button>
+      <button class="btn btn-ghost btn-sm btn-icon show-mob" id="btn-compte-mob" onclick="(G.admin||G.ancien)?ouvrirMonProfil():ouvrirMonCompte()" title="Mon compte" style="display:none"><i class="ti ti-user"></i></button>
       <button class="btn btn-ghost btn-sm btn-icon" id="btn-dark" onclick="toggleDark()" title="Mode sombre"><i class="ti ti-moon"></i></button>
       <button class="btn btn-ghost btn-sm btn-icon" onclick="ouvrirGuide()" title="Aide"><i class="ti ti-help-circle"></i></button>
 
@@ -541,7 +542,7 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="nav-icon hidden" id="n-anciens-admin" data-tip="Anciens" onclick="nav('anciens-admin')"><i class="ti ti-star"></i></div>
     <div class="nav-icon hidden" id="n-stats-admin" data-tip="Statistiques" onclick="nav('stats-admin')"><i class="ti ti-chart-bar"></i></div>
     <div class="sidebar-foot">
-      <div class="sidebar-avatar" id="av" style="cursor:pointer" data-tip="Mon profil Ancien" onclick="ouvrirMonProfil()">?</div>
+      <div class="sidebar-avatar" id="av" style="cursor:pointer" data-tip="Mon compte" onclick="(G.admin||G.ancien)?ouvrirMonProfil():ouvrirMonCompte()">?</div>
     </div>
   </nav>
 
@@ -566,6 +567,7 @@ button,input,select,textarea{font-family:var(--ff)}
         <div style="font-size:.78rem;color:var(--t3);margin-top:2px" id="d-date"></div>
       </div>
       <div id="annonces-dashboard" style="margin-bottom:1rem"></div>
+      <div id="d-email-perso"></div>
       <div id="d-rappel"></div>
       <div id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
       <div id="d-activite"></div>
@@ -963,14 +965,17 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SEUIL = 14
 const DOMAINE = '@compagnons-du-devoir.fr'
 const DOMAINES_ACCEPTES = ['@compagnons-du-devoir.fr','@compagnons-du-devoir.com']
+// Toutes les adresses sont acceptees : de nombreux apprentis n'ont pas
+// encore d'adresse Compagnons du Devoir. Ils pourront la changer plus tard.
 function domaineValide(email){
+  const e=(email||'').toLowerCase().trim()
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)
+}
+function estAdresseCompagnon(email){
   const e=(email||'').toLowerCase().trim()
   const at=e.lastIndexOf('@')
   if(at<1) return false
-  const dom='@'+e.slice(at+1)
-  // Comparaison stricte du domaine : evite les imitations du type
-  // "faux-compagnons-du-devoir.fr" qui se terminent pareil.
-  return DOMAINES_ACCEPTES.indexOf(dom)>=0
+  return DOMAINES_ACCEPTES.indexOf('@'+e.slice(at+1))>=0
 }
 const DOMAINES_TXT = '@compagnons-du-devoir.fr ou .com'
 const MODULES = [
@@ -1075,7 +1080,7 @@ function authMode(m) {
 
 async function login() {
   const email=$('l-email').value.trim(),pwd=$('l-pwd').value
-  if(!domaineValide(email)){msgLogin('Adresse '+DOMAINES_TXT+' requise.');return}
+  if(!domaineValide(email)){msgLogin('Adresse e-mail invalide.');return}
   const btn=$('btn-login');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Connexion...'
   const {error}=await db.auth.signInWithPassword({email,password:pwd})
   if(error){msgLogin('Email ou mot de passe incorrect.');btn.disabled=false;btn.innerHTML='<i class="ti ti-login"></i> Se connecter';return}
@@ -1085,7 +1090,7 @@ async function login() {
 async function motDePasseOublie() {
   const email=$('l-email').value.trim()
   if(!email){msgLogin('Saisis d\'abord ton adresse e-mail ci-dessus, puis reclique sur ce lien.');return}
-  if(!domaineValide(email)){msgLogin('Adresse '+DOMAINES_TXT+' requise.');return}
+  if(!domaineValide(email)){msgLogin('Adresse e-mail invalide.');return}
   const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]})
   if(error){msgLogin('Erreur : '+error.message);return}
   msgLogin('Un lien de réinitialisation vient d\'être envoyé à '+email+'. Pense à regarder dans les indésirables.','ok')
@@ -1095,7 +1100,7 @@ async function register() {
   const email=$('r-email').value.trim(),pwd=$('r-pwd').value
   const prenom=$('r-prenom').value.trim(),nom=$('r-nom').value.trim()
   const role=$('r-role').value
-  if(!domaineValide(email)){msgLogin('Adresse '+DOMAINES_TXT+' requise.');return}
+  if(!domaineValide(email)){msgLogin('Adresse e-mail invalide.');return}
   if(pwd.length<8){msgLogin('Mot de passe : 8 caractères minimum.');return}
   const btn=$('btn-register');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Création...'
   const {error}=await db.auth.signUp({email,password:pwd,options:{data:{prenom,nom,role}}})
@@ -1314,6 +1319,21 @@ async function loadDashboard() {
   if(sEl){const s=pd?.streak_semaines||0;sEl.innerHTML=s>0?`<i class="ti ti-flame" style="color:${pd?.streak_pause?'var(--t3)':'var(--r)'}"></i>${s}`:''}
   const {data:qxD}=await db.from('quiz').select('id,module_id,titre,date_debut,date_fin').eq('actif',true).eq('mode_examen',true)
   const allExD=qxD||[]
+  // Rappel : adresse personnelle a remplacer par l'adresse Compagnons
+  const mailEl=$('d-email-perso')
+  if(mailEl){
+    if(!estAdresseCompagnon(G.userEmail||'')&&!localStorage.getItem('pm_mail_masque')){
+      mailEl.innerHTML='<div class="card" style="margin-bottom:1rem;border-left:3px solid var(--amber)">'
+        +'<div style="display:flex;align-items:center;gap:12px;padding:13px 16px">'
+        +'<i class="ti ti-mail-cog" style="color:var(--amber);font-size:1.2rem;flex-shrink:0"></i>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600">Adresse personnelle</div>'
+        +'<div style="font-size:.74rem;color:var(--t2);margin-top:2px">Pense à la remplacer par ton adresse Compagnons dès que tu l\'as.</div></div>'
+        +'<button class="btn btn-ghost btn-sm" onclick="ouvrirMonCompte()" style="flex-shrink:0">Changer</button>'
+        +'<button onclick="localStorage.setItem(\'pm_mail_masque\',\'1\');this.closest(\'.card\').remove()" style="background:none;border:none;color:var(--t3);cursor:pointer;flex-shrink:0"><i class="ti ti-x"></i></button>'
+        +'</div></div>'
+    } else mailEl.innerHTML=''
+  }
+
   // Rappel du prochain examen (module d'inscription, non encore passé)
   const rapEl=$('d-rappel')
   if(rapEl){
@@ -3194,6 +3214,65 @@ function ouvrirMenuAdmin() {
   document.body.appendChild(modal)
 }
 
+function ouvrirMonCompte() {
+  const p=G.profil||{}
+  const emailActuel=G.userEmail||p.email||''
+  const estCompagnon=estAdresseCompagnon(emailActuel)
+  const modal=document.createElement('div');modal.id='modal-mon-compte'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto'
+  modal.onclick=function(e){if(e.target===modal)modal.remove()}
+  modal.innerHTML='<div style="background:var(--card);border-radius:22px;width:100%;max-width:440px;overflow:hidden;margin:auto">'
+    +'<div style="background:var(--dark);padding:1.1rem 1.3rem;display:flex;align-items:center;justify-content:space-between">'
+      +'<div><div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">Mon compte</div>'
+      +'<div style="font-size:.72rem;color:#888;margin-top:2px">'+((p.prenom||'')+' '+(p.nom||'')).trim()+'</div></div>'
+      +'<button onclick="document.getElementById(\'modal-mon-compte\').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem"><i class="ti ti-x"></i></button>'
+    +'</div>'
+    +'<div style="padding:1.3rem">'
+      +'<label class="field-label">Adresse e-mail</label>'
+      +'<input class="finput" id="mc-email" type="email" value="'+emailActuel+'" style="margin-top:4px"/>'
+      +(estCompagnon
+        ? '<div style="font-size:.72rem;color:var(--v);margin-top:6px"><i class="ti ti-circle-check"></i> Adresse Compagnons du Devoir</div>'
+        : '<div style="font-size:.74rem;color:var(--amber);margin-top:6px;line-height:1.5"><i class="ti ti-info-circle"></i> Dès que tu auras ton adresse @compagnons-du-devoir.fr, remplace-la ici.</div>')
+      +'<div style="font-size:.7rem;color:var(--t3);margin-top:8px;line-height:1.5">Un e-mail de confirmation sera envoyé à la nouvelle adresse. Le changement ne prend effet qu\'une fois le lien cliqué.</div>'
+      +'<button class="btn btn-r btn-full" style="margin-top:1rem" id="mc-btn" onclick="changerMonEmail()"><i class="ti ti-check"></i> Changer mon adresse</button>'
+      +'<div style="border-top:1px solid var(--bord);margin-top:1.3rem;padding-top:1.1rem">'
+        +'<label class="field-label">Téléphone</label>'
+        +'<input class="finput" id="mc-tel" type="tel" placeholder="06 XX XX XX XX" value="'+(p.telephone||'')+'" style="margin-top:4px"/>'
+        +'<button class="btn btn-ghost btn-full" style="margin-top:.7rem" onclick="changerMonTelephone()">Enregistrer le téléphone</button>'
+      +'</div>'
+    +'</div>'
+  +'</div>'
+  document.body.appendChild(modal)
+}
+
+async function changerMonEmail() {
+  const el=document.getElementById('mc-email');if(!el) return
+  const nouveau=(el.value||'').trim().toLowerCase()
+  if(!domaineValide(nouveau)){toast('Adresse e-mail invalide','err');return}
+  if(nouveau===(G.userEmail||'').toLowerCase()){toast('C est déjà ton adresse actuelle','err');return}
+  const btn=document.getElementById('mc-btn')
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Envoi...'}
+  const {error}=await db.auth.updateUser({email:nouveau})
+  if(error){
+    toast('Erreur : '+error.message,'err')
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Changer mon adresse'}
+    return
+  }
+  try{await db.from('profils').update({email:nouveau}).eq('id',G.profil.id)}catch(e){}
+  document.getElementById('modal-mon-compte')?.remove()
+  toast('E-mail de confirmation envoyé à '+nouveau,'ok')
+}
+
+async function changerMonTelephone() {
+  const el=document.getElementById('mc-tel');if(!el) return
+  const v=(el.value||'').trim()
+  const {error}=await db.from('profils').update({telephone:v||null}).eq('id',G.profil.id)
+  if(error){toast('Erreur : '+error.message,'err');return}
+  G.profil.telephone=v
+  document.getElementById('modal-mon-compte')?.remove()
+  toast('Téléphone enregistré','ok')
+}
+
 function ouvrirMonProfil() {
   if(!G.admin && !G.ancien) return
   const p=G.profil
@@ -3673,6 +3752,7 @@ function ouvrirFicheCompte(id, roleActuel) {
     +'<div style="padding:1.3rem">'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.2rem">'
         +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Rôle actuel</div><div style="font-size:.85rem;font-weight:600;margin-top:3px">'+(p.role||'—')+'</div></div>'
+        +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Adresse</div><div style="font-size:.8rem;font-weight:600;margin-top:3px;color:'+(estAdresseCompagnon(p.email)?'var(--v)':'var(--amber)')+'">'+(estAdresseCompagnon(p.email)?'Compagnons':'Personnelle')+'</div></div>'
         +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Téléphone</div><div style="font-size:.85rem;font-weight:600;margin-top:3px">'+(p.telephone||'—')+'</div></div>'
         +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Ville</div><div style="font-size:.85rem;font-weight:600;margin-top:3px">'+(p.ville_sedentaire||'—')+'</div></div>'
         +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Module gâcheur</div><div style="font-size:.85rem;font-weight:600;margin-top:3px">'+(p.superviseur?'Superviseur':(modMap[p.module_gacheur]||'—'))+'</div></div>'
