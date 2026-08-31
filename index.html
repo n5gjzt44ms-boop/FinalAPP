@@ -2897,8 +2897,34 @@ document.addEventListener('click',function(e){const el=e.target.closest('.inscri
 
 async function chargerInscritsStats() {
   const el=$('inscrits-stats');if(!el) return
+
+  // ── Repartition reelle, basee sur le module choisi par chaque aspirant ──
+  // (independante des periodes : couvre aussi les inscriptions libres)
+  let entete=''
+  try{
+    const {data:asp}=await db.from('profils').select('id,prenom,nom,email,module_inscrit,ville_sedentaire').eq('role','aspirant')
+    const tous=asp||[]
+    _inscritsParModule=tous
+    const sans=tous.filter(function(p){return !p.module_inscrit}).length
+    entete='<div style="margin-bottom:1.3rem">'
+      +'<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:600;margin-bottom:.7rem">Répartition actuelle — '+tous.length+' aspirant'+(tous.length>1?'s':'')+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">'
+      +MODULES.map(function(m){
+        const n=tous.filter(function(p){return p.module_inscrit===m.id}).length
+        return '<div onclick="voirAspirantsModule('+m.id+')" style="background:var(--card2);border-radius:14px;padding:12px;cursor:pointer;box-shadow:var(--sh-s)">'
+          +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><i class="ti '+m.icon+'" style="color:'+m.ic+';font-size:.9rem"></i>'
+          +'<span style="font-size:.68rem;color:var(--t3);font-weight:600">'+m.num+'</span></div>'
+          +'<div style="font-family:var(--fg);font-size:1.6rem;font-weight:700;line-height:1;color:'+(n?'var(--t1)':'var(--t3)')+'">'+n+'</div>'
+          +'<div style="font-size:.68rem;color:var(--t3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.nom+'</div>'
+          +'</div>'
+      }).join('')
+      +'</div>'
+      +(sans?'<div style="font-size:.74rem;color:var(--amber);margin-top:.7rem"><i class="ti ti-alert-triangle"></i> '+sans+' aspirant'+(sans>1?'s':'')+' sans module choisi</div>':'')
+      +'</div>'
+  }catch(e){}
+
   const {data:periodes}=await db.from('periodes_inscription').select('*').order('created_at',{ascending:false})
-  if(!periodes?.length){el.innerHTML='<p style="font-size:.78rem;color:var(--t3)">Aucune période.</p>';return}
+  if(!periodes?.length){el.innerHTML=entete+'<p style="font-size:.78rem;color:var(--t3)">Aucune période d\'inscription créée.</p>';return}
   const {data:tousInscrits}=await db.from('inscriptions').select('*');const allInscrits=tousInscrits||[]
   const now=new Date();let html=''
   periodes.forEach(periode=>{
@@ -2909,7 +2935,46 @@ async function chargerInscritsStats() {
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${MODULES.map(m=>{const cnt=counts[m.id]||0;return '<div'+(cnt?' class="inscrit-module" data-pid="'+periode.id+'" data-mid="'+m.id+'" data-mnom="'+m.nom+'"':'')+' style="background:'+m.bg+';border-radius:10px;padding:9px;text-align:center;'+(cnt?'cursor:pointer':'')+'"><div style="font-family:var(--fg);font-size:1.3rem;font-weight:700;color:'+m.ic+';'+(cnt?'text-decoration:underline':'')+'">'+(cnt||0)+'</div><div style="font-size:.68rem;color:var(--t2);margin-top:2px;font-weight:600">'+m.nom+'</div></div>'}).join('')}</div>
     </div>`
   })
-  el.innerHTML=html
+  el.innerHTML=entete+html
+}
+
+let _inscritsParModule=[]
+
+function voirAspirantsModule(moduleId){
+  const m=MODULES.find(function(x){return x.id===moduleId})
+  const liste=_inscritsParModule.filter(function(p){return p.module_inscrit===moduleId})
+  if(!liste.length){toast('Aucun aspirant inscrit en '+(m?m.nom:'ce module'),'def');return}
+  const modal=document.createElement('div');modal.id='modal-inscrits-module'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.onclick=function(e){if(e.target===modal)modal.remove()}
+  modal.innerHTML='<div style="background:var(--card);border-radius:20px;width:100%;max-width:480px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column">'
+    +'<div style="background:var(--dark);color:#fff;padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between">'
+      +'<div><div style="font-family:var(--fg);font-weight:700">'+(m?m.nom:'Module')+'</div>'
+      +'<div style="font-size:.72rem;color:#888">'+liste.length+' aspirant'+(liste.length>1?'s':'')+'</div></div>'
+      +'<button onclick="document.getElementById(\'modal-inscrits-module\').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem"><i class="ti ti-x"></i></button>'
+    +'</div>'
+    +'<div style="padding:1rem;overflow-y:auto;flex:1">'
+    +liste.map(function(p){
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord)">'
+        +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600">'+(p.prenom||'')+' '+(p.nom||'')+'</div>'
+        +'<div style="font-size:.72rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(p.email||'')+(p.ville_sedentaire?' — '+p.ville_sedentaire:'')+'</div></div>'
+        +'</div>'
+    }).join('')
+    +'</div>'
+    +'<div style="padding:.9rem 1rem;border-top:1px solid var(--bord)">'
+      +'<button class="btn btn-ghost btn-full btn-sm" onclick="copierMailsModule('+moduleId+')"><i class="ti ti-mail"></i> Copier les adresses e-mail</button>'
+    +'</div>'
+  +'</div>'
+  document.body.appendChild(modal)
+}
+
+async function copierMailsModule(moduleId){
+  const liste=_inscritsParModule.filter(function(p){return p.module_inscrit===moduleId}).map(function(p){return p.email}).filter(Boolean)
+  if(!liste.length){toast('Aucune adresse','err');return}
+  try{
+    await navigator.clipboard.writeText(liste.join('; '))
+    toast(liste.length+' adresses copiées !','ok')
+  }catch(e){toast('Copie impossible sur cet appareil','err')}
 }
 
 async function voirInscritsModule(periodeId, moduleId, moduleNom) {
