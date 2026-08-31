@@ -1113,6 +1113,27 @@ async function logout() {
   window.location.reload()
 }
 
+// ─── BOUTON RETOUR DU NAVIGATEUR ───────────────────────────────────────────
+window.addEventListener('popstate',function(ev){
+  if(!G.profil) return
+  const st=ev.state
+  // Une fenetre ouverte ? Le retour la ferme d'abord
+  const modaux=['modal-fiche-compte','modal-menu-admin','modal-recherche','modal-mon-profil','modal-tel-aspirant','modal-admin-profil']
+  for(let i=0;i<modaux.length;i++){
+    const m=document.getElementById(modaux[i])
+    if(m){
+      m.remove()
+      const p=(st&&st.page)||localStorage.getItem('pm_page')||'dashboard'
+      try{history.pushState({page:p,app:true},'','#'+p)}catch(e){}
+      return
+    }
+  }
+  if(st&&st.app&&st.page){nav(st.page,true);return}
+  const dflt=G.ancien?'dashboard-ancien':'dashboard'
+  nav(dflt,true)
+  try{history.pushState({page:dflt,app:true},'','#'+dflt)}catch(e){}
+})
+
 // ─── INIT ──────────────────────────────────────────────────────────────────
 // Manifeste d'installation (généré à la volée, aucun fichier séparé requis)
 ;(function(){try{
@@ -1224,7 +1245,7 @@ async function initApp() {
 const PAGES_ADMIN=['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin','stats-admin']
 const PAGES_ANCIEN=['dashboard-ancien','annuaire']
 
-function nav(page) {
+function nav(page,sansHistorique) {
   // Verrou : un non-admin ne peut pas ouvrir une page d'administration
   if(PAGES_ADMIN.indexOf(page)>=0 && !G.admin){
     toast('Cette page est réservée aux gâcheurs','err')
@@ -1232,6 +1253,13 @@ function nav(page) {
   }
   if(PAGES_ANCIEN.indexOf(page)>=0 && !G.ancien && !G.admin){
     page='dashboard'
+  }
+  // Empiler dans l'historique pour que le bouton Retour reste dans l'app
+  if(!sansHistorique){
+    try{
+      const actuelle=(history.state&&history.state.page)||null
+      if(actuelle!==page) history.pushState({page:page,app:true},'','#'+page)
+    }catch(e){}
   }
   localStorage.setItem('pm_page',page)
   document.querySelectorAll('.vue').forEach(v=>v.classList.remove('on'))
@@ -2004,8 +2032,8 @@ function _etatFormulaire(){
     module_id:parseInt(($('mq-mod')||{}).value||'0')||null,
     visibilite:($('mq-vis')||{}).value||'prive',
     mode_examen:t==='examen',
-    date_debut:(($('mq-date-debut')||{}).value||'')||null,
-    date_fin:(($('mq-date-fin')||{}).value||'')||null,
+    date_debut:(($('mq-debut')||{}).value||'')||null,
+    date_fin:(($('mq-fin')||{}).value||'')||null,
     questions:mqQuestions
   }
 }
@@ -2093,8 +2121,8 @@ async function reprendreBrouillon(id){
     const cw=document.getElementById('mq-creneau-wrap')
     if(cw) cw.style.display=b.mode_examen?'':'none'
   }
-  if($('mq-date-debut')) $('mq-date-debut').value=b.date_debut?new Date(b.date_debut).toISOString().slice(0,16):''
-  if($('mq-date-fin')) $('mq-date-fin').value=b.date_fin?new Date(b.date_fin).toISOString().slice(0,16):''
+  if($('mq-debut')) $('mq-debut').value=b.date_debut?new Date(b.date_debut).toISOString().slice(0,16):''
+  if($('mq-fin')) $('mq-fin').value=b.date_fin?new Date(b.date_fin).toISOString().slice(0,16):''
   mqQuestions=b.questions||[]
   renderQuestions()
   chargerBrouillons()
@@ -2155,6 +2183,21 @@ window.addEventListener('beforeunload',function(e){
 })
 
 function ajouterQuestion(){mqQuestions.push({type:'qcm',enonce:'',options:['','','',''],bonne:0,competence:'',reponse_type:'',points:2,imageUrl:''});renderQuestions();sauverBrouillon()}
+function majBonneReponse(i,j,coche,type){
+  const q=mqQuestions[i];if(!q) return
+  if(type==='multi'){
+    if(!q.bonnes) q.bonnes=[]
+    const p=q.bonnes.indexOf(j)
+    if(coche){if(p<0)q.bonnes.push(j)}else{if(p>=0)q.bonnes.splice(p,1)}
+    q.bonnes.sort(function(a,b){return a-b})
+    q.bonne=q.bonnes.length?q.bonnes[0]:0
+  } else {
+    q.bonne=j
+  }
+  renderQuestions()
+  if(typeof sauverBrouillon==='function') sauverBrouillon()
+}
+
 function supprimerQuestion(idx){mqQuestions.splice(idx,1);renderQuestions();sauverBrouillon()}
 
 function renderQuestions() {
@@ -2167,7 +2210,7 @@ function renderQuestions() {
         <button onclick="supprimerQuestion(${i})" style="background:none;border:none;cursor:pointer;color:var(--t3)"><i class="ti ti-trash"></i></button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;margin-bottom:.8rem">
-        <div><label class="field-label">Type</label><select class="fselect" onchange="mqQuestions[${i}].type=this.value;renderQuestions()"><option value="qcm" ${q.type==='qcm'?'selected':''}>QCM</option><option value="vf" ${q.type==='vf'?'selected':''}>Vrai/Faux</option><option value="libre" ${q.type==='libre'?'selected':''}>Libre</option></select></div>
+        <div><label class="field-label">Type</label><select class="fselect" onchange="mqQuestions[${i}].type=this.value;renderQuestions()"><option value="qcm" ${q.type==='qcm'?'selected':''}>QCM — 1 bonne réponse</option><option value="multi" ${q.type==='multi'?'selected':''}>Choix multiples</option><option value="vf" ${q.type==='vf'?'selected':''}>Vrai/Faux</option><option value="libre" ${q.type==='libre'?'selected':''}>Réponse libre</option></select></div>
         <div><label class="field-label">Compétence</label><input class="finput" value="${q.competence}" placeholder="C2, S3..." onchange="mqQuestions[${i}].competence=this.value"/></div>
         <div><label class="field-label">Points</label><input class="finput" type="number" min="0.5" max="20" step="0.5" value="${q.points||2}" onchange="mqQuestions[${i}].points=parseFloat(this.value)||2;renderQuestions()" style="text-align:center"/></div>
       </div>
@@ -2183,7 +2226,7 @@ function renderQuestions() {
         <label style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:600;${q.bonne===0?'background:var(--vl);border-color:var(--v);color:var(--v)':''}"><input type="radio" name="vf_${i}" ${q.bonne===0?'checked':''} onchange="mqQuestions[${i}].bonne=0;renderQuestions()" style="accent-color:var(--v)"/> VRAI</label>
         <label style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:600;${q.bonne===1?'background:var(--rl);border-color:var(--r);color:var(--r)':''}"><input type="radio" name="vf_${i}" ${q.bonne===1?'checked':''} onchange="mqQuestions[${i}].bonne=1;renderQuestions()" style="accent-color:var(--r)"/> FAUX</label>
       </div></div>`:q.type==='libre'?`<div><label class="field-label">Réponse attendue</label><textarea class="ftextarea" rows="2" placeholder="Réponse attendue..." onchange="mqQuestions[${i}].reponse_type=this.value">${q.reponse_type||''}</textarea><p class="field-hint">L'admin notera manuellement</p></div>`:`<div><label class="field-label">Options — cochez la bonne réponse</label></div>
-      ${q.options.map((opt,j)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="radio" name="bonne_${i}" ${q.bonne===j?'checked':''} onchange="mqQuestions[${i}].bonne=${j};renderQuestions()" style="flex-shrink:0;accent-color:var(--r)"/><input class="finput" value="${opt}" placeholder="Option ${j+1}" onchange="mqQuestions[${i}].options[${j}]=this.value" style="border-color:${q.bonne===j?'var(--r)':'var(--bord2)'}"/></div>`).join('')}`}
+      ${q.options.map((opt,j)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="${q.type==='multi'?'checkbox':'radio'}" name="bonne_${i}" ${q.type==='multi'?((q.bonnes||[]).indexOf(j)>=0?'checked':''):(q.bonne===j?'checked':'')} onchange="majBonneReponse(${i},${j},this.checked,'${q.type}')" style="flex-shrink:0;accent-color:var(--r)"/><input class="finput" value="${opt}" placeholder="Option ${j+1}" onchange="mqQuestions[${i}].options[${j}]=this.value" style="border-color:${q.bonne===j?'var(--r)':'var(--bord2)'}"/></div>`).join('')}`}
     </div>`).join('')
 }
 
@@ -2213,7 +2256,52 @@ async function pubQuizManuel() {
   const totalPts=mqQuestions.reduce((a,q)=>a+(parseFloat(q.points)||2),0)
   const {data:quizCree,error}=await db.from('quiz').insert({module_id:modId,titre,filiere:fil,niveau,total_points:totalPts,seuil:SEUIL,actif:estPublie,created_by:user.id,mode_examen:isExamen,date_debut:dateDebut?new Date(dateDebut).toISOString():null,date_fin:dateFin?new Date(dateFin).toISOString():null}).select().single()
   if(error){toast('Erreur : '+error.message,'err');btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer le quiz';return}
-  await db.from('questions').insert(mqQuestions.map((q,i)=>({quiz_id:quizCree.id,enonce:q.enonce,options:q.type==='vf'?['Vrai','Faux']:(q.options||[]),bonne_reponse:q.bonne||0,points:parseFloat(q.points)||2,competence:q.competence||null,type_question:q.type||'qcm',reponse_type:q.reponse_type||null,image_url:q.imageUrl||null,ordre:i})))
+  const lignes=mqQuestions.map((q,i)=>{
+    const o={
+      quiz_id:quizCree.id,
+      enonce:q.enonce,
+      options:q.type==='vf'?['Vrai','Faux']:(q.type==='libre'?[]:(q.options||[])),
+      bonne_reponse:q.type==='libre'?0:(q.bonne||0),
+      points:parseFloat(q.points)||2,
+      competence:q.competence||null,
+      type_question:q.type||'qcm',
+      reponse_type:q.reponse_type||null,
+      image_url:q.imageUrl||null,
+      ordre:i
+    }
+    if(q.type==='multi'&&q.bonnes) o.bonnes_reponses=q.bonnes
+    return o
+  })
+  let {error:errQ}=await db.from('questions').insert(lignes)
+  // La colonne points peut etre entiere en base : on arrondit et on retente
+  if(errQ&&/integer|invalid input syntax|numeric/i.test(errQ.message||'')){
+    const arrondi=lignes.map(function(l){const o=Object.assign({},l);o.points=Math.round(o.points)||2;return o})
+    const r0=await db.from('questions').insert(arrondi)
+    errQ=r0.error
+    if(!errQ) toast('Quiz cree — les points ont ete arrondis a l entier','err')
+  }
+  // Si une colonne optionnelle manque en base, on retente sans elle
+  if(errQ&&/image_url|bonnes_reponses|competence|column/i.test(errQ.message||'')){
+    const secours=lignes.map(function(l){
+      return {quiz_id:l.quiz_id,enonce:l.enonce,options:l.options,bonne_reponse:l.bonne_reponse,points:l.points,type_question:l.type_question,reponse_type:l.reponse_type,ordre:l.ordre}
+    })
+    const r2=await db.from('questions').insert(secours)
+    errQ=r2.error
+    if(!errQ) toast('Quiz cree — images et competences non enregistrees (colonnes manquantes)','err')
+  }
+  // Une contrainte peut refuser le type 'multi' : on bascule en qcm
+  if(errQ&&/type_question|constraint|check/i.test(errQ.message||'')){
+    const compat=lignes.map(function(l){const o=Object.assign({},l);if(o.type_question==='multi')o.type_question='qcm';o.points=Math.round(o.points)||2;return o})
+    const r3=await db.from('questions').insert(compat)
+    errQ=r3.error
+    if(!errQ) toast('Quiz cree — questions a choix multiples converties en QCM','err')
+  }
+  if(errQ){
+    await db.from('quiz').delete().eq('id',quizCree.id)
+    toast('Echec : '+errQ.message,'err')
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer le quiz'
+    return
+  }
   toast(estPublie?'Quiz publié pour tout le monde !':'Quiz créé en privé (admins seulement)','ok');mqQuestions=[];$('mq-titre').value='';await effacerBrouillon();renderQuestions();loadQuizAdmin()
   btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer le quiz'
 }
@@ -3184,7 +3272,7 @@ async function chargerAnciens() {
   const [{data:anciens},{data:stages},{data:gacheurs}]=await Promise.all([
     db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites').in('role',['ancien','admin']).eq('profil_complet',true).not('ville_sedentaire','is',null).order('nom'),
     db.from('mini_stages').select('*').eq('actif',true),
-    db.from('profils').select('nom,prenom,telephone,module_gacheur,superviseur').eq('role','admin').not('telephone','is',null).not('module_gacheur','is',null)
+    db.from('profils').select('nom,prenom,telephone,module_gacheur,superviseur').eq('role','admin').not('module_gacheur','is',null)
   ])
   // Afficher les gâcheurs
   const gEl=document.getElementById('gacheurs-grid')
@@ -3193,7 +3281,7 @@ async function chargerAnciens() {
     gEl.innerHTML=MODULES.map(m=>{
       const fs=gmap[m.id]||[]
       if(!fs.length) return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span style="flex:1;font-size:.82rem;font-weight:600">${m.nom}</span><span style="font-size:.72rem;color:var(--t3)">Non assigné</span></div>`
-      return fs.map(f=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><div style="flex:1"><div style="font-size:.82rem;font-weight:600">${m.nom}</div><div style="font-size:.72rem;color:var(--t3)">${f.prenom||''} ${f.nom||''}</div></div><a href="tel:${f.telephone}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--vl);color:var(--v);font-size:.75rem;font-weight:700;text-decoration:none"><i class="ti ti-phone"></i> ${f.telephone}</a></div>`).join('')
+      return fs.map(f=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><div style="flex:1"><div style="font-size:.82rem;font-weight:600">${m.nom}</div><div style="font-size:.72rem;color:var(--t3)">${f.prenom||''} ${f.nom||''}</div></div>${f.telephone?`<a href="tel:${f.telephone}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:var(--vl);color:var(--v);font-size:.75rem;font-weight:700;text-decoration:none"><i class="ti ti-phone"></i> ${f.telephone}</a>`:`<span style="font-size:.7rem;color:var(--t3)">Numéro non renseigné</span>`}</div>`).join('')
     }).join('')
   }
   // Anciens (hors admins)
@@ -3509,7 +3597,9 @@ function ouvrirFicheCompte(id, roleActuel) {
             +MODULES.map(function(m){return '<option value="'+m.id+'"'+(p.module_gacheur===m.id&&!p.superviseur?' selected':'')+'>'+m.nom+'</option>'}).join('')
             +'<option value="sup"'+(p.superviseur?' selected':'')+'>Superviseur — tous les modules</option>'
           +'</select>'
-          +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Les aspirants verront ce gâcheur et son téléphone dans l\'onglet Contacts. Un superviseur n\'apparaît pas dans cette liste.</div>'
+          +'<label class="field-label" style="margin-top:.9rem">Téléphone (visible par les aspirants)</label>'
+          +'<input class="finput" id="fc-tel" type="tel" placeholder="06 XX XX XX XX" value="'+(p.telephone||'')+'" style="margin-top:4px"/>'
+          +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Les aspirants verront ce gâcheur dans l\'onglet Contacts. Un superviseur n\'apparaît pas dans cette liste.</div>'
         +'</div>'
         +'<button class="btn btn-r btn-full" style="margin-top:1rem" id="fc-btn" onclick="changerRoleCompte(\''+p.id+'\')"><i class="ti ti-check"></i> Enregistrer</button>'
         +'</div>'
@@ -3534,6 +3624,8 @@ async function changerRoleCompte(id) {
     if(v==='sup'){maj.superviseur=true;maj.module_gacheur=null}
     else if(v){maj.superviseur=false;maj.module_gacheur=parseInt(v)}
     else {maj.superviseur=false;maj.module_gacheur=null}
+    const telEl=document.getElementById('fc-tel')
+    if(telEl){const tv=(telEl.value||'').trim();maj.telephone=tv||null}
   } else {
     maj.module_gacheur=null;maj.superviseur=false
   }
