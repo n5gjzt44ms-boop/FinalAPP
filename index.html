@@ -488,7 +488,7 @@ button,input,select,textarea{font-family:var(--ff)}
         <div class="field"><label>Prénom</label><input type="text" id="r-prenom" placeholder="Jean"/></div>
         <div class="field"><label>Nom</label><input type="text" id="r-nom" placeholder="Dupont"/></div>
       </div>
-      <div class="field"><label>E-mail</label><input type="email" id="r-email" placeholder="prenom.nom@compagnons-du-devoir.fr"/><small>Uniquement @compagnons-du-devoir.fr</small></div>
+      <div class="field"><label>E-mail</label><input type="email" id="r-email" placeholder="prenom.nom@compagnons-du-devoir.fr"/><small>Adresse @compagnons-du-devoir.fr ou .com</small></div>
       <div class="field"><label>Mot de passe</label><input type="password" id="r-pwd" placeholder="8 caractères minimum"/></div>
       <div class="field hidden" id="f-role"><label>Rôle</label>
         <select class="fselect" id="r-role">
@@ -962,6 +962,17 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 const SEUIL = 14
 const DOMAINE = '@compagnons-du-devoir.fr'
+const DOMAINES_ACCEPTES = ['@compagnons-du-devoir.fr','@compagnons-du-devoir.com']
+function domaineValide(email){
+  const e=(email||'').toLowerCase().trim()
+  const at=e.lastIndexOf('@')
+  if(at<1) return false
+  const dom='@'+e.slice(at+1)
+  // Comparaison stricte du domaine : evite les imitations du type
+  // "faux-compagnons-du-devoir.fr" qui se terminent pareil.
+  return DOMAINES_ACCEPTES.indexOf(dom)>=0
+}
+const DOMAINES_TXT = '@compagnons-du-devoir.fr ou .com'
 const MODULES = [
   {id:1,num:'Module 1',nom:'Thermique & Mécanique',icon:'ti-engine',bg:'var(--rl)',ic:'var(--r)',desc:'Moteurs thermiques, distribution, injection, mécanique générale (roulements, boîtes, freinage...)'},
   {id:2,num:'Module 2',nom:'Hydraulique',icon:'ti-droplets',bg:'var(--bl)',ic:'var(--b)',desc:'Circuits hydrauliques, diagnostic, maintenance'},
@@ -1064,7 +1075,7 @@ function authMode(m) {
 
 async function login() {
   const email=$('l-email').value.trim(),pwd=$('l-pwd').value
-  if(!email.endsWith(DOMAINE)){msgLogin('Adresse '+DOMAINE+' requise.');return}
+  if(!domaineValide(email)){msgLogin('Adresse '+DOMAINES_TXT+' requise.');return}
   const btn=$('btn-login');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Connexion...'
   const {error}=await db.auth.signInWithPassword({email,password:pwd})
   if(error){msgLogin('Email ou mot de passe incorrect.');btn.disabled=false;btn.innerHTML='<i class="ti ti-login"></i> Se connecter';return}
@@ -1074,7 +1085,7 @@ async function login() {
 async function motDePasseOublie() {
   const email=$('l-email').value.trim()
   if(!email){msgLogin('Saisis d\'abord ton adresse e-mail ci-dessus, puis reclique sur ce lien.');return}
-  if(!email.endsWith(DOMAINE)){msgLogin('Adresse '+DOMAINE+' requise.');return}
+  if(!domaineValide(email)){msgLogin('Adresse '+DOMAINES_TXT+' requise.');return}
   const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]})
   if(error){msgLogin('Erreur : '+error.message);return}
   msgLogin('Un lien de réinitialisation vient d\'être envoyé à '+email+'. Pense à regarder dans les indésirables.','ok')
@@ -1084,7 +1095,7 @@ async function register() {
   const email=$('r-email').value.trim(),pwd=$('r-pwd').value
   const prenom=$('r-prenom').value.trim(),nom=$('r-nom').value.trim()
   const role=$('r-role').value
-  if(!email.endsWith(DOMAINE)){msgLogin('Adresse '+DOMAINE+' requise.');return}
+  if(!domaineValide(email)){msgLogin('Adresse '+DOMAINES_TXT+' requise.');return}
   if(pwd.length<8){msgLogin('Mot de passe : 8 caractères minimum.');return}
   const btn=$('btn-register');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Création...'
   const {error}=await db.auth.signUp({email,password:pwd,options:{data:{prenom,nom,role}}})
