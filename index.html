@@ -1123,6 +1123,7 @@ async function register() {
 }
 
 async function logout() {
+  if(_autoTimer){clearInterval(_autoTimer);_autoTimer=null}
   await db.auth.signOut()
   // Purge complète : sinon le menu du compte précédent reste visible
   // pour la personne suivante sur le même appareil.
@@ -1141,6 +1142,78 @@ document.addEventListener('click',function(e){
   if(wrap&&wrap.contains(e.target)) return
   if(res.contains(e.target)) return
   res.classList.add('hidden')
+})
+
+// ─── RAFRAICHISSEMENT AUTOMATIQUE ──────────────────────────────────────────
+// On recharge les DONNEES de la page affichee, jamais la page elle-meme :
+// un rechargement complet couperait un examen ou effacerait une saisie.
+let _autoTimer=null
+const AUTO_DELAI=90000  // 90 secondes
+
+function _peutRafraichir(){
+  if(!G.profil) return false
+  // Jamais pendant un quiz ou un examen en cours
+  const vq=document.getElementById('v-quiz')
+  if(vq&&vq.classList.contains('on')) return false
+  const vr=document.getElementById('v-resultats')
+  if(vr&&vr.classList.contains('on')) return false
+  // Jamais quand une fenetre est ouverte
+  if(document.querySelector('[id^="modal-"]')) return false
+  // Jamais pendant une saisie
+  const a=document.activeElement
+  if(a&&['INPUT','TEXTAREA','SELECT'].indexOf(a.tagName)>=0) return false
+  // Jamais avec un quiz en cours de redaction
+  if(typeof mqQuestions!=='undefined'&&mqQuestions.length){
+    const vqa=document.getElementById('v-quiz-admin')
+    if(vqa&&vqa.classList.contains('on')) return false
+  }
+  // Inutile si l'onglet est en arriere-plan
+  if(document.hidden) return false
+  return true
+}
+
+async function rafraichirPage(){
+  if(!_peutRafraichir()) return
+  // Session expiree apres une longue inactivite : on previent clairement
+  try{
+    const {data:{session}}=await db.auth.getSession()
+    if(!session){
+      if(_autoTimer){clearInterval(_autoTimer);_autoTimer=null}
+      toast('Session expiree — reconnecte-toi','err')
+      setTimeout(function(){window.location.reload()},2500)
+      return
+    }
+  }catch(e){}
+  const page=localStorage.getItem('pm_page')||'dashboard'
+  try{
+    if(page==='dashboard'){loadDashboard();chargerAnnonces()}
+    else if(page==='dashboard-ancien'){loadDashboardAncien();chargerAnnonces()}
+    else if(page==='modules') loadModules()
+    else if(page==='module'){const m=parseInt(localStorage.getItem('pm_module')||'0');if(m)ouvrirModule(m)}
+    else if(page==='suivi') loadSuivi()
+    else if(page==='anciens') chargerAnciens()
+    else if(page==='carnet') chargerCarnet()
+    else if(page==='quiz-admin') loadQuizAdmin()
+    else if(page==='aspirants') loadAspirants()
+    else if(page==='annonces-admin') chargerAnnoncesAdmin()
+    else if(page==='inscriptions-admin'){chargerPeriodes();chargerInscritsStats()}
+    else if(page==='comptes-admin') chargerTousComptes()
+    else if(page==='stats-admin') chargerStatsAdmin()
+    else if(page==='ressources') loadResAdmin()
+  }catch(e){}
+}
+
+function demarrerAutoRefresh(){
+  if(_autoTimer) clearInterval(_autoTimer)
+  _autoTimer=setInterval(rafraichirPage,AUTO_DELAI)
+}
+
+// Rafraichir aussi au retour sur l'onglet (apres une pause, un autre appli...)
+let _dernierMasquage=0
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){_dernierMasquage=Date.now();return}
+  // Au retour, si l'absence a dure plus de 30 s, on remet a jour
+  if(_dernierMasquage&&Date.now()-_dernierMasquage>30000) rafraichirPage()
 })
 
 // ─── BOUTON RETOUR DU NAVIGATEUR ───────────────────────────────────────────
@@ -1217,6 +1290,7 @@ async function initApp() {
   db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
   hi('vue-login');$('vue-app').classList.add('on')
   initDark()
+  demarrerAutoRefresh()
   // Vérifier messages non lus
   setTimeout(async()=>{
     const {data}=await db.from('messages').select('id').eq('to_id',user.id).eq('lu',false)
@@ -3641,6 +3715,7 @@ function afficherQuestionnaireAncien() {
   db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
   hi('vue-login');$('vue-app').classList.add('on')
   initDark()
+  demarrerAutoRefresh()
   // Vérifier messages non lus
   setTimeout(async()=>{
     const {data}=await db.from('messages').select('id').eq('to_id',user.id).eq('lu',false)
