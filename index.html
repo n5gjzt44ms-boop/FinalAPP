@@ -582,6 +582,7 @@ button,input,select,textarea{font-family:var(--ff)}
         <div style="font-family:var(--fg);font-size:1.6rem;font-weight:700;letter-spacing:-.5px">Bonjour, Compagnon <span id="da-prenom">—</span></div>
         <div style="font-size:.78rem;color:var(--t3);margin-top:2px" id="da-ville"></div>
       </div>
+      <div id="annonces-dashboard-ancien" style="margin-bottom:1rem"></div>
       <div class="card">
         <div class="card-head">
           <span class="card-title">Progression des aspirants</span>
@@ -1240,9 +1241,9 @@ async function initApp() {
 
   // Dashboard selon rôle
   if(G.ancien) {
-    ;['n-carnet'].forEach(id=>hi(id))
+    ;['n-carnet','b-carnet'].forEach(id=>hi(id))
     const savedA=localStorage.getItem('pm_page')
-    const okA=['dashboard-ancien','modules','annuaire','anciens']
+    const okA=['dashboard-ancien','modules','module','anciens']
     nav(savedA&&okA.includes(savedA)?savedA:'dashboard-ancien')
   } else if(G.admin) {
     const savedD=localStorage.getItem('pm_page')
@@ -1280,7 +1281,7 @@ async function initApp() {
 // ─── NAVIGATION ────────────────────────────────────────────────────────────
 // Pages réservées aux admins (gâcheurs)
 const PAGES_ADMIN=['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin','stats-admin']
-const PAGES_ANCIEN=['dashboard-ancien','annuaire']
+const PAGES_ANCIEN=['dashboard-ancien']
 
 function nav(page,sansHistorique) {
   // Verrou : un non-admin ne peut pas ouvrir une page d'administration
@@ -1291,6 +1292,9 @@ function nav(page,sansHistorique) {
   if(PAGES_ANCIEN.indexOf(page)>=0 && !G.ancien && !G.admin){
     page='dashboard'
   }
+  // Un Ancien ou Compagnon n'a pas de tableau de bord d'aspirant :
+  // on le renvoie vers le sien plutot que d'afficher un ecran vide.
+  if(page==='dashboard' && G.ancien && !G.admin) page='dashboard-ancien'
   // Empiler dans l'historique pour que le bouton Retour reste dans l'app
   if(!sansHistorique){
     try{
@@ -1305,7 +1309,7 @@ function nav(page,sansHistorique) {
   const n=$('n-'+page);if(n) n.classList.add('on')
   const b=$('b-'+page);if(b) b.classList.add('on')
   if(page==='dashboard'){loadDashboard();chargerAnnonces()}
-  if(page==='dashboard-ancien') loadDashboardAncien()
+  if(page==='dashboard-ancien'){loadDashboardAncien();chargerAnnonces()}
   if(page!=='modules'&&_cdTimer){clearInterval(_cdTimer);_cdTimer=null}
   if(page==='modules') loadModules()
   if(page==='suivi') loadSuivi()
@@ -2500,7 +2504,7 @@ async function validerCorrection(tentId,totalPts) {
 async function chargerAnnonces() {
   const {data}=await db.from('annonces').select('*').order('created_at',{ascending:false})
   const now=new Date(),actives=(data||[]).filter(a=>!a.expire_at||new Date(a.expire_at)>now)
-  const el=$('annonces-dashboard');if(!el) return
+  const el=$('annonces-dashboard')||$('annonces-dashboard-ancien');if(!el) return
   if(!actives.length){el.innerHTML='';return}
   const C={info:{bg:'var(--bl)',border:'var(--b)',color:'#0C447C',icon:'ti-info-circle'},warn:{bg:'var(--amberl)',border:'var(--amber)',color:'#633806',icon:'ti-alert-triangle'},urgent:{bg:'var(--rl)',border:'var(--r)',color:'var(--r2)',icon:'ti-speakerphone'}}
   el.innerHTML=actives.map(a=>{const c=C[a.type]||C.info;const age=Math.floor((now-new Date(a.created_at))/3600000);const ageStr=age<1?'À l\'instant':age<24?'Il y a '+age+'h':'Il y a '+Math.floor(age/24)+'j';return `<div style="border-radius:12px;padding:10px 16px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;border:1.5px solid ${c.border};background:${c.bg}"><i class="ti ${c.icon}" style="color:${c.border};flex-shrink:0;margin-top:1px"></i><div style="flex:1"><div style="font-size:.82rem;font-weight:700;color:${c.color}">${a.titre}</div><div style="font-size:.75rem;color:${c.color};opacity:.9">${a.message}</div></div><span style="font-size:.68rem;color:${c.color};white-space:nowrap;opacity:.7">${ageStr}</span></div>`}).join('')
@@ -3719,14 +3723,14 @@ async function sauvegarderProfilAncien() {
   G.profil.ville_sedentaire=ville;G.profil.profil_complet=true;G.profil.specialites=specs
   document.getElementById('modal-questionnaire-ancien')?.remove()
   toast('Profil enregistré !','ok')
-  ;['n-carnet'].forEach(id=>hi(id))
+  ;['n-carnet','b-carnet'].forEach(id=>hi(id))
   nav('dashboard-ancien')
 }
 
 // ─── ANCIENS ADMIN ─────────────────────────────────────────────────────────
 async function chargerAnciensAdmin() {
   const [{data:anciens},{data:stages}]=await Promise.all([
-    db.from('profils').select('*').eq('role','ancien').order('nom'),
+    db.from('profils').select('*').in('role',['ancien','compagnon']).order('nom'),
     db.from('mini_stages').select('*').eq('actif',true)
   ])
   const el=$('anciens-admin-body');if(!el) return
