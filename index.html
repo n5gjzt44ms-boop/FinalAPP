@@ -493,6 +493,8 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="field hidden" id="f-role"><label>Rôle</label>
         <select class="fselect" id="r-role">
           <option value="aspirant">Aspirant</option>
+          <option value="apprenti">Apprenti</option>
+          <option value="compagnon">Compagnon itinérant</option>
           <option value="ancien">Ancien (Compagnon sédentaire)</option>
         </select>
       </div>
@@ -1109,7 +1111,7 @@ async function register() {
   const {error:le}=await db.auth.signInWithPassword({email,password:pwd})
   if(!le){
     // Forcer le rôle dans profils (le trigger Supabase peut ignorer ce champ)
-    if(role==='ancien'||role==='admin'){
+    if(role==='ancien'||role==='admin'||role==='compagnon'||role==='apprenti'){
       const {data:{user}}=await db.auth.getUser()
       if(user) await db.from('profils').update({role}).eq('id',user.id)
     }
@@ -1177,7 +1179,13 @@ async function initApp() {
   if(!user) return
   const {data:p}=await db.from('profils').select('*').eq('id',user.id).single()
   if(!p){await db.auth.signOut();return}
-  G.profil=p;G.admin=p.role==='admin';G.ancien=p.role==='ancien';G.userEmail=user.email||''
+  G.profil=p;G.admin=p.role==='admin';G.userEmail=user.email||''
+  // Compagnon itinerant : memes droits que l'Ancien (ressources, suivi, mini-stages)
+  G.compagnon=p.role==='compagnon'
+  G.ancien=p.role==='ancien'||G.compagnon
+  // Apprenti : comme un aspirant, mais l'inscription a un module est facultative
+  G.apprenti=p.role==='apprenti'
+  G.aspirant=p.role==='aspirant'||G.apprenti
   if(!G.profil.module_inscrit && p.module_inscrit) G.profil.module_inscrit=p.module_inscrit
   const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
   $('av').textContent=ini
@@ -1186,8 +1194,10 @@ async function initApp() {
 
   // Badge rôle
   const badge=$('top-badge')
-  if(G.admin){badge.textContent='Admin';badge.className='badge badge-r'}
+  if(G.admin){badge.textContent='Gâcheur';badge.className='badge badge-r'}
+  else if(G.compagnon){badge.textContent='Compagnon';badge.className='badge badge-ancien'}
   else if(G.ancien){badge.textContent='Ancien';badge.className='badge badge-ancien'}
+  else if(G.apprenti){badge.textContent='Apprenti';badge.className='badge badge-g'}
   else{badge.textContent='Aspirant';badge.className='badge badge-g'}
 
   // Navigation selon le rôle — on repart toujours d'un menu vierge
@@ -1213,7 +1223,7 @@ async function initApp() {
     if(badge){badge.style.display=total?'flex':'none';badge.textContent=total}
   },1000)
 
-  // Ancien : questionnaire si profil incomplet
+  // Ancien / Compagnon itinérant : questionnaire si profil incomplet
   if(G.ancien && !p.profil_complet) {
     afficherQuestionnaireAncien()
     return
@@ -1224,7 +1234,7 @@ async function initApp() {
     return
   }
   // Aspirant : demander le téléphone (peut être reporté)
-  if(!G.admin && !G.ancien && !p.telephone && !localStorage.getItem('pm_tel_plus_tard')) {
+  if(G.aspirant && !p.telephone && !localStorage.getItem('pm_tel_plus_tard')) {
     afficherFormulaireTelephone()
   }
 
@@ -1395,9 +1405,9 @@ async function loadDashboard() {
 async function loadDashboardAncien() {
   const p=G.profil
   if($('da-prenom')) $('da-prenom').textContent=p.nom||p.prenom||'Compagnon'
-  if($('da-ville')) $('da-ville').textContent=p.ville_sedentaire?'Sédentaire à '+p.ville_sedentaire:''
+  if($('da-ville')) $('da-ville').textContent=G.compagnon?'Compagnon itinérant':(p.ville_sedentaire?'Sédentaire à '+p.ville_sedentaire:'')
   const [{data:aspirants},{data:tents},{data:allQuiz}]=await Promise.all([
-    db.from('profils').select('id,prenom,nom').eq('role','aspirant').order('nom'),
+    db.from('profils').select('id,prenom,nom,role').in('role',['aspirant','apprenti']).order('nom'),
     db.from('tentatives').select('aspirant_id,quiz_id,score,valide,quiz(module_id)'),
     db.from('quiz').select('id,module_id').eq('actif',true)
   ])
@@ -2638,7 +2648,7 @@ async function ouvrirRattrapage(quizId,aspirantId){
 
 async function loadAspirants() {
   const [{data:asp},{data:tents},{data:allQ},{data:ratt}]=await Promise.all([
-    db.from('profils').select('*').eq('role','aspirant').order('nom'),
+    db.from('profils').select('*').in('role',['aspirant','apprenti']).order('nom'),
     db.from('tentatives').select('*'),
     db.from('quiz').select('*').eq('actif',true),
     db.from('rattrapages').select('*')
@@ -2919,6 +2929,9 @@ async function exportCarnetPDF() {
 // ─── INSCRIPTIONS ──────────────────────────────────────────────────────────
 async function verifierInscription() {
   if(G.admin||G.ancien) return
+  // L'apprenti accede librement aux ressources : le choix du module
+  // lui est propose une seule fois, et il peut le refuser.
+  if(G.apprenti&&localStorage.getItem('pm_module_refuse')) return
   const now=new Date().toISOString()
   // Vérifier si une période admin est active
   const {data:periode}=await db.from('periodes_inscription').select('*').eq('actif',true).lte('date_debut',now).gte('date_fin',now).maybeSingle()
@@ -2946,6 +2959,7 @@ function afficherFormulaireInscription(periode) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem" id="choix-modules"></div>
       <div style="margin-bottom:1rem"><label class="field-label">Votre ville actuelle <span style="color:var(--r)">*</span></label><input class="finput" id="insc-ville" placeholder="Ex : Lyon, Paris, Bordeaux..."/></div>
       <button class="btn btn-dark btn-full" id="btn-inscrire" onclick="confirmerInscription('${periode.id}')"><i class="ti ti-check"></i> Confirmer mon inscription</button>
+      ${G.apprenti?`<button class="btn btn-ghost btn-full" style="margin-top:.6rem;font-size:.8rem" onclick="reporterChoixModule()">Pas de module pour l'instant — accéder aux ressources</button>`:''}
     </div>
   </div>`
   document.body.appendChild(modal)
@@ -2956,6 +2970,12 @@ function afficherFormulaireInscription(periode) {
 }
 
 function selectModuleInscription(modId){MODULES.forEach(m=>{const lbl=document.getElementById('lbl-mod-'+m.id);if(lbl)lbl.style.border=m.id===modId?'1.5px solid var(--r)':'1.5px solid var(--bord2)'})}
+
+function reporterChoixModule(){
+  try{localStorage.setItem('pm_module_refuse','1')}catch(e){}
+  document.getElementById('modal-inscription')?.remove()
+  toast('Tu peux t inscrire à un module plus tard depuis l onglet Modules','ok')
+}
 
 async function confirmerInscription(periodeId) {
   const radio=document.querySelector('input[name="mod-insc"]:checked');if(!radio){toast('Choisissez un module','err');return}
@@ -2997,7 +3017,7 @@ async function chargerInscritsStats() {
   // (independante des periodes : couvre aussi les inscriptions libres)
   let entete=''
   try{
-    const {data:asp}=await db.from('profils').select('id,prenom,nom,email,module_inscrit,ville_sedentaire').eq('role','aspirant')
+    const {data:asp}=await db.from('profils').select('id,prenom,nom,email,module_inscrit,ville_sedentaire,role').in('role',['aspirant','apprenti'])
     const tous=asp||[]
     _inscritsParModule=tous
     const sans=tous.filter(function(p){return !p.module_inscrit}).length
@@ -3499,7 +3519,7 @@ async function sauvegarderProfilAdmin() {
 
 async function chargerAnciens() {
   const [{data:anciens},{data:stages},{data:gacheurs}]=await Promise.all([
-    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites').in('role',['ancien','admin']).eq('profil_complet',true).not('ville_sedentaire','is',null).order('nom'),
+    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites,role').in('role',['ancien','admin','compagnon']).eq('profil_complet',true).not('ville_sedentaire','is',null).order('nom'),
     db.from('mini_stages').select('*').eq('actif',true),
     db.from('profils').select('nom,prenom,telephone,module_gacheur,superviseur').eq('role','admin').not('module_gacheur','is',null)
   ])
@@ -3765,8 +3785,9 @@ function filtrerComptes(role) {
     const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
     const r=ROLES[p.role]||{label:p.role||'—',badge:'badge-g'}
     const created=p.created_at?new Date(p.created_at).toLocaleDateString('fr-FR'):''
-    const ROLE_BG={aspirant:'var(--bl)',ancien:'rgba(60,52,137,.10)',admin:'var(--rl)'}
-    const ROLE_TC={aspirant:'var(--b)',ancien:'#3C3489',admin:'var(--r)'}
+    const ROLE_BG={aspirant:'var(--bl)',apprenti:'var(--bl)',ancien:'rgba(60,52,137,.10)',compagnon:'rgba(60,52,137,.10)',admin:'var(--rl)'}
+    const ROLE_TC={aspirant:'var(--b)',apprenti:'var(--b)',ancien:'#3C3489',compagnon:'#3C3489',admin:'var(--r)'}
+    const ROLE_LBL={aspirant:'Aspirant',apprenti:'Apprenti',ancien:'Ancien',compagnon:'Compagnon',admin:'Gâcheur'}
     const bg=ROLE_BG[p.role]||'var(--bg)',tc=ROLE_TC[p.role]||'var(--t2)'
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord);cursor:pointer" onclick="ouvrirFicheCompte('${p.id}','${p.role}')" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background=''">
       <div style="width:36px;height:36px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.78rem;font-weight:700;color:${tc};flex-shrink:0">${ini}</div>
@@ -3816,6 +3837,8 @@ function ouvrirFicheCompte(id, roleActuel) {
         +'<label class="field-label">Changer le rôle</label>'
         +'<select class="fselect" id="fc-role" style="margin-top:4px" onchange="document.getElementById(\'fc-zone-module\').style.display=(this.value===\'admin\'?\'\':\'none\')">'
           +'<option value="aspirant"'+(p.role==='aspirant'?' selected':'')+'>Aspirant — suit la formation</option>'
+          +'<option value="apprenti"'+(p.role==='apprenti'?' selected':'')+'>Apprenti — ressources et exercices</option>'
+          +'<option value="compagnon"'+(p.role==='compagnon'?' selected':'')+'>Compagnon itinérant</option>'
           +'<option value="ancien"'+(p.role==='ancien'?' selected':'')+'>Ancien — Compagnon sédentaire</option>'
           +'<option value="admin"'+(p.role==='admin'?' selected':'')+'>Admin — Gâcheur (crée les contenus)</option>'
         +'</select>'
@@ -3882,7 +3905,7 @@ async function rechercheGlobale(q) {
     db.from('quiz').select('id,titre,module_id').ilike('titre','%'+q+'%').eq('actif',true).limit(6)
   ])
   const asp=(profils||[]).filter(p=>p.role==='aspirant')
-  const anc=(profils||[]).filter(p=>p.role==='ancien'||p.role==='admin')
+  const anc=(profils||[]).filter(p=>p.role==='ancien'||p.role==='admin'||p.role==='compagnon')
   const res=ressources||[], qz=quiz||[]
   if(!asp.length&&!anc.length&&!res.length&&!qz.length){
     el.innerHTML='<div style="padding:12px;font-size:.82rem;color:var(--t3);text-align:center">Aucun résultat</div>'
