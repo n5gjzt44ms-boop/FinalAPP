@@ -746,6 +746,7 @@ button,input,select,textarea{font-family:var(--ff)}
             </div>
             <div style="margin-bottom:.9rem"><label class="field-label">Titre</label><input class="finput" id="up-titre" placeholder="Ex : Principes fondamentaux"/></div>
             <div style="margin-bottom:.9rem"><label class="field-label">Dossier</label><select class="fselect" id="up-dossier"><option value="">— Aucun —</option></select></div>
+            <div style="margin-bottom:.9rem"><label class="field-label">Compétence liée (optionnel)</label><input class="finput" id="up-competence" placeholder="Ex : C2, S3... — doit correspondre au tag utilisé sur les questions"/><small style="font-size:.68rem;color:var(--t3);display:block;margin-top:3px">Permet de proposer ce cours automatiquement quand un aspirant rate une question portant ce tag.</small></div>
             <div style="margin-bottom:.9rem"><label class="field-label">Fichier</label><input type="file" id="up-fichier" accept=".pdf,.doc,.docx,.sldprt,.sldasm,.hyd,.cwk,.dwg,.step"/><p class="field-hint">PDF, Word, SolidWorks, HydroSim — max 50 Mo</p></div>
             <button class="btn btn-r" id="btn-up" onclick="uploadRes()"><i class="ti ti-upload"></i> Publier</button>
           </div>
@@ -1751,7 +1752,18 @@ async function commencer(qid) {
   const isExamen=qinfo?.mode_examen
   const {data:exist}=await db.from('tentatives').select('id').eq('aspirant_id',G.profil.id).eq('quiz_id',qid).maybeSingle()
   if(isExamen&&exist){toast('Examen déjà passé. Score définitif.','err');return}
-  if(!isExamen&&exist) await db.from('tentatives').delete().eq('id',exist.id)
+  if(!isExamen&&exist){
+    // On archive le passage precedent avant de le remplacer, pour que
+    // l'historique des exercices d'entrainement soit consultable.
+    try{
+      const {data:ancien}=await db.from('tentatives').select('*').eq('id',exist.id).single()
+      if(ancien) await db.from('historique_tentatives').insert({
+        aspirant_id:ancien.aspirant_id,quiz_id:ancien.quiz_id,score:ancien.score,
+        valide:ancien.valide,completed_at:ancien.completed_at
+      })
+    }catch(e){}
+    await db.from('tentatives').delete().eq('id',exist.id)
+  }
   const [{data:q},{data:qs}]=await Promise.all([db.from('quiz').select('*').eq('id',qid).single(),db.from('questions').select('*').eq('quiz_id',qid).order('ordre')])
   G.quizActif=q;G.questions=qs||[];G.reponses={};G.fichiersLibres={};G.etape=0;G.choix=null;G.confirme=false
   nav('quiz');showQ();demarrerTimer()
@@ -1920,7 +1932,24 @@ function afficheRes() {
   $('r-msg').textContent=enAttente?'Votre copie est transmise. Résultat affiché après correction.':valide?'Toutes vos réponses sont correctes !':'Certaines réponses sont incorrectes. Révisez les cours.'
   const comps=Object.entries(parComp)
   $('r-comps').innerHTML=comps.length?'<div class="section-label">Résultats par compétence</div>'+comps.map(([code,v])=>{const pct=Math.round(v.score/v.total*100);return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:.75rem;color:var(--t2);width:80px;flex-shrink:0;font-weight:600">${code}</span><div class="pbar" style="flex:1"><div class="pfill ${pct>=50?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div><span style="font-size:.72rem;font-weight:600;min-width:40px;text-align:right">${v.score}/${v.total}</span><span class="badge ${pct>=50?'badge-v':'badge-rl'}" style="font-size:.62rem">${pct>=50?'Acquis':'À revoir'}</span></div>`}).join(''):''
-  if(!valide&&modId&&!enAttente){db.from('ressources').select('*').eq('module_id',modId).then(({data:res})=>{if(res?.length){$('r-revisions').innerHTML=`<div class="card-head"><span class="card-title">Cours à réviser</span></div><div class="card-body">${res.map(r=>`<div class="res-row" onclick="ouvrirRes('${r.id}','${r.storage_path||''}','${r.url_externe||''}')"><i class="ti ti-file" style="font-size:.95rem;color:var(--r);flex-shrink:0"></i><div class="res-name">${r.titre}</div><i class="ti ti-arrow-right" style="font-size:.875rem;color:var(--t3)"></i></div>`).join('')}</div>`;sh('r-revisions')}else hi('r-revisions')})}else hi('r-revisions')
+  if(!valide&&modId&&!enAttente){
+    db.from('ressources').select('*').eq('module_id',modId).then(({data:res})=>{
+      if(!res?.length){hi('r-revisions');return}
+      // Compétences ratées lors de ce passage (score < total)
+      const ratees=Object.entries(parComp).filter(function(e){return e[1].score<e[1].total}).map(function(e){return e[0].toLowerCase().trim()})
+      let cible=res
+      let cible_precise=false
+      if(ratees.length){
+        const filtre=res.filter(function(r){return r.competence&&ratees.indexOf(String(r.competence).toLowerCase().trim())>=0})
+        if(filtre.length){cible=filtre;cible_precise=true}
+      }
+      const titre=cible_precise?'Cours à réviser — en lien avec vos erreurs':'Cours du module — à consulter'
+      $('r-revisions').innerHTML='<div class="card-head"><span class="card-title">'+titre+'</span></div><div class="card-body">'+cible.map(function(r){
+        return '<div class="res-row" onclick="ouvrirRes(\''+r.id+'\',\''+(r.storage_path||'')+'\',\''+(r.url_externe||'')+'\')"><i class="ti ti-file" style="font-size:.95rem;color:var(--r);flex-shrink:0"></i><div class="res-name">'+r.titre+'</div><i class="ti ti-arrow-right" style="font-size:.875rem;color:var(--t3)"></i></div>'
+      }).join('')+'</div>'
+      sh('r-revisions')
+    })
+  } else hi('r-revisions')
   $('r-detail').innerHTML=questions.map((q,i)=>{
     const rep=reps[q.id],isLibre=q.type_question==='libre',isMulti=q.type_question==='multi'
     let ok=false
@@ -1946,7 +1975,7 @@ function afficheRes() {
       <div style="flex:1">${q.image_url?`<img src="${q.image_url}" style="width:100%;max-height:80px;object-fit:contain;border-radius:8px;border:1px solid var(--bord);margin-bottom:4px"/>`:''}<div style="font-size:.82rem;font-weight:500;margin-bottom:2px">${q.enonce}</div>
       ${isLibre?`<div style="font-size:.72rem;color:var(--b);margin-bottom:4px"><strong>Votre réponse :</strong> ${repTexte}</div>${q.reponse_type?`<div style="background:var(--vl);border:1px solid var(--v);border-radius:8px;padding:7px 10px;margin-top:4px"><div style="font-size:.65rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--v);margin-bottom:3px">Corrigé</div><div style="font-size:.75rem;color:var(--v);line-height:1.5">${q.reponse_type}</div></div>`:`<div style="font-size:.72rem;color:var(--amber);font-style:italic;margin-top:3px">En attente de correction par le formateur</div>`}`:!ok?`<div style="font-size:.72rem;color:var(--r)">Votre réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--v);font-weight:600">Bonne réponse : ${bonneTexte} ✓</div>`:''}
       </div>
-      ${G.admin?`<span style="font-size:.72rem;font-weight:700;font-family:var(--fg);color:\${isLibre?'var(--amber)':ok?'var(--v)':'var(--t3)'};flex-shrink:0">\${isLibre?noteQ:ok?'+'+q.points:'0'}pt</span>`:''}
+      ${G.admin?`<span style="font-size:.72rem;font-weight:700;font-family:var(--fg);color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--t3)'};flex-shrink:0">${isLibre?noteQ:ok?'+'+q.points:'0'}pt</span>`:''}
     </div>`
   }).join('')
 }
@@ -1958,9 +1987,14 @@ async function voirHistorique() {
   if(el.style.display!=='none'){el.style.display='none';return}
   el.style.display='block'
   el.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.2rem;color:var(--r)"></i></div>'
-  const {data}=await db.from('tentatives').select('*').eq('aspirant_id',G.profil.id).eq('quiz_id',G.tentResult?.tent?.quiz_id).order('completed_at',{ascending:false})
+  const quizId=G.tentResult?.tent?.quiz_id
+  const [{data:courant},{data:archive}]=await Promise.all([
+    db.from('tentatives').select('*').eq('aspirant_id',G.profil.id).eq('quiz_id',quizId).order('completed_at',{ascending:false}),
+    (async()=>{try{return await db.from('historique_tentatives').select('*').eq('aspirant_id',G.profil.id).eq('quiz_id',quizId).order('completed_at',{ascending:false})}catch(e){return {data:[]}}})()
+  ])
+  const data=[...(courant||[]),...(archive||[])].sort(function(a,b){return new Date(b.completed_at)-new Date(a.completed_at)})
   if(!data?.length){el.innerHTML='<p style="font-size:.78rem;color:var(--t3)">Aucun historique.</p>';return}
-  el.innerHTML='<div style="font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:8px">Historique de vos passages</div>'+data.map((t,i)=>{
+  el.innerHTML='<div style="font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:8px">Historique de vos passages ('+data.length+')</div>'+data.map((t,i)=>{
     const tps=t.temps_secondes?Math.floor(t.temps_secondes/60)+'min '+t.temps_secondes%60+'s':'—'
     return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bord)">
       <span style="font-size:.7rem;font-weight:700;color:var(--t3);min-width:18px">${data.length-i}</span>
@@ -2011,7 +2045,12 @@ async function uploadRes() {
   const {error}=await db.storage.from('ressources').upload(path,fichier)
   if(error){toast('Erreur : '+error.message,'err');btn.disabled=false;btn.innerHTML='<i class="ti ti-upload"></i> Publier';return}
   const {data:{user}}=await db.auth.getUser()
-  await db.from('ressources').insert({module_id:parseInt(modId),titre,type,taille:(fichier.size/1024/1024).toFixed(1)+' Mo',storage_path:path,created_by:user.id,dossier_id:dossierId})
+  const competenceRes=(document.getElementById('up-competence')||{}).value?.trim()||null
+  let {error:errRes}=await db.from('ressources').insert({module_id:parseInt(modId),titre,type,taille:(fichier.size/1024/1024).toFixed(1)+' Mo',storage_path:path,created_by:user.id,dossier_id:dossierId,competence:competenceRes})
+  if(errRes&&/column|competence/i.test(errRes.message||'')){
+    const r2=await db.from('ressources').insert({module_id:parseInt(modId),titre,type,taille:(fichier.size/1024/1024).toFixed(1)+' Mo',storage_path:path,created_by:user.id,dossier_id:dossierId})
+    errRes=r2.error
+  }
   toast('Ressource publiée !','ok');$('up-titre').value='';$('up-fichier').value=''
   btn.disabled=false;btn.innerHTML='<i class="ti ti-upload"></i> Publier';loadResAdmin()
 }
