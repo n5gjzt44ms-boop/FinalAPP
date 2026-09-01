@@ -3457,6 +3457,14 @@ function ouvrirMonProfil() {
         </div>
       </div>
       <div style="margin-bottom:1.2rem"><label class="field-label">Description / expérience</label><textarea class="ftextarea" id="mp-ref" rows="2" placeholder="Ex : 15 ans en hydraulique industrielle...">${p.reference||''}</textarea></div>
+      ${!G.admin?`<div style="margin-bottom:1.2rem;border-top:1px solid var(--bord);padding-top:1.1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem">
+          <div><label class="field-label" style="margin-bottom:2px">Mini-stages proposés</label>
+          <div style="font-size:.7rem;color:var(--t3)">Visibles par les aspirants dans l'onglet Contacts</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="ajouterStageFormProfil()"><i class="ti ti-plus"></i> Ajouter</button>
+        </div>
+        <div id="mp-stages-list"></div>
+      </div>`:''}
       
 
       <button class="btn btn-dark btn-full" id="btn-save-profil" onclick="sauvegarderMonProfil()"><i class="ti ti-check"></i> Enregistrer</button>
