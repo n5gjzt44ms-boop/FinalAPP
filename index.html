@@ -1642,7 +1642,10 @@ async function renderEval(modId,quiz,tents) {
   }catch(e){_mesRattrapages=[]}
   let h=''
   quiz.forEach(q=>{
-    const t=tents.find(x=>x.quiz_id===q.id)
+    // Plusieurs tentatives peuvent coexister : on retient la validee,
+    // sinon la plus recente. Evite d'afficher "non valide" a tort.
+    const tousT=tents.filter(x=>x.quiz_id===q.id)
+    const t=tousT.find(x=>x.valide)||tousT.sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at))[0]
     const aRattrapage=_mesRattrapages.indexOf(q.id)>=0
     const now=new Date(),debut=q.date_debut?new Date(q.date_debut):null,fin=q.date_fin?new Date(q.date_fin):null
     const horsCreneaux=q.mode_examen&&!aRattrapage&&((debut&&now<debut)||(fin&&now>fin))
@@ -1762,7 +1765,12 @@ async function commencer(qid) {
         valide:ancien.valide,completed_at:ancien.completed_at
       })
     }catch(e){}
-    await db.from('tentatives').delete().eq('id',exist.id)
+    const {error:errDel}=await db.from('tentatives').delete().eq('id',exist.id)
+    if(errDel){
+      // La suppression a echoue (droits) : on previent plutot que de creer un doublon
+      toast('Impossible de reinitialiser la tentative precedente. Contactez un gacheur.','err')
+      return
+    }
   }
   const [{data:q},{data:qs}]=await Promise.all([db.from('quiz').select('*').eq('id',qid).single(),db.from('questions').select('*').eq('quiz_id',qid).order('ordre')])
   G.quizActif=q;G.questions=qs||[];G.reponses={};G.fichiersLibres={};G.etape=0;G.choix=null;G.confirme=false
@@ -2029,7 +2037,7 @@ async function loadSuivi() {
     const exM=qm.filter(q=>q.mode_examen)
     const exVal=exM.filter(q=>tents.some(x=>x.quiz_id===q.id&&x.valide)).length
     const modValide=exM.length>0&&exVal===exM.length
-    return `<div class="card"><div class="card-head"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span class="card-title">${m.nom}</span>${modValide?'<span class="badge badge-v" style="font-size:.6rem;font-weight:800">VALIDÉ</span>':''}</div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${exM.length?exVal+'/'+exM.length+' examens':'—'}</span></div><div class="card-body">${qm.length?qm.map(q=>{const tent=tents.find(x=>x.quiz_id===q.id);const statut=tent?.valide?'Validé':tent?'Non validé':'—';return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)"><i class="ti ${tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:1rem;flex-shrink:0"></i><span style="flex:1;font-size:.82rem;font-weight:500">${q.titre}${q.mode_examen?' <span style="background:var(--rl);color:var(--r);padding:0 6px;border-radius:20px;font-weight:700;font-size:.6rem">EXAMEN</span>':''}</span><span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${statut}</span></div>`}).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'}</div></div>`}).join('')
+    return `<div class="card"><div class="card-head"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span class="card-title">${m.nom}</span>${modValide?'<span class="badge badge-v" style="font-size:.6rem;font-weight:800">VALIDÉ</span>':''}</div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${exM.length?exVal+'/'+exM.length+' examens':'—'}</span></div><div class="card-body">${qm.length?qm.map(q=>{const _tt=tents.filter(x=>x.quiz_id===q.id);const tent=_tt.find(x=>x.valide)||_tt.sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at))[0];const statut=tent?.valide?'Validé':tent?'Non validé':'—';return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)"><i class="ti ${tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:1rem;flex-shrink:0"></i><span style="flex:1;font-size:.82rem;font-weight:500">${q.titre}${q.mode_examen?' <span style="background:var(--rl);color:var(--r);padding:0 6px;border-radius:20px;font-weight:700;font-size:.6rem">EXAMEN</span>':''}</span><span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${statut}</span></div>`}).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'}</div></div>`}).join('')
 }
 
 // ─── RÉVISION ──────────────────────────────────────────────────────────────
@@ -2917,10 +2925,12 @@ async function verifierInscription() {
   if(periode){
     // Période active : vérifier si l'aspirant est déjà inscrit
     const {data:inscription}=await db.from('inscriptions').select('*').eq('aspirant_id',G.profil.id).eq('periode_id',periode.id).maybeSingle()
-    if(!inscription) afficherFormulaireInscription(periode)
+    if(!inscription && !G.profil.module_inscrit) afficherFormulaireInscription(periode)
     return
   }
-  // Pas de période active : vérifier si l'aspirant a déjà choisi un module
+  // Le module choisi est enregistre sur le profil : c'est la source fiable.
+  // (la table inscriptions peut echouer sans bloquer l'aspirant)
+  if(G.profil.module_inscrit) return
   const {data:dejaInscrit}=await db.from('inscriptions').select('id').eq('aspirant_id',G.profil.id).limit(1)
   if(dejaInscrit?.length) return
   // 1ère connexion sans période → afficher le choix de module
@@ -2952,15 +2962,20 @@ async function confirmerInscription(periodeId) {
   const modId=parseInt(radio.value),ville=document.getElementById('insc-ville')?.value?.trim()
   if(!ville){toast('Veuillez renseigner votre ville actuelle','err');return}
   const btn=document.getElementById('btn-inscrire');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i>'
-  // Sauvegarder module_inscrit dans le profil
-  await db.from('profils').update({module_inscrit:modId}).eq('id',G.profil.id)
-  G.profil.module_inscrit=modId
+  // Sauvegarder module ET ville sur le profil (source fiable, relue a chaque connexion)
+  const {error:errProfil}=await db.from('profils').update({module_inscrit:modId,ville_sedentaire:ville}).eq('id',G.profil.id)
+  if(errProfil){
+    toast('Erreur d enregistrement : '+errProfil.message,'err')
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Valider mon inscription'
+    return
+  }
+  G.profil.module_inscrit=modId;G.profil.ville_sedentaire=ville
   // Enregistrer l'inscription formelle si une période existe
   if(periodeId&&periodeId!=='libre'){
     await db.from('inscriptions').insert({aspirant_id:G.profil.id,module_id:modId,periode_id:periodeId,ville:ville||null})
   } else {
     // Période libre : stocker quand même pour les stats
-    await db.from('inscriptions').insert({aspirant_id:G.profil.id,module_id:modId,ville:ville||null}).then(()=>{})
+    try{await db.from('inscriptions').insert({aspirant_id:G.profil.id,module_id:modId,ville:ville||null})}catch(e){}
   }
   document.getElementById('modal-inscription')?.remove()
   toast('Module enregistré — '+MODULES.find(m=>m.id===modId)?.nom+' !','ok');loadDashboard()
