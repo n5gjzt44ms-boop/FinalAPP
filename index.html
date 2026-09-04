@@ -490,6 +490,22 @@ button,input,select,textarea{font-family:var(--ff)}
       </div>
       <div class="field"><label>E-mail</label><input type="email" id="r-email" placeholder="ton adresse e-mail"/><small>Ton adresse Compagnons si tu en as une, sinon ton adresse personnelle — tu pourras la changer plus tard.</small></div>
       <div class="field"><label>Mot de passe</label><input type="password" id="r-pwd" placeholder="8 caractères minimum"/></div>
+      <div class="field" id="f-choix-jeune">
+        <label>Tu es</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+          <label id="lbl-aspirant" style="display:block;padding:12px;border:1.5px solid var(--r);border-radius:14px;cursor:pointer;text-align:center;background:var(--rl)">
+            <input type="radio" name="type-jeune" value="aspirant" checked onchange="majChoixJeune()" style="display:none"/>
+            <div style="font-size:.9rem;font-weight:700">Aspirant</div>
+            <div style="font-size:.68rem;color:var(--t3);margin-top:3px;line-height:1.4">Je suis la formation et je passe les examens</div>
+          </label>
+          <label id="lbl-apprenti" style="display:block;padding:12px;border:1.5px solid var(--bord2);border-radius:14px;cursor:pointer;text-align:center">
+            <input type="radio" name="type-jeune" value="apprenti" onchange="majChoixJeune()" style="display:none"/>
+            <div style="font-size:.9rem;font-weight:700">Apprenti</div>
+            <div style="font-size:.68rem;color:var(--t3);margin-top:3px;line-height:1.4">Je consulte les cours et m'entraîne librement</div>
+          </label>
+        </div>
+        <div style="font-size:.7rem;color:var(--t3);margin-top:8px;line-height:1.5" id="txt-choix-jeune">En tant qu'aspirant, tu choisiras ton module juste après.</div>
+      </div>
       <div class="field hidden" id="f-role"><label>Rôle</label>
         <select class="fselect" id="r-role">
           <option value="aspirant">Aspirant</option>
@@ -934,8 +950,10 @@ button,input,select,textarea{font-family:var(--ff)}
       <div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap" id="filtres-comptes">
         <button class="btn btn-dark btn-sm" data-role="tous" onclick="filtrerComptes('tous')">Tous</button>
         <button class="btn btn-ghost btn-sm" data-role="aspirant" onclick="filtrerComptes('aspirant')"><i class="ti ti-user"></i> Aspirants</button>
+        <button class="btn btn-ghost btn-sm" data-role="apprenti" onclick="filtrerComptes('apprenti')"><i class="ti ti-user-plus"></i> Apprentis</button>
+        <button class="btn btn-ghost btn-sm" data-role="compagnon" onclick="filtrerComptes('compagnon')"><i class="ti ti-route"></i> Compagnons</button>
         <button class="btn btn-ghost btn-sm" data-role="ancien" onclick="filtrerComptes('ancien')"><i class="ti ti-star"></i> Anciens</button>
-        <button class="btn btn-ghost btn-sm" data-role="admin" onclick="filtrerComptes('admin')"><i class="ti ti-shield"></i> Admins</button>
+        <button class="btn btn-ghost btn-sm" data-role="admin" onclick="filtrerComptes('admin')"><i class="ti ti-shield"></i> Gâcheurs</button>
 
       </div>
       <div class="card"><div class="card-body" id="comptes-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div></div>
@@ -1103,7 +1121,13 @@ async function motDePasseOublie() {
 async function register() {
   const email=$('r-email').value.trim(),pwd=$('r-pwd').value
   const prenom=$('r-prenom').value.trim(),nom=$('r-nom').value.trim()
-  const role=$('r-role').value
+  // Le choix Aspirant/Apprenti prime quand il est visible (lien standard)
+  let role=$('r-role').value
+  const zoneJeune=document.getElementById('f-choix-jeune')
+  if(zoneJeune&&!zoneJeune.classList.contains('hidden')){
+    const rj=document.querySelector('input[name="type-jeune"]:checked')
+    if(rj) role=rj.value
+  }
   if(!domaineValide(email)){msgLogin('Adresse e-mail invalide.');return}
   if(pwd.length<8){msgLogin('Mot de passe : 8 caractères minimum.');return}
   const btn=$('btn-register');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Création...'
@@ -1427,7 +1451,7 @@ async function loadDashboard() {
   const rapEl=$('d-rappel')
   if(rapEl){
     const maintenant=new Date()
-    const prochains=allExD.filter(function(q){
+    const prochains=G.profil.sans_module?[]:allExD.filter(function(q){
       if(G.profil.module_inscrit&&q.module_id!==G.profil.module_inscrit) return false
       if(!q.date_debut) return false
       if(tents.some(function(t){return t.quiz_id===q.id})) return false
@@ -1448,14 +1472,16 @@ async function loadDashboard() {
     } else rapEl.innerHTML=''
   }
   const monMod=G.profil.module_inscrit
+  const sansModule=!!G.profil.sans_module
   $('d-modules').innerHTML=MODULES.map(m=>{
     const exM=allExD.filter(x=>x.module_id===m.id)
     const exVal=exM.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
     const fini=exM.length>0&&exVal===exM.length
     const inscrit=monMod===m.id
     // Pastilles : une par examen du module
-    const pastilles=exM.length?exM.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join(''):''
-    const etat=!exM.length?'<span style="font-size:.8rem;color:var(--t3)">Bientôt disponible</span>'
+    const pastilles=(G.profil.sans_module||!exM.length)?'':exM.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')
+    const etat=G.profil.sans_module?'<span style="font-size:.8rem;color:var(--t3)">Cours et exercices</span>'
+      :!exM.length?'<span style="font-size:.8rem;color:var(--t3)">Bientôt disponible</span>'
       :fini?'<span class="badge badge-v"><i class="ti ti-check"></i> Validé</span>'
       :`<span style="font-size:.82rem;font-weight:600;color:var(--t2)">${exVal} sur ${exM.length}</span>`
     return `<div class="card" style="cursor:pointer;margin-bottom:10px" onclick="ouvrirModule(${m.id})">
@@ -1540,10 +1566,10 @@ async function loadModules() {
           <div style="width:48px;height:48px;border-radius:14px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:1.4rem"></i></div>
           <div style="flex:1"><div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${m.num}</div>
           <div style="font-family:var(--fg);font-size:1rem;font-weight:700;letter-spacing:-.3px">${m.nom}</div></div>
-          <span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}">${termine?'Validé':encours?'En cours':'À faire'}</span>
+          ${G.profil.sans_module?'':`<span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}">${termine?'Validé':encours?'En cours':'À faire'}</span>`}
         </div>
         <p style="font-size:.78rem;color:var(--t2);margin-bottom:10px;line-height:1.5">${m.desc}</p>
-        <div style="display:flex;align-items:center;gap:8px">${exM.length?exM.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')+`<span style="font-size:.82rem;font-weight:600;color:${termine?'var(--v)':'var(--t2)'};margin-left:4px">${termine?'Module validé':exVal+' sur '+exM.length}</span>`:'<span style="font-size:.8rem;color:var(--t3)">Examens à venir</span>'}</div>
+        <div style="display:flex;align-items:center;gap:8px">${G.profil.sans_module?'<span style="font-size:.8rem;color:var(--t3)">Cours et exercices</span>':(exM.length?exM.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')+`<span style="font-size:.82rem;font-weight:600;color:${termine?'var(--v)':'var(--t2)'};margin-left:4px">${termine?'Module validé':exVal+' sur '+exM.length}</span>`:'<span style="font-size:.8rem;color:var(--t3)">Examens à venir</span>')}</div>
       </div>
     </div>`
   }).join('')
@@ -1569,9 +1595,9 @@ async function ouvrirModule(id) {
     <div style="flex:1"><div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${m.num}</div>
     <div style="font-family:var(--fg);font-size:1.15rem;font-weight:700;letter-spacing:-.3px;margin-bottom:6px">${m.nom}</div>
     <div style="display:flex;align-items:center;gap:8px;max-width:300px">${examens.length?examens.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exValides?'var(--v)':'var(--field)'};display:inline-block"></span>`).join(''):''}
-    <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${examens.length?exValides+'/'+examens.length+' examen'+(examens.length>1?'s':'')+' validé'+(exValides>1?'s':''):'Aucun examen planifié'}</span>
-    ${moduleValide?'<span class="badge badge-v" style="font-size:.65rem;font-weight:800">MODULE VALIDÉ</span>':''}</div>
-    <div style="font-size:.68rem;color:var(--t3);margin-top:4px">Seuls les examens comptent pour la validation du module — les exercices servent à s'entraîner.</div></div>
+    <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${G.profil.sans_module?'Cours et exercices':(examens.length?exValides+'/'+examens.length+' examen'+(examens.length>1?'s':'')+' validé'+(exValides>1?'s':''):'Aucun examen planifié')}</span>
+    ${(moduleValide&&!G.profil.sans_module)?'<span class="badge badge-v" style="font-size:.65rem;font-weight:800">MODULE VALIDÉ</span>':''}</div>
+    <div style="font-size:.68rem;color:var(--t3);margin-top:4px">${G.profil.sans_module?"Tu ne valides pas de module cette année : profite des cours et des exercices pour t'entraîner.":"Seuls les examens comptent pour la validation du module — les exercices servent à s'entraîner."}</div></div>
   </div>`
   await renderCours(id)
   await renderEval(id,quiz,tents)
@@ -1736,10 +1762,10 @@ async function renderEval(modId,quiz,tents) {
     const t=tousT.find(x=>x.valide)||tousT.sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at))[0]
     const aRattrapage=_mesRattrapages.indexOf(q.id)>=0
     const now=new Date(),debut=q.date_debut?new Date(q.date_debut):null,fin=q.date_fin?new Date(q.date_fin):null
-    const horsCreneaux=q.mode_examen&&!aRattrapage&&((debut&&now<debut)||(fin&&now>fin))
+    const horsCreneaux=q.mode_examen&&!aRattrapage&&!G.admin&&((debut&&now<debut)||(fin&&now>fin))
     const isExamen=!!q.mode_examen
     // Bloquer examen si mauvais module ou pas inscrit
-    const bonModule=G.admin||!isExamen||(G.profil.module_inscrit===modId)
+    const bonModule=G.admin||!isExamen||(!G.profil.sans_module&&G.profil.module_inscrit===modId)
     const peutCommencer=!horsCreneaux&&(!isExamen||!t)&&bonModule
     const bc=t?.valide?'var(--v)':t?'var(--r)':'var(--bord2)'
     const ic=t?.valide?'ti-check':t?'ti-x':'ti-help'
@@ -1777,8 +1803,12 @@ async function renderEval(modId,quiz,tents) {
     }
     h+=`</div></div>`
     if(isExamen&&t) h+=`<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide?'Validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR'):(G.admin?'Score définitif : '+t.score+'/20':'Examen passé — non validé')}</div>`
-    if(!bonModule&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-lock"></i> Réservé aux aspirants inscrits en ${MODULES.find(m=>m.id===modId)?.nom}</div>`}
+    if(!bonModule&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-lock"></i> ${G.profil.sans_module?'Tu ne valides pas de module cette année':'Réservé aux aspirants inscrits en '+(MODULES.find(m=>m.id===modId)?.nom||'')}</div>`}
     if(aRattrapage&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--v);background:var(--vl)"><i class="ti ti-unlock"></i> Rattrapage autorisé — tu peux passer cet examen</div>`}
+    // Rappel pour le gacheur : il voit l'examen hors de son creneau
+    if(G.admin&&isExamen&&((debut&&now<debut)||(fin&&now>fin))){
+      h+=`<div class="quiz-lock" style="color:var(--amber);background:var(--amberl)"><i class="ti ti-eye"></i> Accès gâcheur — cet examen est fermé pour les aspirants${debut&&now<debut?' jusqu\'au '+new Date(debut).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}):''}</div>`
+    }
     h+='</div>'
   })
   const toutOk=quiz.length>0&&quiz.every(q=>tents.find(t=>t.quiz_id===q.id&&t.valide))
@@ -1842,7 +1872,9 @@ async function commencer(qid) {
   const {data:qinfo}=await db.from('quiz').select('mode_examen').eq('id',qid).single()
   const isExamen=qinfo?.mode_examen
   const {data:exist}=await db.from('tentatives').select('id').eq('aspirant_id',G.profil.id).eq('quiz_id',qid).maybeSingle()
-  if(isExamen&&exist){toast('Examen déjà passé. Score définitif.','err');return}
+  if(isExamen&&exist&&!G.admin){toast('Examen déjà passé. Score définitif.','err');return}
+  // Un gacheur peut refaire un examen autant de fois qu'il veut : c'est un test
+  if(isExamen&&exist&&G.admin){await db.from('tentatives').delete().eq('id',exist.id)}
   if(!isExamen&&exist){
     // On archive le passage precedent avant de le remplacer, pour que
     // l'historique des exercices d'entrainement soit consultable.
@@ -2125,7 +2157,7 @@ async function loadSuivi() {
     const exM=qm.filter(q=>q.mode_examen)
     const exVal=exM.filter(q=>tents.some(x=>x.quiz_id===q.id&&x.valide)).length
     const modValide=exM.length>0&&exVal===exM.length
-    return `<div class="card"><div class="card-head"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span class="card-title">${m.nom}</span>${modValide?'<span class="badge badge-v" style="font-size:.6rem;font-weight:800">VALIDÉ</span>':''}</div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${exM.length?exVal+'/'+exM.length+' examens':'—'}</span></div><div class="card-body">${qm.length?qm.map(q=>{const _tt=tents.filter(x=>x.quiz_id===q.id);const tent=_tt.find(x=>x.valide)||_tt.sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at))[0];const statut=tent?.valide?'Validé':tent?'Non validé':'—';return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)"><i class="ti ${tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:1rem;flex-shrink:0"></i><span style="flex:1;font-size:.82rem;font-weight:500">${q.titre}${q.mode_examen?' <span style="background:var(--rl);color:var(--r);padding:0 6px;border-radius:20px;font-weight:700;font-size:.6rem">EXAMEN</span>':''}</span><span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${statut}</span></div>`}).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'}</div></div>`}).join('')
+    return `<div class="card"><div class="card-head"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span class="card-title">${m.nom}</span>${(modValide&&!G.profil.sans_module)?'<span class="badge badge-v" style="font-size:.6rem;font-weight:800">VALIDÉ</span>':''}</div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${G.profil.sans_module?'—':(exM.length?exVal+'/'+exM.length+' examens':'—')}</span></div><div class="card-body">${qm.length?qm.map(q=>{const _tt=tents.filter(x=>x.quiz_id===q.id);const tent=_tt.find(x=>x.valide)||_tt.sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at))[0];const statut=tent?.valide?'Validé':tent?'Non validé':'—';return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)"><i class="ti ${tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:1rem;flex-shrink:0"></i><span style="flex:1;font-size:.82rem;font-weight:500">${q.titre}${q.mode_examen?' <span style="background:var(--rl);color:var(--r);padding:0 6px;border-radius:20px;font-weight:700;font-size:.6rem">EXAMEN</span>':''}</span><span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${statut}</span></div>`}).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'}</div></div>`}).join('')
 }
 
 // ─── RÉVISION ──────────────────────────────────────────────────────────────
@@ -2497,10 +2529,74 @@ async function loadQuizAdmin() {
       </div>
     </div>
     <button class="btn btn-ghost btn-sm" onclick="togglePubQuiz('${x.id}',${x.actif})" title="${x.actif?'Rendre privé':'Publier pour tous'}" style="color:${x.actif?'#A08CFF':'var(--v)'};font-size:.68rem;font-weight:700;white-space:nowrap">${x.actif?'Rendre privé':'Publier'}</button>
+    <button class="btn btn-ghost btn-sm btn-icon" onclick="previsualiserQuiz('${x.id}')" title="Relire les questions et les réponses"><i class="ti ti-eye"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="editerQuiz('${x.id}')" title="Modifier"><i class="ti ti-pencil"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="dupliquerQuiz('${x.id}')"><i class="ti ti-copy"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="delQuiz('${x.id}')"><i class="ti ti-trash"></i></button>
   </div>`).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz pour ce module.</p>'
+}
+
+async function previsualiserQuiz(id){
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  const [{data:qz},{data:qs}]=await Promise.all([
+    db.from('quiz').select('*').eq('id',id).single(),
+    db.from('questions').select('*').eq('quiz_id',id).order('ordre')
+  ])
+  if(!qz){toast('Quiz introuvable','err');return}
+  const questions=qs||[]
+  const modal=document.createElement('div');modal.id='modal-previsu'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.onclick=function(e){if(e.target===modal)modal.remove()}
+  const mod=MODULES.find(function(m){return m.id===qz.module_id})
+  const totalPts=questions.reduce(function(a,q){return a+(parseFloat(q.points)||0)},0)
+
+  const corps=questions.map(function(q,i){
+    const opts=Array.isArray(q.options)?q.options:[]
+    const bonnes=(q.bonnes_reponses&&q.bonnes_reponses.length)?q.bonnes_reponses:[q.bonne_reponse]
+    let blocOpts=''
+    if(q.type_question==='libre'){
+      blocOpts='<div style="font-size:.78rem;color:var(--t3);font-style:italic;padding:8px 0">Réponse rédigée — correction manuelle</div>'
+    } else {
+      blocOpts=opts.map(function(o,j){
+        const ok=bonnes.indexOf(j)>=0
+        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;border-radius:10px;margin-bottom:4px;background:'+(ok?'var(--vl)':'transparent')+'">'
+          +'<i class="ti '+(ok?'ti-circle-check':'ti-circle')+'" style="color:'+(ok?'var(--v)':'var(--t3)')+';font-size:.95rem;flex-shrink:0;margin-top:1px"></i>'
+          +'<span style="font-size:.82rem;color:'+(ok?'var(--v)':'var(--t2)')+';font-weight:'+(ok?'600':'400')+'">'+(o||'—')+'</span></div>'
+      }).join('')
+    }
+    const alerte=[]
+    if(!q.enonce||!q.enonce.trim()) alerte.push('énoncé vide')
+    if(q.type_question!=='libre'&&opts.filter(function(o){return o&&o.trim()}).length<2) alerte.push('moins de 2 propositions')
+    if(q.type_question!=='libre'&&!bonnes.length) alerte.push('aucune bonne réponse')
+
+    return '<div style="border-bottom:1px solid var(--bord);padding:14px 0">'
+      +'<div style="display:flex;gap:10px;margin-bottom:8px">'
+        +'<span style="font-family:var(--fg);font-weight:700;color:var(--t3);flex-shrink:0">'+(i+1)+'</span>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:.88rem;font-weight:500;line-height:1.5">'+(q.enonce||'<span style="color:var(--r)">Énoncé manquant</span>')+'</div>'
+          +(q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;border-radius:10px;margin-top:8px"/>':'')
+        +'</div>'
+        +'<span style="font-size:.7rem;color:var(--t3);flex-shrink:0">'+(q.points||0)+' pt</span>'
+      +'</div>'
+      +'<div style="padding-left:24px">'+blocOpts
+      +(q.reponse_type?'<div style="font-size:.76rem;color:var(--t2);background:var(--field);border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.5"><b>Explication :</b> '+q.reponse_type+'</div>':'')
+      +(alerte.length?'<div style="font-size:.74rem;color:var(--r);margin-top:6px"><i class="ti ti-alert-triangle"></i> '+alerte.join(' · ')+'</div>':'')
+      +'</div></div>'
+  }).join('')
+
+  modal.innerHTML='<div style="background:var(--card);border-radius:20px;width:100%;max-width:640px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
+    +'<div style="background:var(--dark);padding:1.1rem 1.3rem;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'
+      +'<div style="min-width:0"><div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">'+qz.titre+'</div>'
+      +'<div style="font-size:.72rem;color:#888;margin-top:3px">'+(mod?mod.nom:'')+' — '+questions.length+' question'+(questions.length>1?'s':'')+' — '+totalPts+' points'+(qz.mode_examen?' — EXAMEN':'')+'</div></div>'
+      +'<button onclick="document.getElementById(\'modal-previsu\').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem;flex-shrink:0"><i class="ti ti-x"></i></button>'
+    +'</div>'
+    +'<div style="padding:0 1.3rem;overflow-y:auto;flex:1">'+(questions.length?corps:'<p style="padding:2rem 0;text-align:center;color:var(--t3);font-size:.85rem">Aucune question dans ce quiz.</p>')+'</div>'
+    +'<div style="padding:.9rem 1.3rem;border-top:1px solid var(--bord);display:flex;gap:8px">'
+      +'<button class="btn btn-ghost btn-sm" style="flex:1" onclick="document.getElementById(\'modal-previsu\').remove();editerQuiz(\''+id+'\')"><i class="ti ti-pencil"></i> Modifier</button>'
+      +'<button class="btn btn-r btn-sm" style="flex:1" onclick="document.getElementById(\'modal-previsu\').remove();commencer(\''+id+'\')"><i class="ti ti-player-play"></i> Passer en conditions réelles</button>'
+    +'</div>'
+  +'</div>'
+  document.body.appendChild(modal)
 }
 
 async function togglePubQuiz(id,actuel){
@@ -2858,9 +2954,9 @@ function afficherAspirants(){
         +'<div style="flex:1;min-width:0">'
           +'<div style="font-size:.875rem;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap">Pays '+(p.prenom||'')+' '+(p.nom||'')
           +(aCorriger?'<span class="badge badge-a" style="font-size:.6rem">À corriger</span>':'')+'</div>'
-          +'<div style="font-size:.7rem;color:var(--t3);margin-top:2px">'+(mod?mod.nom:'Pas encore inscrit')+'</div>'
+          +'<div style="font-size:.7rem;color:var(--t3);margin-top:2px">'+(p.sans_module?'<span style="color:var(--amber);font-weight:600">Année blanche</span>':(mod?mod.nom:'Pas encore inscrit'))+'</div>'
         +'</div>'
-        +'<span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:'+(exM.length&&exVal===exM.length?'var(--v)':'var(--t3)')+';flex-shrink:0">'+(exM.length?exVal+'/'+exM.length:'—')+'</span>'
+        +'<span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:'+(exM.length&&exVal===exM.length?'var(--v)':'var(--t3)')+';flex-shrink:0">'+(p.sans_module?'—':(exM.length?exVal+'/'+exM.length:'—'))+'</span>'
         +'<i class="ti ti-chevron-'+(ouvert?'up':'down')+'" style="color:var(--t3);flex-shrink:0"></i>'
       +'</div>'
       +detail
@@ -3007,6 +3103,8 @@ async function exportCarnetPDF() {
 // ─── INSCRIPTIONS ──────────────────────────────────────────────────────────
 async function verifierInscription() {
   if(G.admin||G.ancien) return
+  // Le gacheur a tranche : annee sans module, on ne redemande rien
+  if(G.profil.sans_module) return
   // L'apprenti accede librement aux ressources : le choix du module
   // lui est propose une seule fois, et il peut le refuser.
   if(G.apprenti&&localStorage.getItem('pm_module_refuse')) return
@@ -3848,6 +3946,15 @@ async function chargerTousComptes() {
   const {data,error}=await db.from('profils').select('*').order('created_at',{ascending:false})
   if(error){el.innerHTML='<p style="color:var(--r);font-size:.82rem">Erreur : '+error.message+'</p>';return}
   _tousComptes=data||[]
+  // Compteur sur chaque onglet
+  document.querySelectorAll('#filtres-comptes button').forEach(function(b){
+    const r=b.dataset.role
+    if(!r||r==='jamais') return
+    const n=r==='tous'?_tousComptes.length:_tousComptes.filter(function(p){return p.role===r}).length
+    let sp=b.querySelector('.cpt-role')
+    if(!sp){sp=document.createElement('span');sp.className='cpt-role';sp.style.cssText='opacity:.6;margin-left:4px;font-weight:400';b.appendChild(sp)}
+    sp.textContent='('+n+')'
+  })
   filtrerComptes('tous')
 }
 
@@ -3922,7 +4029,7 @@ function ouvrirFicheCompte(id, roleActuel) {
       +(peutModifier?(
         '<div style="border-top:1px solid var(--bord);padding-top:1.1rem">'
         +'<label class="field-label">Changer le rôle</label>'
-        +'<select class="fselect" id="fc-role" style="margin-top:4px" onchange="document.getElementById(\'fc-zone-module\').style.display=(this.value===\'admin\'?\'\':\'none\')">'
+        +'<select class="fselect" id="fc-role" style="margin-top:4px" onchange="document.getElementById(\'fc-zone-module\').style.display=(this.value===\'admin\'?\'\':\'none\');document.getElementById(\'fc-zone-jeune\').style.display=((this.value===\'aspirant\'||this.value===\'apprenti\')?\'\':\'none\')">'
           +'<option value="aspirant"'+(p.role==='aspirant'?' selected':'')+'>Aspirant — suit la formation</option>'
           +'<option value="apprenti"'+(p.role==='apprenti'?' selected':'')+'>Apprenti — ressources et exercices</option>'
           +'<option value="compagnon"'+(p.role==='compagnon'?' selected':'')+'>Compagnon itinérant</option>'
@@ -3930,6 +4037,14 @@ function ouvrirFicheCompte(id, roleActuel) {
           +'<option value="admin"'+(p.role==='admin'?' selected':'')+'>Admin — Gâcheur (crée les contenus)</option>'
         +'</select>'
         +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Un Admin peut créer les cours, les exercices et les examens. La personne devra se reconnecter pour voir son nouvel espace.</div>'
+        +'<div id="fc-zone-jeune" style="margin-top:1rem;'+((p.role==='aspirant'||p.role==='apprenti')?'':'display:none')+'">'
+          +'<label class="field-label">Inscription à un module</label>'
+          +'<select class="fselect" id="fc-module-jeune" style="margin-top:4px">'
+            +'<option value="">Aspirant sans module — année blanche</option>'
+            +MODULES.map(function(m){return '<option value="'+m.id+'"'+(p.module_inscrit===m.id?' selected':'')+'>'+m.nom+'</option>'}).join('')
+          +'</select>'
+          +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Sans module : il garde son statut d\'aspirant et l\'accès aux cours et exercices, mais aucun examen ne lui est proposé et aucune progression n\'est décomptée.</div>'
+        +'</div>'
         +'<div id="fc-zone-module" style="margin-top:1rem;'+(p.role==='admin'?'':'display:none')+'">'
           +'<label class="field-label">Module dont il est gâcheur</label>'
           +'<select class="fselect" id="fc-module" style="margin-top:4px">'
@@ -3940,6 +4055,13 @@ function ouvrirFicheCompte(id, roleActuel) {
           +'<label class="field-label" style="margin-top:.9rem">Téléphone (visible par les aspirants)</label>'
           +'<input class="finput" id="fc-tel" type="tel" placeholder="06 XX XX XX XX" value="'+(p.telephone||'')+'" style="margin-top:4px"/>'
           +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Les aspirants verront ce gâcheur dans l\'onglet Contacts. Un superviseur n\'apparaît pas dans cette liste.</div>'
+        +'</div>'
+        +'<div id="fc-zone-jeune" style="margin-top:1rem;'+((p.role==='aspirant'||p.role==='apprenti')?'':'display:none')+'">'
+          +'<label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1.5px solid '+(p.sans_module?'var(--amber)':'var(--bord2)')+';border-radius:14px;cursor:pointer;background:'+(p.sans_module?'var(--amberl)':'')+'" id="fc-lbl-sm">'
+            +'<input type="checkbox" id="fc-sans-module" '+(p.sans_module?'checked':'')+' onchange="var l=document.getElementById(\'fc-lbl-sm\');l.style.borderColor=this.checked?\'var(--amber)\':\'var(--bord2)\';l.style.background=this.checked?\'var(--amberl)\':\'\'" style="accent-color:var(--amber);width:18px;height:18px;flex-shrink:0;margin-top:1px"/>'
+            +'<div><div style="font-size:.85rem;font-weight:600">Ne valide pas de module cette année</div>'
+            +'<div style="font-size:.72rem;color:var(--t3);margin-top:3px;line-height:1.5">Année blanche : garde l\'accès aux cours et aux exercices, mais aucun examen ni compteur de validation ne lui sera proposé.</div></div>'
+          +'</label>'
         +'</div>'
         +'<button class="btn btn-r btn-full" style="margin-top:1rem" id="fc-btn" onclick="changerRoleCompte(\''+p.id+'\')"><i class="ti ti-check"></i> Enregistrer</button>'
         +'</div>'
@@ -3969,6 +4091,20 @@ async function changerRoleCompte(id) {
   } else {
     maj.module_gacheur=null;maj.superviseur=false
   }
+  // Aspirant / Apprenti : inscription a un module decidee par le gacheur
+  if(nouveauRole==='aspirant'||nouveauRole==='apprenti'){
+    const mj=document.getElementById('fc-module-jeune')
+    if(mj){
+      const v=mj.value
+      maj.module_inscrit=v?parseInt(v):null
+      // Marqueur : le choix a ete tranche par un gacheur,
+      // l'application ne redemandera plus le module a l'aspirant.
+      maj.sans_module=!v
+    }
+  }
+  const smEl=document.getElementById('fc-sans-module')
+  if(smEl&&(nouveauRole==='aspirant'||nouveauRole==='apprenti')) maj.sans_module=smEl.checked
+  else if(nouveauRole!=='aspirant'&&nouveauRole!=='apprenti') maj.sans_module=false
   const {error}=await db.from('profils').update(maj).eq('id',id)
   if(error){
     toast('Erreur : '+error.message,'err')
@@ -4092,18 +4228,31 @@ async function chargerStatsAdmin() {
 // ─── CALENDRIER MINI-STAGES ───────────────────────────────────────────────
 
 // ─── DÉMARRAGE ─────────────────────────────────────────────────────────────
+function majChoixJeune(){
+  const v=(document.querySelector('input[name="type-jeune"]:checked')||{}).value||'aspirant'
+  const la=document.getElementById('lbl-aspirant'),lp=document.getElementById('lbl-apprenti')
+  if(la){la.style.borderColor=v==='aspirant'?'var(--r)':'var(--bord2)';la.style.background=v==='aspirant'?'var(--rl)':''}
+  if(lp){lp.style.borderColor=v==='apprenti'?'var(--r)':'var(--bord2)';lp.style.background=v==='apprenti'?'var(--rl)':''}
+  const t=document.getElementById('txt-choix-jeune')
+  if(t) t.textContent=v==='aspirant'
+    ? "En tant qu'aspirant, tu choisiras ton module juste après."
+    : "En tant qu'apprenti, tu accèdes directement aux cours et aux exercices. Tu pourras t'inscrire à un module plus tard si tu le souhaites."
+  const sel=document.getElementById('r-role')
+  if(sel) sel.value=v
+}
+
 function detectUrlParams(){
   const params=new URLSearchParams(location.search)
   if(params.get('ancien')){
     authMode('register')
     const sel=document.getElementById('r-role')
     if(sel) sel.value='ancien'
-    hi('f-role')
+    hi('f-role');hi('f-choix-jeune')
     const banner=document.getElementById('banner-ancien')
     if(banner) banner.classList.remove('hidden')
   } else if(params.get('admin')){
     authMode('register')
-    sh('banner-admin');sh('f-role')
+    sh('banner-admin');sh('f-role');hi('f-choix-jeune')
   }
 }
 
