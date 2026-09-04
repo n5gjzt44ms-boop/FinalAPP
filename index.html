@@ -1780,7 +1780,13 @@ async function renderEval(modId,quiz,tents) {
     if(t) h+=`<span style="font-family:var(--fg);font-size:.875rem;font-weight:700;color:${t.valide?'var(--v)':'var(--r)'};">${G.admin?t.score+'/20':''}</span>`
     if(t) h+=`<button class="btn btn-ghost btn-sm" onclick="voirRes('${t.id}')">Résultats</button>`
     // BULLE COUNTDOWN ou bouton selon l'état
-    if(!t && isExamen && debut && now < debut && bonModule) {
+    // Le gacheur passe avant toutes les conditions de creneau : il doit
+    // pouvoir controler et tester un examen a tout moment.
+    if(isExamen && G.admin) {
+      const ouvert=(!debut||now>=debut)&&(!fin||now<=fin)
+      h+=`<button class="btn btn-ghost btn-sm btn-icon" onclick="previsualiserQuiz('${q.id}')" title="Relire les questions"><i class="ti ti-eye"></i></button>`
+      h+=`<button class="btn ${ouvert?'btn-r':'btn-dark'} btn-sm" onclick="commencer('${q.id}')" title="${ouvert?'Examen ouvert':'Accès gâcheur — hors créneau'}"><i class="ti ti-player-play"></i> ${ouvert?'Passer':'Tester'}</button>`
+    } else if(!t && isExamen && debut && now < debut && bonModule) {
       // Avant le début : bulle rouge animée avec countdown
       const diff=debut-now, jj=Math.floor(diff/86400000), hh=Math.floor((diff%86400000)/3600000), mm=Math.floor((diff%3600000)/60000), ss=Math.floor((diff%60000)/1000)
       const lbl=jj>=1?'J-'+jj:hh>0?hh+'h'+String(mm).padStart(2,'0')+'m':mm>0?mm+'m'+String(ss).padStart(2,'0')+'s':'⚠'+String(ss).padStart(2,'0')+'s'
