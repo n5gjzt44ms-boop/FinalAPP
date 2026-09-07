@@ -2069,16 +2069,71 @@ function afficheRes() {
   if(!valide&&modId&&!enAttente){
     db.from('ressources').select('*').eq('module_id',modId).then(({data:res})=>{
       if(!res?.length){hi('r-revisions');return}
-      // Compétences ratées lors de ce passage (score < total)
-      const ratees=Object.entries(parComp).filter(function(e){return e[1].score<e[1].total}).map(function(e){return e[0].toLowerCase().trim()})
-      let cible=res
-      let cible_precise=false
-      if(ratees.length){
-        const filtre=res.filter(function(r){return r.competence&&ratees.indexOf(String(r.competence).toLowerCase().trim())>=0})
-        if(filtre.length){cible=filtre;cible_precise=true}
+
+      // ── Identifier les questions ratees ──
+      const ratees=questions.filter(function(q){
+        const r=reps[q.id]
+        if(q.type_question==='libre') return false
+        const bonnes=(q.bonnes_reponses&&q.bonnes_reponses.length)?q.bonnes_reponses:[q.bonne_reponse]
+        if(Array.isArray(r)) return !(r.length===bonnes.length&&r.every(function(x){return bonnes.indexOf(x)>=0}))
+        return bonnes.indexOf(r)<0
+      })
+      if(!ratees.length){hi('r-revisions');return}
+
+      // ── Mots significatifs des questions ratees ──
+      const VIDES=['dans','pour','avec','sans','cette','elle','vous','votre','quelle','quel','entre','plus','moins','doit','peut','faut','sont','etre','avoir','lors','apres','avant','tout','tous','leur','leurs','celui','celle','ainsi','donc','mais','comme','deux','trois','type','types','cas','lorsque','quand','pourquoi','comment','suivant','suivante','correcte','correspond','permet','utilise','faire','fait']
+      function motsDe(txt){
+        return (txt||'').toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+          .replace(/[^a-z0-9 ]/g,' ').split(/\s+/)
+          .filter(function(m){return m.length>4&&VIDES.indexOf(m)<0})
       }
-      const titre=cible_precise?'Cours à réviser — en lien avec vos erreurs':'Cours du module — à consulter'
-      $('r-revisions').innerHTML='<div class="card-head"><span class="card-title">'+titre+'</span></div><div class="card-body">'+cible.map(function(r){
+      const motsRates={}
+      const compRatees=[]
+      ratees.forEach(function(q){
+        motsDe(q.enonce).forEach(function(m){motsRates[m]=(motsRates[m]||0)+1})
+        if(q.competence) compRatees.push(String(q.competence).toLowerCase().trim())
+      })
+
+      // ── Noter chaque cours ──
+      const notes=res.map(function(r){
+        let score=0
+        // Correspondance exacte du tag competence : priorite absolue
+        if(r.competence&&compRatees.indexOf(String(r.competence).toLowerCase().trim())>=0) score+=100
+        // Correspondance de mots entre le titre du cours et les questions ratees
+        const motsTitre=motsDe(r.titre)
+        motsTitre.forEach(function(m){ if(motsRates[m]) score+=10+motsRates[m] })
+        // Correspondance partielle (racine commune d'au moins 5 lettres)
+        if(!score){
+          motsTitre.forEach(function(mt){
+            for(const mr in motsRates){
+              if(mr.slice(0,5)===mt.slice(0,5)){score+=4;break}
+            }
+          })
+        }
+        return {r:r,score:score}
+      }).filter(function(x){return x.score>0}).sort(function(a,b){return b.score-a.score})
+
+      let cible,precis
+      if(notes.length){
+        cible=notes.slice(0,4).map(function(x){return x.r})
+        precis=true
+      } else {
+        // Aucun rapprochement possible : on montre 3 cours maximum, pas toute la liste
+        cible=res.slice(0,3)
+        precis=false
+      }
+
+      const titre=precis
+        ? 'À réviser — en lien avec vos erreurs'
+        : 'Cours du module'
+      const sousTitre=precis
+        ? ratees.length+' question'+(ratees.length>1?'s':'')+' manquée'+(ratees.length>1?'s':'')
+        : 'Aucun cours ne correspond précisément'
+
+      $('r-revisions').innerHTML='<div class="card-head"><div><span class="card-title">'+titre+'</span>'
+        +'<div style="font-size:.7rem;color:var(--t3);margin-top:2px">'+sousTitre+'</div></div></div>'
+        +'<div class="card-body">'+cible.map(function(r){
         return '<div class="res-row" onclick="ouvrirRes(\''+r.id+'\',\''+(r.storage_path||'')+'\',\''+(r.url_externe||'')+'\')"><i class="ti ti-file" style="font-size:.95rem;color:var(--r);flex-shrink:0"></i><div class="res-name">'+r.titre+'</div><i class="ti ti-arrow-right" style="font-size:.875rem;color:var(--t3)"></i></div>'
       }).join('')+'</div>'
       sh('r-revisions')
@@ -3560,8 +3615,15 @@ function ouvrirMonProfil() {
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500"><input type="checkbox" value="4" class="mp-spec" ${specsChecked(4)} style="accent-color:var(--r)"/> <i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</label>
         </div>
       </div>
+      ${G.admin?`<div style="margin-bottom:1.2rem;background:var(--field);border-radius:14px;padding:12px 14px">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+          <input type="checkbox" id="mp-aussi-contact" ${p.ville_sedentaire?'checked':''} style="accent-color:var(--r);width:18px;height:18px;flex-shrink:0;margin-top:1px"/>
+          <span><span style="font-size:.85rem;font-weight:600">Me référencer aussi dans les Contacts</span>
+          <span style="display:block;font-size:.72rem;color:var(--t3);margin-top:2px;line-height:1.45">Je suis aussi Compagnon itinérant ou sédentaire : les aspirants pourront me contacter et voir mes mini-stages.</span></span>
+        </label>
+      </div>`:''}
       <div style="margin-bottom:1.2rem"><label class="field-label">Description / expérience</label><textarea class="ftextarea" id="mp-ref" rows="2" placeholder="Ex : 15 ans en hydraulique industrielle...">${p.reference||''}</textarea></div>
-      ${!G.admin?`<div style="margin-bottom:1.2rem;border-top:1px solid var(--bord);padding-top:1.1rem">
+      ${true?`<div style="margin-bottom:1.2rem;border-top:1px solid var(--bord);padding-top:1.1rem">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem">
           <div><label class="field-label" style="margin-bottom:2px">Mini-stages proposés</label>
           <div style="font-size:.7rem;color:var(--t3)">Visibles par les aspirants dans l'onglet Contacts</div></div>
@@ -3607,10 +3669,16 @@ async function sauvegarderMonProfil() {
   const ref=document.getElementById('mp-ref')?.value?.trim()
   const specs=[...document.querySelectorAll('.mp-spec:checked')].map(c=>parseInt(c.value))
   const modAdminEl=G.admin?document.querySelector('input[name="mp-mod-admin"]:checked'):null
-  if(!ville||!tel){toast('Ville et téléphone obligatoires','err');return}
+  const _chk=document.getElementById('mp-aussi-contact')
+  const _veutContact=!G.admin||(_chk&&_chk.checked)
+  if(_veutContact&&!ville){toast('Ville obligatoire pour être référencé dans les Contacts','err');return}
+  if(!tel){toast('Téléphone obligatoire','err');return}
   if(G.admin&&!estAdminSuperviseur()&&!modAdminEl){toast('Choisissez votre module','err');return}
   const btn=document.getElementById('btn-save-profil');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'
-  const update={ville_sedentaire:ville,telephone:tel,reference:ref||null,specialites:specs,profil_complet:true}
+  const chkContact=document.getElementById('mp-aussi-contact')
+  // Un admin non coche disparait de l'annuaire : on vide sa ville
+  const villeFinale=(G.admin&&chkContact&&!chkContact.checked)?null:ville
+  const update={ville_sedentaire:villeFinale,telephone:tel,reference:ref||null,specialites:specs,profil_complet:true}
   if(G.admin&&modAdminEl&&!estAdminSuperviseur()) update.module_gacheur=parseInt(modAdminEl.value)
   await db.from('profils').update(update).eq('id',G.profil.id)
   await db.from('mini_stages').delete().eq('ancien_id',G.profil.id)
@@ -3858,6 +3926,13 @@ function afficherQuestionnaireAncien() {
           <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:500" id="spec-lbl-4"><input type="checkbox" value="4" class="anc-spec" style="accent-color:var(--r)"/> <i class="ti ti-bolt" style="color:#854F0B"></i> Électrique</label>
         </div>
       </div>
+      ${G.admin?`<div style="margin-bottom:1.2rem;background:var(--field);border-radius:14px;padding:12px 14px">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+          <input type="checkbox" id="mp-aussi-contact" ${p.ville_sedentaire?'checked':''} style="accent-color:var(--r);width:18px;height:18px;flex-shrink:0;margin-top:1px"/>
+          <span><span style="font-size:.85rem;font-weight:600">Me référencer aussi dans les Contacts</span>
+          <span style="display:block;font-size:.72rem;color:var(--t3);margin-top:2px;line-height:1.45">Je suis aussi Compagnon itinérant ou sédentaire : les aspirants pourront me contacter et voir mes mini-stages.</span></span>
+        </label>
+      </div>`:''}
       <div style="margin-bottom:1.2rem"><label class="field-label">Description / expérience</label><textarea class="ftextarea" id="anc-ref" rows="2" placeholder="Ex : 15 ans en hydraulique industrielle, engins TP..."></textarea></div>
       
       <div style="border-top:1px solid var(--bord);padding-top:1.2rem;margin-bottom:1.2rem">
