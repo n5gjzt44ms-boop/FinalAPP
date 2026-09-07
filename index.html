@@ -1245,6 +1245,14 @@ document.addEventListener('visibilitychange',function(){
 // et propose les villes deja enregistrees pour limiter les fautes de frappe.
 let _villesConnues=[]
 
+// Protege une valeur inseree dans un attribut HTML (guillemets, apostrophes,
+// chevrons). Sans cela, une ville comme "L'Isle-d'Abeau" casse le formulaire.
+function echapAttr(v){
+  return String(v==null?'':v)
+    .replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+    .replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
 function normaliserVille(v){
   let s=(v||'').trim().replace(/\s+/g,' ')
   if(!s) return ''
@@ -1278,7 +1286,7 @@ function majListeVilles(){
     dl=document.createElement('datalist');dl.id='liste-villes'
     document.body.appendChild(dl)
   }
-  dl.innerHTML=_villesConnues.map(function(v){return '<option value="'+v+'"></option>'}).join('')
+  dl.innerHTML=_villesConnues.map(function(v){return '<option value="'+echapAttr(v)+'"></option>'}).join('')
 }
 
 // A appliquer sur chaque champ ville : suggestions + normalisation a la sortie
@@ -3600,7 +3608,7 @@ function ouvrirMonCompte() {
     +'</div>'
     +'<div style="padding:1.3rem">'
       +'<label class="field-label">Adresse e-mail</label>'
-      +'<input class="finput" id="mc-email" type="email" value="'+emailActuel+'" style="margin-top:4px"/>'
+      +'<input class="finput" id="mc-email" type="email" value="'+echapAttr(emailActuel)+'" style="margin-top:4px"/>'
       +(estCompagnon
         ? '<div style="font-size:.72rem;color:var(--v);margin-top:6px"><i class="ti ti-circle-check"></i> Adresse Compagnons du Devoir</div>'
         : '<div style="font-size:.74rem;color:var(--amber);margin-top:6px;line-height:1.5"><i class="ti ti-info-circle"></i> Dès que tu auras ton adresse @compagnons-du-devoir.fr, remplace-la ici.</div>')
@@ -3608,7 +3616,7 @@ function ouvrirMonCompte() {
       +'<button class="btn btn-r btn-full" style="margin-top:1rem" id="mc-btn" onclick="changerMonEmail()"><i class="ti ti-check"></i> Changer mon adresse</button>'
       +'<div style="border-top:1px solid var(--bord);margin-top:1.3rem;padding-top:1.1rem">'
         +'<label class="field-label">Téléphone</label>'
-        +'<input class="finput" id="mc-tel" type="tel" placeholder="06 XX XX XX XX" value="'+(p.telephone||'')+'" style="margin-top:4px"/>'
+        +'<input class="finput" id="mc-tel" type="tel" placeholder="06 XX XX XX XX" value="'+echapAttr(p.telephone)+'" style="margin-top:4px"/>'
         +'<button class="btn btn-ghost btn-full" style="margin-top:.7rem" onclick="changerMonTelephone()">Enregistrer le téléphone</button>'
       +'</div>'
     +'</div>'
@@ -4245,9 +4253,9 @@ function ouvrirFicheCompte(id, roleActuel) {
         +'</div>'
         +'<div style="border-top:1px solid var(--bord);margin-top:1.1rem;padding-top:1.1rem">'
           +'<label class="field-label">Ville</label>'
-          +'<input class="finput" id="fc-ville" placeholder="Ville" value="'+(p.ville_sedentaire||'')+'" style="margin-top:4px"/>'
+          +'<input class="finput" id="fc-ville" placeholder="Ville" value="'+echapAttr(p.ville_sedentaire)+'" style="margin-top:4px"/>'
           +'<label class="field-label" style="margin-top:.9rem">Téléphone</label>'
-          +'<input class="finput" id="fc-tel-tous" type="tel" placeholder="06 XX XX XX XX" value="'+(p.telephone||'')+'" style="margin-top:4px"/>'
+          +'<input class="finput" id="fc-tel-tous" type="tel" placeholder="06 XX XX XX XX" value="'+echapAttr(p.telephone)+'" style="margin-top:4px"/>'
           +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Corrige ici une ville mal saisie. La casse et les accents sont normalisés automatiquement.</div>'
         +'</div>'
         +'<button class="btn btn-r btn-full" style="margin-top:1rem" id="fc-btn" onclick="changerRoleCompte(\''+p.id+'\')"><i class="ti ti-check"></i> Enregistrer</button>'
