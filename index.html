@@ -797,7 +797,7 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="vue" id="v-quiz-admin">
       <div style="max-width:660px">
         <div style="margin-bottom:1.2rem"><div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Gérer les quiz</div></div>
-        <div class="card" style="margin-bottom:1rem">
+        <div class="card" style="margin-bottom:1rem" id="form-creation-quiz">
           <div class="card-head">
             <div><div class="card-title">Créer un quiz</div><div style="font-size:.7rem;color:var(--t3)">Points libres · Score / 20 · Seuil 14/20</div></div>
             <div style="display:flex;align-items:center;gap:10px">
@@ -846,8 +846,9 @@ button,input,select,textarea{font-family:var(--ff)}
           </div>
         </div>
         <div class="card">
-          <div class="card-head">
-            <span class="card-title">Quiz existants</span>
+          <div class="card-head" style="flex-wrap:wrap;gap:8px">
+            <span class="card-title" id="titre-liste-quiz">Quiz du module</span>
+            <button class="btn btn-ghost btn-sm" id="btn-archives" onclick="basculerArchives()"><i class="ti ti-archive"></i> Archives</button>
             <select class="fselect" style="width:auto;padding:5px 8px;font-size:.78rem" id="fil-mod-quiz" onchange="loadQuizAdmin()">
               <option value="1">Module 1</option><option value="2">Module 2</option><option value="3">Module 3</option><option value="4">Module 4</option>
             </select>
@@ -1497,7 +1498,7 @@ async function loadDashboard() {
   const {data:pd}=await db.from('profils').select('points_total,streak_semaines,streak_pause').eq('id',G.profil.id).single()
   const sEl=document.getElementById('streak-topbar')
   if(sEl){const s=pd?.streak_semaines||0;sEl.innerHTML=s>0?`<i class="ti ti-flame" style="color:${pd?.streak_pause?'var(--t3)':'var(--r)'}"></i>${s}`:''}
-  const {data:qxD}=await db.from('quiz').select('id,module_id,titre,date_debut,date_fin').eq('actif',true).eq('mode_examen',true)
+  const {data:qxD}=await db.from('quiz').select('id,module_id,titre,date_debut,date_fin').eq('actif',true).eq('mode_examen',true).or('archive.is.null,archive.eq.false')
   const allExD=qxD||[]
   // Rappel : adresse personnelle a remplacer par l'adresse Compagnons
   const mailEl=$('d-email-perso')
@@ -1617,7 +1618,7 @@ async function loadDashboardAncien() {
 async function loadModules() {
   const [{data:t},{data:qx}]=await Promise.all([
     db.from('tentatives').select('*, quiz(module_id)').eq('aspirant_id',G.profil.id),
-    db.from('quiz').select('id,module_id').eq('actif',true).eq('mode_examen',true)
+    db.from('quiz').select('id,module_id').eq('actif',true).eq('mode_examen',true).or('archive.is.null,archive.eq.false')
   ])
   const tents=t||[],allEx=qx||[]
   $('v-modules-grid').innerHTML=MODULES.map(m=>{
@@ -1650,7 +1651,7 @@ async function ouvrirModule(id) {
   nav('module')
   const [{data:t},{data:q}]=await Promise.all([
     db.from('tentatives').select('*, quiz(id,module_id,mode_examen)').eq('aspirant_id',G.profil.id),
-    G.admin?db.from('quiz').select('*').eq('module_id',id).order('niveau'):db.from('quiz').select('*').eq('module_id',id).eq('actif',true).order('niveau')
+    G.admin?db.from('quiz').select('*').eq('module_id',id).or('archive.is.null,archive.eq.false').order('niveau'):db.from('quiz').select('*').eq('module_id',id).eq('actif',true).or('archive.is.null,archive.eq.false').order('niveau')
   ])
   const tents=(t||[]).filter(x=>x.quiz?.module_id===id),quiz=q||[]
   const examens=quiz.filter(x=>x.mode_examen&&x.actif!==false)
@@ -2277,7 +2278,7 @@ async function uploaderFichierLibre(input) {
 async function loadSuivi() {
   const [{data:t},{data:aq}]=await Promise.all([
     db.from('tentatives').select('*, quiz(module_id,titre,niveau)').eq('aspirant_id',G.profil.id).order('completed_at',{ascending:false}),
-    db.from('quiz').select('*').eq('actif',true).order('module_id').order('niveau')
+    db.from('quiz').select('*').eq('actif',true).or('archive.is.null,archive.eq.false').order('module_id').order('niveau')
   ])
   const tents=t||[],allQ=aq||[]
   $('v-suivi-body').innerHTML=MODULES.map(m=>{
@@ -2644,7 +2645,10 @@ async function pubQuizManuel() {
 
 async function loadQuizAdmin() {
   const sel=$('fil-mod-quiz');if(!sel) return;const m=parseInt(sel.value)
-  const {data,error}=await db.from('quiz').select('*').eq('module_id',m).order('niveau')
+  const voirArchives=_modeArchives
+  let req=db.from('quiz').select('*').eq('module_id',m)
+  req=voirArchives?req.eq('archive',true):req.or('archive.is.null,archive.eq.false')
+  const {data,error}=await req.order('niveau')
   if(error){$('quiz-admin-body').innerHTML='<p style="font-size:.78rem;color:var(--r)">Erreur : '+error.message+'</p>';return}
   const el=$('quiz-admin-body');if(!el) return
   el.innerHTML=(data||[]).length?(data||[]).map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--bord)">
@@ -2658,6 +2662,10 @@ async function loadQuizAdmin() {
     </div>
     <button class="btn btn-ghost btn-sm" onclick="togglePubQuiz('${x.id}',${x.actif})" title="${x.actif?'Rendre privé':'Publier pour tous'}" style="color:${x.actif?'#A08CFF':'var(--v)'};font-size:.68rem;font-weight:700;white-space:nowrap">${x.actif?'Rendre privé':'Publier'}</button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="previsualiserQuiz('${x.id}')" title="Relire les questions et les réponses"><i class="ti ti-eye"></i></button>
+    ${_modeArchives
+      ? `<button class="btn btn-ghost btn-sm" onclick="dupliquerQuiz('${x.id}')" title="Créer une copie pour une nouvelle session" style="color:var(--v);font-size:.68rem;font-weight:700">Réutiliser</button>
+         <button class="btn btn-ghost btn-sm btn-icon" onclick="archiverQuiz('${x.id}',false)" title="Sortir des archives"><i class="ti ti-archive-off"></i></button>`
+      : `<button class="btn btn-ghost btn-sm btn-icon" onclick="archiverQuiz('${x.id}',true)" title="Archiver pour réutilisation ultérieure"><i class="ti ti-archive"></i></button>`}
     <button class="btn btn-ghost btn-sm btn-icon" onclick="editerQuiz('${x.id}')" title="Modifier"><i class="ti ti-pencil"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="dupliquerQuiz('${x.id}')"><i class="ti ti-copy"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="delQuiz('${x.id}')"><i class="ti ti-trash"></i></button>
@@ -2725,6 +2733,75 @@ async function previsualiserQuiz(id){
     +'</div>'
   +'</div>'
   document.body.appendChild(modal)
+}
+
+let _modeArchives=false
+
+function basculerArchives(){
+  _modeArchives=!_modeArchives
+  const b=document.getElementById('btn-archives')
+  if(b){
+    b.className=_modeArchives?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'
+    b.innerHTML=_modeArchives?'<i class="ti ti-arrow-left"></i> Retour aux quiz actifs':'<i class="ti ti-archive"></i> Archives'
+  }
+  const t=document.getElementById('titre-liste-quiz')
+  if(t) t.textContent=_modeArchives?'Examens archivés':'Quiz du module'
+  const f=document.getElementById('form-creation-quiz')
+  if(f) f.style.display=_modeArchives?'none':''
+  loadQuizAdmin()
+}
+
+async function archiverQuiz(id,archiver){
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  if(archiver&&!confirm("Archiver cet examen ?\n\nIl ne sera plus visible des aspirants ni dans la liste courante, mais restera consultable dans les Archives et pourra être réutilisé plus tard.")) return
+  const maj={archive:archiver}
+  // Un examen archive est retire de la circulation
+  if(archiver) maj.actif=false
+  const {error}=await db.from('quiz').update(maj).eq('id',id)
+  if(error){toast('Erreur : '+error.message,'err');return}
+  toast(archiver?'Examen archivé':'Examen sorti des archives (en privé)','ok')
+  loadQuizAdmin()
+}
+
+async function dupliquerQuiz(id){
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  const [{data:qz},{data:qs}]=await Promise.all([
+    db.from('quiz').select('*').eq('id',id).single(),
+    db.from('questions').select('*').eq('quiz_id',id).order('ordre')
+  ])
+  if(!qz){toast('Examen introuvable','err');return}
+  const annee=new Date().getFullYear()
+  const titre=prompt('Titre de la nouvelle copie :', (qz.titre||'').replace(/\s*\(\d{4}(-\d{4})?\)\s*$/,'')+' ('+annee+'-'+(annee+1)+')')
+  if(!titre) return
+  const {data:{user}}=await db.auth.getUser()
+  // Niveau suivant dans le module
+  const {data:der}=await db.from('quiz').select('niveau').eq('module_id',qz.module_id).order('niveau',{ascending:false}).limit(1)
+  const niveau=((der&&der[0]&&der[0].niveau)||0)+1
+  const {data:copie,error}=await db.from('quiz').insert({
+    module_id:qz.module_id,titre:titre.substring(0,80),filiere:qz.filiere||'com',
+    niveau:niveau,total_points:qz.total_points,seuil:qz.seuil,
+    mode_examen:qz.mode_examen,
+    actif:false,      // la copie repart en prive
+    archive:false,
+    date_debut:null,date_fin:null,   // creneau a redefinir
+    created_by:user.id
+  }).select().single()
+  if(error){toast('Erreur : '+error.message,'err');return}
+  if((qs||[]).length){
+    const lignes=qs.map(function(q,i){
+      const o={quiz_id:copie.id,enonce:q.enonce,options:q.options,bonne_reponse:q.bonne_reponse,
+        points:q.points,type_question:q.type_question,reponse_type:q.reponse_type,ordre:i}
+      if(q.bonnes_reponses) o.bonnes_reponses=q.bonnes_reponses
+      if(q.competence) o.competence=q.competence
+      if(q.image_url) o.image_url=q.image_url
+      return o
+    })
+    const {error:e2}=await db.from('questions').insert(lignes)
+    if(e2){toast('Copie créée mais questions incomplètes : '+e2.message,'err')}
+  }
+  toast('Copie créée en privé — pense à définir son créneau','ok')
+  _modeArchives=false
+  basculerArchives()
 }
 
 async function togglePubQuiz(id,actuel){
@@ -2952,7 +3029,7 @@ async function loadAspirants() {
   const [{data:asp},{data:tents},{data:allQ},{data:ratt}]=await Promise.all([
     db.from('profils').select('*').in('role',['aspirant','apprenti']).order('nom'),
     db.from('tentatives').select('*'),
-    db.from('quiz').select('*').eq('actif',true),
+    db.from('quiz').select('*').eq('actif',true).or('archive.is.null,archive.eq.false'),
     db.from('rattrapages').select('*')
   ])
   const a=asp||[],t=tents||[],q=allQ||[]
@@ -3492,7 +3569,7 @@ async function ouvrirProfilAspirantAncien(aspirantId, nom) {
   const [{data:profil},{data:tents},{data:allQuiz},{data:carnet}]=await Promise.all([
     db.from('profils').select('*').eq('id',aspirantId).single(),
     db.from('tentatives').select('*,quiz(id,titre,module_id,niveau)').eq('aspirant_id',aspirantId).order('completed_at',{ascending:false}),
-    db.from('quiz').select('*').eq('actif',true).order('module_id').order('niveau'),
+    db.from('quiz').select('*').eq('actif',true).or('archive.is.null,archive.eq.false').order('module_id').order('niveau'),
     db.from('carnet_bord').select('*').eq('aspirant_id',aspirantId)
   ])
   const el=document.getElementById('profil-asp-body');if(!el) return
