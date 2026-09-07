@@ -1240,6 +1240,60 @@ document.addEventListener('visibilitychange',function(){
   if(_dernierMasquage&&Date.now()-_dernierMasquage>30000) rafraichirPage()
 })
 
+// ─── VILLES : saisie assistee et normalisee ────────────────────────────────
+// Evite les doublons du type "albi" / "ALBI" / "Albi " en normalisant,
+// et propose les villes deja enregistrees pour limiter les fautes de frappe.
+let _villesConnues=[]
+
+function normaliserVille(v){
+  let s=(v||'').trim().replace(/\s+/g,' ')
+  if(!s) return ''
+  s=s.toLowerCase()
+  // Majuscule a chaque debut de mot (apres espace, tiret ou apostrophe)
+  s=s.replace(/(^|[\s\-'])([a-zà-ÿ])/g,function(m,p,l){return p+l.toUpperCase()})
+  // Particules en minuscule, sauf en tout debut de nom
+  const PART=['Sur','Sous','Les','Le','La','De','Du','Des','En','Lès','Aux','Au','Et','D','L']
+  s=s.replace(/([\s\-'])([A-ZÀ-Ÿ][a-zà-ÿ]*)/g,function(m,sep,mot){
+    return PART.indexOf(mot)>=0 ? sep+mot.toLowerCase() : m
+  })
+  return s
+}
+
+async function chargerVilles(){
+  try{
+    const {data}=await db.from('profils').select('ville_sedentaire').not('ville_sedentaire','is',null)
+    const set={}
+    ;(data||[]).forEach(function(p){
+      const v=normaliserVille(p.ville_sedentaire)
+      if(v) set[v]=true
+    })
+    _villesConnues=Object.keys(set).sort(function(a,b){return a.localeCompare(b,'fr')})
+  }catch(e){_villesConnues=[]}
+  majListeVilles()
+}
+
+function majListeVilles(){
+  let dl=document.getElementById('liste-villes')
+  if(!dl){
+    dl=document.createElement('datalist');dl.id='liste-villes'
+    document.body.appendChild(dl)
+  }
+  dl.innerHTML=_villesConnues.map(function(v){return '<option value="'+v+'"></option>'}).join('')
+}
+
+// A appliquer sur chaque champ ville : suggestions + normalisation a la sortie
+function brancherChampVille(id){
+  const el=document.getElementById(id)
+  if(!el) return
+  el.setAttribute('list','liste-villes')
+  el.setAttribute('autocomplete','off')
+  el.addEventListener('blur',function(){
+    const v=normaliserVille(el.value)
+    if(v&&v!==el.value) el.value=v
+  })
+  if(!_villesConnues.length) chargerVilles(); else majListeVilles()
+}
+
 // ─── BOUTON RETOUR DU NAVIGATEUR ───────────────────────────────────────────
 window.addEventListener('popstate',function(ev){
   if(!G.profil) return
@@ -1315,6 +1369,7 @@ async function initApp() {
   hi('vue-login');$('vue-app').classList.add('on')
   initDark()
   demarrerAutoRefresh()
+  chargerVilles()
   // Vérifier messages non lus
   setTimeout(async()=>{
     const {data}=await db.from('messages').select('id').eq('to_id',user.id).eq('lu',false)
@@ -1332,8 +1387,12 @@ async function initApp() {
     afficherFormulaireAdmin(user.email)
     return
   }
+  // Ville obligatoire pour tout le monde : on la demande des la connexion
+  if(!p.ville_sedentaire){
+    afficherFormulaireVille()
+  }
   // Aspirant : demander le téléphone (peut être reporté)
-  if(G.aspirant && !p.telephone && !localStorage.getItem('pm_tel_plus_tard')) {
+  else if(G.aspirant && !p.telephone && !localStorage.getItem('pm_tel_plus_tard')) {
     afficherFormulaireTelephone()
   }
 
@@ -3200,6 +3259,7 @@ function afficherFormulaireInscription(periode) {
     </div>
   </div>`
   document.body.appendChild(modal)
+  brancherChampVille('insc-ville')
   db.from('inscriptions').select('module_id').eq('periode_id',periode.id).then(({data})=>{
     const counts=(data||[]).reduce((a,x)=>{a[x.module_id]=(a[x.module_id]||0)+1;return a},{})
     document.getElementById('choix-modules').innerHTML=MODULES.map(m=>`<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer" id="lbl-mod-${m.id}" onclick="selectModuleInscription(${m.id})"><input type="radio" name="mod-insc" value="${m.id}" style="accent-color:var(--r);flex-shrink:0"/><div><div style="font-size:.82rem;font-weight:700">${m.nom}</div><div style="font-size:.7rem;color:var(--t3)">${counts[m.id]||0} inscrit(s)</div></div></label>`).join('')
@@ -3216,7 +3276,7 @@ function reporterChoixModule(){
 
 async function confirmerInscription(periodeId) {
   const radio=document.querySelector('input[name="mod-insc"]:checked');if(!radio){toast('Choisissez un module','err');return}
-  const modId=parseInt(radio.value),ville=document.getElementById('insc-ville')?.value?.trim()
+  const modId=parseInt(radio.value),ville=normaliserVille(document.getElementById('insc-ville')?.value||'')
   if(!ville){toast('Veuillez renseigner votre ville actuelle','err');return}
   const btn=document.getElementById('btn-inscrire');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i>'
   // Sauvegarder module ET ville sur le profil (source fiable, relue a chaque connexion)
@@ -3637,6 +3697,7 @@ function ouvrirMonProfil() {
     </div>
   </div>`
   document.body.appendChild(modal)
+  brancherChampVille('mp-ville')
   // Charger les stages existants
   db.from('mini_stages').select('*').eq('ancien_id',G.profil.id).eq('actif',true).then(({data})=>{
     _stagesForm=(data||[]).map(s=>({module_id:s.module_id,periode:s.periode||'',description:s.description||''}))
@@ -3664,7 +3725,7 @@ function renderStagesFormProfil() {
 }
 
 async function sauvegarderMonProfil() {
-  const ville=document.getElementById('mp-ville')?.value?.trim()
+  const ville=normaliserVille(document.getElementById('mp-ville')?.value||'')
   const tel=document.getElementById('mp-tel')?.value?.trim()
   const ref=document.getElementById('mp-ref')?.value?.trim()
   const specs=[...document.querySelectorAll('.mp-spec:checked')].map(c=>parseInt(c.value))
@@ -3691,6 +3752,36 @@ async function sauvegarderMonProfil() {
 
 // ─── ANCIENS ───────────────────────────────────────────────────────────────
 let _anciensAll=[]
+
+function afficherFormulaireVille() {
+  const modal=document.createElement('div');modal.id='modal-ville'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.innerHTML='<div style="background:var(--card);border-radius:24px;width:100%;max-width:400px;overflow:hidden">'
+    +'<div style="padding:1.6rem 1.5rem 1.3rem;text-align:center">'
+      +'<div style="width:52px;height:52px;border-radius:16px;background:var(--amberl);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem"><i class="ti ti-map-pin" style="color:var(--amber);font-size:1.4rem"></i></div>'
+      +'<div style="font-family:var(--fg);font-size:1.1rem;font-weight:700;letter-spacing:-.02em">Dans quelle ville es-tu ?</div>'
+      +'<p style="font-size:.82rem;color:var(--t2);margin-top:8px;line-height:1.5">Cette information permet de te mettre en relation avec les Compagnons et les aspirants les plus proches de toi.</p>'
+      +'<input class="finput" id="ville-init" placeholder="Commence à taper..." style="margin-top:1.2rem;text-align:center" onkeydown="if(event.key===\'Enter\')enregistrerVilleInit()"/>'
+      +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px">Choisis dans la liste si ta ville y figure</div>'
+      +'<button class="btn btn-r btn-full" style="margin-top:1.1rem" onclick="enregistrerVilleInit()"><i class="ti ti-check"></i> Enregistrer</button>'
+    +'</div>'
+  +'</div>'
+  document.body.appendChild(modal)
+  brancherChampVille('ville-init')
+  setTimeout(function(){const i=document.getElementById('ville-init');if(i)i.focus()},150)
+}
+
+async function enregistrerVilleInit() {
+  const el=document.getElementById('ville-init');if(!el) return
+  const v=normaliserVille(el.value)
+  if(v.length<2){toast('Indique ta ville','err');return}
+  const {error}=await db.from('profils').update({ville_sedentaire:v,profil_complet:true}).eq('id',G.profil.id)
+  if(error){toast('Erreur : '+error.message,'err');return}
+  G.profil.ville_sedentaire=v;G.profil.profil_complet=true
+  document.getElementById('modal-ville')?.remove()
+  toast('Merci !','ok')
+  chargerVilles()
+}
 
 function afficherFormulaireTelephone() {
   const modal=document.createElement('div');modal.id='modal-tel-aspirant'
@@ -3777,7 +3868,7 @@ async function sauvegarderProfilAdmin() {
 
 async function chargerAnciens() {
   const [{data:anciens},{data:stages},{data:gacheurs}]=await Promise.all([
-    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites,role').in('role',['ancien','admin','compagnon']).eq('profil_complet',true).not('ville_sedentaire','is',null).order('nom'),
+    db.from('profils').select('id,prenom,nom,reference,ville_sedentaire,telephone,specialites,role').in('role',['ancien','admin','compagnon']).not('ville_sedentaire','is',null).order('nom'),
     db.from('mini_stages').select('*').eq('actif',true),
     db.from('profils').select('nom,prenom,telephone,module_gacheur,superviseur').eq('role','admin').not('module_gacheur','is',null)
   ])
@@ -3817,9 +3908,15 @@ function filtrerAnciens(moduleId) {
 }
 function filtrerAnciensVille(){afficherAnciens(_getFiltre())}
 
+function libelleRoleContact(r){
+  if(r==='compagnon') return 'Itinérant'
+  if(r==='admin') return 'Gâcheur'
+  return 'Sédentaire'
+}
+
 function afficherAnciens(anciens) {
   const el=$('anciens-grid');if(!el) return
-  if(!anciens.length){el.innerHTML='<p style="font-size:.82rem;color:var(--t3)">Aucun Ancien disponible pour ce filtre.</p>';return}
+  if(!anciens.length){el.innerHTML='<p style="font-size:.82rem;color:var(--t3)">Personne pour ce filtre.</p>';return}
   const colors=['var(--amberl)','var(--bl)','var(--rl)','#EAF3DE','rgba(60,52,137,.10)']
   el.innerHTML=anciens.map(a=>{
     const ini=[(a.prenom||'')[0],(a.nom||'')[0]].join('').toUpperCase()||'?'
@@ -3829,7 +3926,9 @@ function afficherAnciens(anciens) {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
         <div style="width:44px;height:44px;border-radius:14px;background:${color};display:flex;align-items:center;justify-content:center;font-family:var(--fg);font-size:.9rem;font-weight:700;flex-shrink:0">${ini}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:.875rem;font-weight:700">Compagnon ${a.nom||''}</div>
+          <div style="font-size:.875rem;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">Compagnon ${a.nom||''}
+            <span style="font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:9px;background:${a.role==='compagnon'?'rgba(60,52,137,.12)':a.role==='admin'?'var(--rl)':'var(--field)'};color:${a.role==='compagnon'?'#3C3489':a.role==='admin'?'var(--r)':'var(--t2)'}">${libelleRoleContact(a.role)}</span>
+          </div>
           <div style="display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--t3)"><i class="ti ti-map-pin" style="font-size:.85rem;color:var(--amber)"></i>${a.ville_sedentaire||'—'}</div>
         </div>
         <i class="ti ti-chevron-right" style="color:var(--t3);flex-shrink:0"></i>
@@ -3896,6 +3995,7 @@ function afficherQuestionnaireAncien() {
   hi('vue-login');$('vue-app').classList.add('on')
   initDark()
   demarrerAutoRefresh()
+  chargerVilles()
   // Vérifier messages non lus
   setTimeout(async()=>{
     const {data}=await db.from('messages').select('id').eq('to_id',user.id).eq('lu',false)
@@ -3946,6 +4046,7 @@ function afficherQuestionnaireAncien() {
     </div>
   </div>`
   document.body.appendChild(modal)
+  brancherChampVille('anc-ville')
 }
 
 let _stagesForm=[]
@@ -3973,7 +4074,7 @@ function renderStagesForm() {
 }
 
 async function sauvegarderProfilAncien() {
-  const ville=document.getElementById('anc-ville')?.value?.trim()
+  const ville=normaliserVille(document.getElementById('anc-ville')?.value||'')
   const tel=document.getElementById('anc-tel')?.value?.trim()
   const ref=document.getElementById('anc-ref')?.value?.trim()
   const specs=[...document.querySelectorAll('.anc-spec:checked')].map(c=>parseInt(c.value))
@@ -4133,8 +4234,6 @@ function ouvrirFicheCompte(id, roleActuel) {
             +MODULES.map(function(m){return '<option value="'+m.id+'"'+(p.module_gacheur===m.id&&!p.superviseur?' selected':'')+'>'+m.nom+'</option>'}).join('')
             +'<option value="sup"'+(p.superviseur?' selected':'')+'>Superviseur — tous les modules</option>'
           +'</select>'
-          +'<label class="field-label" style="margin-top:.9rem">Téléphone (visible par les aspirants)</label>'
-          +'<input class="finput" id="fc-tel" type="tel" placeholder="06 XX XX XX XX" value="'+(p.telephone||'')+'" style="margin-top:4px"/>'
           +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Les aspirants verront ce gâcheur dans l\'onglet Contacts. Un superviseur n\'apparaît pas dans cette liste.</div>'
         +'</div>'
         +'<div id="fc-zone-jeune" style="margin-top:1rem;'+((p.role==='aspirant'||p.role==='apprenti')?'':'display:none')+'">'
@@ -4144,12 +4243,20 @@ function ouvrirFicheCompte(id, roleActuel) {
             +'<div style="font-size:.72rem;color:var(--t3);margin-top:3px;line-height:1.5">Année blanche : garde l\'accès aux cours et aux exercices, mais aucun examen ni compteur de validation ne lui sera proposé.</div></div>'
           +'</label>'
         +'</div>'
+        +'<div style="border-top:1px solid var(--bord);margin-top:1.1rem;padding-top:1.1rem">'
+          +'<label class="field-label">Ville</label>'
+          +'<input class="finput" id="fc-ville" placeholder="Ville" value="'+(p.ville_sedentaire||'')+'" style="margin-top:4px"/>'
+          +'<label class="field-label" style="margin-top:.9rem">Téléphone</label>'
+          +'<input class="finput" id="fc-tel-tous" type="tel" placeholder="06 XX XX XX XX" value="'+(p.telephone||'')+'" style="margin-top:4px"/>'
+          +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Corrige ici une ville mal saisie. La casse et les accents sont normalisés automatiquement.</div>'
+        +'</div>'
         +'<button class="btn btn-r btn-full" style="margin-top:1rem" id="fc-btn" onclick="changerRoleCompte(\''+p.id+'\')"><i class="ti ti-check"></i> Enregistrer</button>'
         +'</div>'
       ):'<div style="border-top:1px solid var(--bord);padding-top:1rem;font-size:.75rem;color:var(--t3);line-height:1.5">Seuls les superviseurs peuvent modifier les rôles.</div>')
     +'</div>'
   +'</div>'
   document.body.appendChild(modal)
+  brancherChampVille('fc-ville')
 }
 
 async function changerRoleCompte(id) {
@@ -4167,8 +4274,7 @@ async function changerRoleCompte(id) {
     if(v==='sup'){maj.superviseur=true;maj.module_gacheur=null}
     else if(v){maj.superviseur=false;maj.module_gacheur=parseInt(v)}
     else {maj.superviseur=false;maj.module_gacheur=null}
-    const telEl=document.getElementById('fc-tel')
-    if(telEl){const tv=(telEl.value||'').trim();maj.telephone=tv||null}
+
   } else {
     maj.module_gacheur=null;maj.superviseur=false
   }
@@ -4186,6 +4292,11 @@ async function changerRoleCompte(id) {
   const smEl=document.getElementById('fc-sans-module')
   if(smEl&&(nouveauRole==='aspirant'||nouveauRole==='apprenti')) maj.sans_module=smEl.checked
   else if(nouveauRole!=='aspirant'&&nouveauRole!=='apprenti') maj.sans_module=false
+  // Ville et telephone, modifiables pour tous les roles
+  const vEl=document.getElementById('fc-ville')
+  if(vEl){const vv=normaliserVille(vEl.value);maj.ville_sedentaire=vv||null}
+  const tEl=document.getElementById('fc-tel-tous')
+  if(tEl){const tv=(tEl.value||'').trim();maj.telephone=tv||null}
   const {error}=await db.from('profils').update(maj).eq('id',id)
   if(error){
     toast('Erreur : '+error.message,'err')
@@ -4194,6 +4305,7 @@ async function changerRoleCompte(id) {
   }
   toast('Compte mis à jour','ok')
   document.getElementById('modal-fiche-compte')?.remove()
+  chargerVilles()
   chargerTousComptes()
 }
 
