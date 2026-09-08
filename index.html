@@ -490,6 +490,15 @@ button,input,select,textarea{font-family:var(--ff)}
       </div>
       <div class="field"><label>E-mail</label><input type="email" id="r-email" placeholder="ton adresse e-mail"/><small>Ton adresse Compagnons si tu en as une, sinon ton adresse personnelle — tu pourras la changer plus tard.</small></div>
       <div class="field"><label>Mot de passe</label><input type="password" id="r-pwd" placeholder="8 caractères minimum"/></div>
+      <div class="field" id="f-metier">
+        <label>Ton métier</label>
+        <select class="fselect" id="r-metier" style="margin-top:4px" onchange="majChoixMetier()">
+          <option value="mecanicien">Mécanicien</option>
+          <option value="electrotechnicien">Électrotechnicien</option>
+          <option value="outilleur">Mécanicien outilleur</option>
+        </select>
+        <div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5" id="txt-metier">En tant que mécanicien, tu suivras les modules et passeras les examens.</div>
+      </div>
       <div class="field" id="f-choix-jeune">
         <label>Tu es</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
@@ -935,6 +944,12 @@ button,input,select,textarea{font-family:var(--ff)}
         <button class="btn btn-ghost btn-sm" data-am="4" onclick="filtrerAspirants(4)"><i class="ti ti-bolt" style="color:var(--amber)"></i> Électrique</button>
         <button class="btn btn-ghost btn-sm" data-am="9" onclick="filtrerAspirants(9)">Sans module</button>
       </div>
+      <div style="display:flex;gap:6px;margin-bottom:.7rem;flex-wrap:wrap" id="filtres-metier">
+        <button class="btn btn-dark btn-sm" data-mt="" onclick="filtrerMetier('')">Tous métiers</button>
+        <button class="btn btn-ghost btn-sm" data-mt="mecanicien" onclick="filtrerMetier('mecanicien')">Mécaniciens</button>
+        <button class="btn btn-ghost btn-sm" data-mt="electrotechnicien" onclick="filtrerMetier('electrotechnicien')">Électrotechniciens</button>
+        <button class="btn btn-ghost btn-sm" data-mt="outilleur" onclick="filtrerMetier('outilleur')">Outilleurs</button>
+      </div>
       <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="copierMailsAspirants()"><i class="ti ti-mail"></i> Copier les adresses e-mail</button>
         <span style="font-size:.72rem;color:var(--t3)" id="asp-compteur"></span>
@@ -1009,6 +1024,20 @@ const MODULES = [
 ]
 const FILIERES = {tp:'Engins TP',agr:'Engins agricoles',ind:'Maintenance industrielle',com:'Toutes filières'}
 // Admins superviseurs : ne gèrent aucun module en particulier, pas de contact à renseigner
+const METIERS = [
+  {id:'mecanicien',nom:'Mécanicien',modules:true,desc:'Suit les modules et passe les examens'},
+  {id:'electrotechnicien',nom:'Électrotechnicien',modules:false,desc:'Ressources et culture métier'},
+  {id:'outilleur',nom:'Mécanicien outilleur',modules:false,desc:'Ressources et culture métier'}
+]
+function metierNom(id){const m=METIERS.find(function(x){return x.id===id});return m?m.nom:'—'}
+// Seuls les mecaniciens sont concernes par les modules et les examens
+function suitLesModules(p){
+  const prof=p||G.profil||{}
+  if(!prof.metier) return true          // metier non renseigne : on ne bloque rien
+  const m=METIERS.find(function(x){return x.id===prof.metier})
+  return m?m.modules:true
+}
+
 const ADMINS_SUPERVISEURS = ['b.prudhomme18@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
 function estAdminSuperviseur(){
   if(!G.admin) return false
@@ -1132,14 +1161,17 @@ async function register() {
   if(!domaineValide(email)){msgLogin('Adresse e-mail invalide.');return}
   if(pwd.length<8){msgLogin('Mot de passe : 8 caractères minimum.');return}
   const btn=$('btn-register');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Création...'
-  const {error}=await db.auth.signUp({email,password:pwd,options:{data:{prenom,nom,role}}})
+  const metier=(document.getElementById('r-metier')||{}).value||'mecanicien'
+  const {error}=await db.auth.signUp({email,password:pwd,options:{data:{prenom,nom,role,metier}}})
   if(error){msgLogin(error.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-user-plus"></i> Créer mon compte';return}
   const {error:le}=await db.auth.signInWithPassword({email,password:pwd})
   if(!le){
     // Forcer le rôle dans profils (le trigger Supabase peut ignorer ce champ)
-    if(role==='ancien'||role==='admin'||role==='compagnon'||role==='apprenti'){
-      const {data:{user}}=await db.auth.getUser()
-      if(user) await db.from('profils').update({role}).eq('id',user.id)
+    const {data:{user}}=await db.auth.getUser()
+    if(user){
+      const maj={metier:metier}
+      if(role==='ancien'||role==='admin'||role==='compagnon'||role==='apprenti') maj.role=role
+      try{await db.from('profils').update(maj).eq('id',user.id)}catch(e){}
     }
     await initApp();return
   }
@@ -1549,8 +1581,9 @@ async function loadDashboard() {
     const inscrit=monMod===m.id
     // Pastilles : une par examen du module
     const dejaAcquis=(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0
-    const pastilles=(dejaAcquis||G.profil.sans_module||!exM.length)?'':exM.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')
+    const pastilles=(dejaAcquis||!suitLesModules()||G.profil.sans_module||!exM.length)?'':exM.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')
     const etat=dejaAcquis?'<span class="badge badge-v"><i class="ti ti-check"></i> Validé</span>'
+      :!suitLesModules()?'<span style="font-size:.8rem;color:var(--t3)">Cours et ressources</span>'
       :G.profil.sans_module?'<span style="font-size:.8rem;color:var(--t3)">Cours et exercices</span>'
       :!exM.length?'<span style="font-size:.8rem;color:var(--t3)">Bientôt disponible</span>'
       :fini?'<span class="badge badge-v"><i class="ti ti-check"></i> Validé</span>'
@@ -1836,7 +1869,7 @@ async function renderEval(modId,quiz,tents) {
     const horsCreneaux=q.mode_examen&&!aRattrapage&&!G.admin&&((debut&&now<debut)||(fin&&now>fin))
     const isExamen=!!q.mode_examen
     // Bloquer examen si mauvais module ou pas inscrit
-    const bonModule=G.admin||!isExamen||(!G.profil.sans_module&&G.profil.module_inscrit===modId)
+    const bonModule=G.admin||!isExamen||(suitLesModules()&&!G.profil.sans_module&&G.profil.module_inscrit===modId)
     const peutCommencer=!horsCreneaux&&(!isExamen||!t)&&bonModule
     const bc=t?.valide?'var(--v)':t?'var(--r)':'var(--bord2)'
     const ic=t?.valide?'ti-check':t?'ti-x':'ti-help'
@@ -3082,10 +3115,22 @@ function filtrerAspirants(modId){
   afficherAspirants()
 }
 
+let _aspMetier=''
+
+function filtrerMetier(mt){
+  _aspMetier=mt
+  document.querySelectorAll('#filtres-metier button').forEach(function(b){
+    b.className=(b.dataset.mt||'')===mt?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'
+  })
+  afficherAspirants()
+}
+
 function _aspFiltres(){
-  if(_aspFiltre===0) return _aspAll
-  if(_aspFiltre===9) return _aspAll.filter(function(p){return !p.module_inscrit})
-  return _aspAll.filter(function(p){return p.module_inscrit===_aspFiltre})
+  let r=_aspAll
+  if(_aspFiltre===9) r=r.filter(function(p){return !p.module_inscrit})
+  else if(_aspFiltre!==0) r=r.filter(function(p){return p.module_inscrit===_aspFiltre})
+  if(_aspMetier) r=r.filter(function(p){return (p.metier||'mecanicien')===_aspMetier})
+  return r
 }
 
 function basculerAspirant(id){
@@ -3166,7 +3211,7 @@ function afficherAspirants(){
         +'<div style="flex:1;min-width:0">'
           +'<div style="font-size:.875rem;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap">Pays '+(p.prenom||'')+' '+(p.nom||'')
           +(aCorriger?'<span class="badge badge-a" style="font-size:.6rem">À corriger</span>':'')+'</div>'
-          +'<div style="font-size:.7rem;color:var(--t3);margin-top:2px">'+(p.sans_module?'<span style="color:var(--amber);font-weight:600">Année blanche</span>':(mod?mod.nom:'Pas encore inscrit'))+'</div>'
+          +'<div style="font-size:.7rem;color:var(--t3);margin-top:2px">'+metierNom(p.metier||'mecanicien')+((p.metier&&p.metier!=='mecanicien')?'':' · '+(p.sans_module?'<span style="color:var(--amber);font-weight:600">Année blanche</span>':(mod?mod.nom:'Pas encore inscrit')))+'</div>'
         +'</div>'
         +'<span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:'+(exM.length&&exVal===exM.length?'var(--v)':'var(--t3)')+';flex-shrink:0">'+(p.sans_module?'—':(exM.length?exVal+'/'+exM.length:'—'))+'</span>'
         +'<i class="ti ti-chevron-'+(ouvert?'up':'down')+'" style="color:var(--t3);flex-shrink:0"></i>'
@@ -3345,6 +3390,8 @@ async function exportCarnetPDF() {
 // ─── INSCRIPTIONS ──────────────────────────────────────────────────────────
 async function verifierInscription() {
   if(G.admin||G.ancien) return
+  // Les modules ne concernent que les mecaniciens
+  if(!suitLesModules()) return
   // Le gacheur a tranche : annee sans module, on ne redemande rien
   if(G.profil.sans_module) return
   // L'apprenti accede librement aux ressources : le choix du module
@@ -4350,6 +4397,13 @@ async function ouvrirFicheCompte(id, roleActuel) {
         +'</select>'
         +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Un Admin peut créer les cours, les exercices et les examens. La personne devra se reconnecter pour voir son nouvel espace.</div>'
         +'</div>'
+        +'<div style="margin-top:1.1rem;border-top:1px solid var(--bord);padding-top:1.1rem">'
+          +'<label class="field-label">Métier</label>'
+          +'<select class="fselect" id="fc-metier" style="margin-top:4px">'
+            +METIERS.map(function(mt){return '<option value="'+mt.id+'"'+((p.metier||'mecanicien')===mt.id?' selected':'')+'>'+mt.nom+' — '+mt.desc+'</option>'}).join('')
+          +'</select>'
+          +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Seuls les mécaniciens suivent les modules et passent les examens. Les autres métiers ont accès aux cours et ressources.</div>'
+        +'</div>'
         +'<div id="fc-zone-valid" style="margin-top:1.1rem;border-top:1px solid var(--bord);padding-top:1.1rem">'
           +'<label class="field-label">Modules déjà validés</label>'
           +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">'
@@ -4451,6 +4505,8 @@ async function changerRoleCompte(id) {
     maj.modules_valides=vals
   }
   // Ville et telephone, modifiables pour tous les roles
+  const mtEl=document.getElementById('fc-metier')
+  if(mtEl) maj.metier=mtEl.value
   const vEl=document.getElementById('fc-ville')
   if(vEl){const vv=normaliserVille(vEl.value);maj.ville_sedentaire=vv||null}
   const tEl=document.getElementById('fc-tel-tous')
@@ -4584,6 +4640,15 @@ async function chargerStatsAdmin() {
 // ─── CALENDRIER MINI-STAGES ───────────────────────────────────────────────
 
 // ─── DÉMARRAGE ─────────────────────────────────────────────────────────────
+function majChoixMetier(){
+  const v=(document.getElementById('r-metier')||{}).value||'mecanicien'
+  const m=METIERS.find(function(x){return x.id===v})
+  const t=document.getElementById('txt-metier')
+  if(t) t.textContent=m&&m.modules
+    ? 'En tant que mécanicien, tu suivras les modules et passeras les examens.'
+    : 'Tu auras accès aux cours et aux ressources. Les modules et examens sont réservés aux mécaniciens.'
+}
+
 function majChoixJeune(){
   const v=(document.querySelector('input[name="type-jeune"]:checked')||{}).value||'aspirant'
   const la=document.getElementById('lbl-aspirant'),lp=document.getElementById('lbl-apprenti')
