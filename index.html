@@ -3130,6 +3130,10 @@ function afficherAspirants(){
     let detail=''
     if(ouvert){
       detail='<div style="padding:2px 0 12px 42px">'
+        +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
+          +'<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();voirCarnetDe(\''+p.id+'\')"><i class="ti ti-notebook"></i> Carnet de bord</button>'
+          +'<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();ouvrirFicheCompte(\''+p.id+'\',\''+p.role+'\')"><i class="ti ti-user-cog"></i> Modifier / valider des modules</button>'
+        +'</div>'
         +'<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:.72rem;color:var(--t2)">'
           +(p.telephone?'<a href="tel:'+p.telephone+'" style="color:var(--v);font-weight:600;text-decoration:none"><i class="ti ti-phone"></i> '+p.telephone+'</a>':'<span style="color:var(--t3)"><i class="ti ti-phone-off"></i> Pas de téléphone</span>')
           +'<a href="mailto:'+p.email+'" style="color:var(--b);text-decoration:none"><i class="ti ti-mail"></i> '+p.email+'</a>'
@@ -3251,16 +3255,25 @@ async function chargerCarnet(aspirantId) {
       ${c?`<span class="badge badge-v">Validé</span>`:''}
     </div>`
   })
-  // Champ ville pour modules validés non encore dans carnet
-  // Seuls les EXAMENS valident un module : un exercice reussi ne doit
-  // jamais faire apparaitre de note sur le module.
+  // Les modules dont les examens sont valides sont inscrits automatiquement
+  // au carnet : la ville est deja connue par le profil.
   const tentsValides=(tents||[]).filter(t=>t.valide&&t.quiz?.mode_examen)
   const modulesAvecExamen=[...new Set(tentsValides.map(t=>t.quiz?.module_id).filter(Boolean))]
-  const modulesNonCarnet=modulesAvecExamen.filter(mid=>!modulesValides.find(c=>c.module_id===mid))
-  if(modulesNonCarnet.length&&!aspirantId){
-    html+=`<div style="margin-top:1rem;padding:.9rem;background:var(--amberl);border-radius:10px;border:1px solid var(--amber)"><div style="font-size:.78rem;font-weight:700;color:var(--amber);margin-bottom:8px">Renseignez votre ville pour les modules validés</div>
-      ${modulesNonCarnet.map(mid=>{const m=MODULES.find(x=>x.id===mid),t=tentsValides.filter(x=>x.quiz?.module_id===mid),best=t.reduce((a,x)=>x.score>a?x.score:a,0);return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><span style="font-size:.78rem;color:var(--t2);flex-shrink:0;font-weight:600">${m?.nom}</span><input class="finput" id="ville-${mid}" placeholder="Votre ville" style="flex:1"/><button class="btn btn-r btn-sm" onclick="ajouterCarnet(${mid},'ville-${mid}',${best})"><i class="ti ti-check"></i></button></div>`}).join('')}
-    </div>`
+  const aInscrire=modulesAvecExamen.filter(mid=>!modulesValides.find(c=>c.module_id===mid))
+  if(aInscrire.length&&!aspirantId){
+    const villeP=p&&p.ville_sedentaire||null
+    for(const mid of aInscrire){
+      try{
+        await db.from('carnet_bord').upsert(
+          {aspirant_id:id,module_id:mid,ville:villeP,valide_at:new Date().toISOString()},
+          {onConflict:'aspirant_id,module_id',ignoreDuplicates:true})
+      }catch(e){}
+    }
+    // Un seul rechargement, sans boucle infinie
+    if(!window._carnetRelance){
+      window._carnetRelance=true
+      setTimeout(function(){window._carnetRelance=false;chargerCarnet(aspirantId)},300)
+    }
   }
   html+='</div></div>'
   el.innerHTML=html
@@ -4499,7 +4512,12 @@ async function changerRoleCompte(id) {
   }
   const {error}=await db.from('profils').update(maj).eq('id',id)
   if(error){
-    toast('Erreur : '+error.message,'err')
+    // Message explicite : colonne absente ou droits insuffisants
+    let m=error.message||''
+    if(/modules_valides/.test(m)) m='La colonne modules_valides n existe pas encore. Execute le SQL modules_valides.sql dans Supabase.'
+    else if(/sans_module/.test(m)) m='La colonne sans_module n existe pas encore. Execute le SQL dans Supabase.'
+    else if(/row-level security|policy/i.test(m)) m='Droits insuffisants : seuls les superviseurs modifient les autres comptes.'
+    toast('Erreur : '+m,'err')
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Enregistrer'}
     return
   }
