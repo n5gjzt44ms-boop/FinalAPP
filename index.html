@@ -4350,13 +4350,6 @@ async function ouvrirFicheCompte(id, roleActuel) {
         +'</select>'
         +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Un Admin peut créer les cours, les exercices et les examens. La personne devra se reconnecter pour voir son nouvel espace.</div>'
         +'</div>'
-        +'<div id="fc-zone-valides" style="margin-top:1rem;'+((p.role==='aspirant'||p.role==='apprenti')?'':'display:none')+'">'
-          +'<label class="field-label">Modules déjà validés</label>'
-          +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px" id="fc-modules-valides">'
-            +MODULES.map(function(m){return '<label style="display:flex;align-items:center;gap:7px;padding:9px 10px;border:1.5px solid var(--bord2);border-radius:11px;cursor:pointer;font-size:.78rem;font-weight:600"><input type="checkbox" class="fc-mv" value="'+m.id+'" style="accent-color:var(--v);width:17px;height:17px"/><i class="ti '+m.icon+'" style="color:'+m.ic+'"></i>'+m.nom+'</label>'}).join('')
-          +'</div>'
-          +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Coche un module acquis par diplôme ou équivalence. Il apparaîtra "Validé" chez l\'aspirant, sans note ni examen à passer.</div>'
-        +'</div>'
         +'<div id="fc-zone-valid" style="margin-top:1.1rem;border-top:1px solid var(--bord);padding-top:1.1rem">'
           +'<label class="field-label">Modules déjà validés</label>'
           +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">'
@@ -4387,34 +4380,6 @@ async function ouvrirFicheCompte(id, roleActuel) {
           +'</select>'
           +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Les aspirants verront ce gâcheur dans l\'onglet Contacts. Un superviseur n\'apparaît pas dans cette liste.</div>'
         +'</div>'
-        +'<div id="fc-zone-valides" style="margin-top:1rem;'+((p.role==='aspirant'||p.role==='apprenti')?'':'display:none')+'">'
-          +'<label class="field-label">Modules déjà validés</label>'
-          +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px" id="fc-modules-valides">'
-            +MODULES.map(function(m){return '<label style="display:flex;align-items:center;gap:7px;padding:9px 10px;border:1.5px solid var(--bord2);border-radius:11px;cursor:pointer;font-size:.78rem;font-weight:600"><input type="checkbox" class="fc-mv" value="'+m.id+'" style="accent-color:var(--v);width:17px;height:17px"/><i class="ti '+m.icon+'" style="color:'+m.ic+'"></i>'+m.nom+'</label>'}).join('')
-          +'</div>'
-          +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Coche un module acquis par diplôme ou équivalence. Il apparaîtra "Validé" chez l\'aspirant, sans note ni examen à passer.</div>'
-        +'</div>'
-        +'<div id="fc-zone-valid" style="margin-top:1.1rem;border-top:1px solid var(--bord);padding-top:1.1rem">'
-          +'<label class="field-label">Modules déjà validés</label>'
-          +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">'
-          +MODULES.map(function(m){
-            const coche=(p.modules_valides||[]).map(Number).indexOf(m.id)>=0
-            return '<label style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px solid '+(coche?'var(--v)':'var(--bord2)')+';border-radius:12px;cursor:pointer;font-size:.8rem;font-weight:600;background:'+(coche?'var(--vl)':'transparent')+'">'
-              +'<input type="checkbox" class="fc-mval" value="'+m.id+'"'+(coche?' checked':'')+' style="accent-color:var(--v);width:17px;height:17px" onchange="this.parentNode.style.borderColor=this.checked?\'var(--v)\':\'var(--bord2)\';this.parentNode.style.background=this.checked?\'var(--vl)\':\'transparent\'"/>'
-              +'<i class="ti '+m.icon+'" style="color:'+m.ic+'"></i>'+m.nom
-            +'</label>'
-          }).join('')
-          +'</div>'
-          +'<div style="font-size:.7rem;color:var(--t3);margin-top:8px;line-height:1.5">À cocher pour un module acquis autrement que par les examens de la plateforme (diplôme, équivalence, session antérieure). L\'aspirant verra le module marqué « Validé ».</div>'
-        +'</div>'
-        +'<div id="fc-zone-jeune" style="margin-top:1rem;'+((p.role==='aspirant'||p.role==='apprenti')?'':'display:none')+'">'
-          +'<label style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1.5px solid '+(p.sans_module?'var(--amber)':'var(--bord2)')+';border-radius:14px;cursor:pointer;background:'+(p.sans_module?'var(--amberl)':'')+'" id="fc-lbl-sm">'
-            +'<input type="checkbox" id="fc-sans-module" '+(p.sans_module?'checked':'')+' onchange="var l=document.getElementById(\'fc-lbl-sm\');l.style.borderColor=this.checked?\'var(--amber)\':\'var(--bord2)\';l.style.background=this.checked?\'var(--amberl)\':\'\'" style="accent-color:var(--amber);width:18px;height:18px;flex-shrink:0;margin-top:1px"/>'
-            +'<div><div style="font-size:.85rem;font-weight:600">Ne valide pas de module cette année</div>'
-            +'<div style="font-size:.72rem;color:var(--t3);margin-top:3px;line-height:1.5">Année blanche : garde l\'accès aux cours et aux exercices, mais aucun examen ni compteur de validation ne lui sera proposé.</div></div>'
-          +'</label>'
-        +'</div>'
-        +'<div style="border-top:1px solid var(--bord);margin-top:1.1rem;padding-top:1.1rem">'
           +'<label class="field-label">Ville</label>'
           +'<input class="finput" id="fc-ville" placeholder="Ville" value="'+echapAttr(p.ville_sedentaire)+'" style="margin-top:4px"/>'
           +'<label class="field-label" style="margin-top:.9rem">Téléphone</label>'
@@ -4429,21 +4394,6 @@ async function ouvrirFicheCompte(id, roleActuel) {
   +'</div>'
   document.body.appendChild(modal)
   brancherChampVille('fc-ville')
-  // Pre-cocher les modules deja valides
-  db.from('modules_valides').select('module_id').eq('aspirant_id',p.id).then(function(r){
-    const dejaV=(r.data||[]).map(function(x){return x.module_id})
-    document.querySelectorAll('.fc-mv').forEach(function(cb){
-      if(dejaV.indexOf(parseInt(cb.value))>=0){
-        cb.checked=true
-        cb.parentElement.style.borderColor='var(--v)'
-        cb.parentElement.style.background='var(--vl)'
-      }
-      cb.addEventListener('change',function(){
-        cb.parentElement.style.borderColor=cb.checked?'var(--v)':'var(--bord2)'
-        cb.parentElement.style.background=cb.checked?'var(--vl)':''
-      })
-    })
-  })
 }
 
 function voirCarnetDe(id){
@@ -4505,26 +4455,6 @@ async function changerRoleCompte(id) {
   if(vEl){const vv=normaliserVille(vEl.value);maj.ville_sedentaire=vv||null}
   const tEl=document.getElementById('fc-tel-tous')
   if(tEl){const tv=(tEl.value||'').trim();maj.telephone=tv||null}
-  // Modules valides manuellement
-  const cases=document.querySelectorAll('.fc-mv')
-  if(cases.length){
-    const coches=[]
-    cases.forEach(function(cb){if(cb.checked)coches.push(parseInt(cb.value))})
-    try{
-      const {data:actuels}=await db.from('modules_valides').select('module_id').eq('aspirant_id',id)
-      const avant=(actuels||[]).map(function(x){return x.module_id})
-      const aAjouter=coches.filter(function(m){return avant.indexOf(m)<0})
-      const aRetirer=avant.filter(function(m){return coches.indexOf(m)<0})
-      if(aAjouter.length){
-        await db.from('modules_valides').insert(aAjouter.map(function(m){
-          return {aspirant_id:id,module_id:m,origine:'manuel',valide_par:G.profil.id}
-        }))
-      }
-      if(aRetirer.length){
-        await db.from('modules_valides').delete().eq('aspirant_id',id).in('module_id',aRetirer)
-      }
-    }catch(e){toast('Modules validés non enregistrés : '+e.message,'err')}
-  }
   const {error}=await db.from('profils').update(maj).eq('id',id)
   if(error){
     // Message explicite : colonne absente ou droits insuffisants
