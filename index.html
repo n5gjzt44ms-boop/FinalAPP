@@ -1217,7 +1217,7 @@ async function rafraichirPage(){
     else if(page==='module'){const m=parseInt(localStorage.getItem('pm_module')||'0');if(m)ouvrirModule(m)}
     else if(page==='suivi') loadSuivi()
     else if(page==='anciens') chargerAnciens()
-    else if(page==='carnet') chargerCarnet()
+    else if(page==='carnet') chargerCarnet(_carnetAspirant)
     else if(page==='quiz-admin') loadQuizAdmin()
     else if(page==='aspirants') loadAspirants()
     else if(page==='annonces-admin') chargerAnnoncesAdmin()
@@ -1413,7 +1413,7 @@ async function initApp() {
     nav(savedA&&okA.includes(savedA)?savedA:'dashboard-ancien')
   } else if(G.admin) {
     const savedD=localStorage.getItem('pm_page')
-    const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module']
+    const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module','carnet']
     if(savedD&&okD.includes(savedD)){
       if(savedD==='module'){
         const savedMod=parseInt(localStorage.getItem('pm_module')||'0')
@@ -1483,7 +1483,8 @@ function nav(page,sansHistorique) {
   if(page==='quiz-admin'){loadQuizAdmin();chargerBrouillons();recupererLocal()}
   if(page==='aspirants') loadAspirants()
   if(page==='annonces-admin') chargerAnnoncesAdmin()
-  if(page==='carnet') chargerCarnet()
+  if(page==='carnet') chargerCarnet(_carnetAspirant)
+  else if(page!=='carnet') _carnetAspirant=null
   if(page==='inscriptions-admin') {chargerPeriodes();chargerInscritsStats()}
   if(page==='anciens') chargerAnciens()
   if(page==='anciens-admin') chargerAnciensAdmin()
@@ -2870,9 +2871,9 @@ function majScoreLive(){const notes=window._notesTemp||{},obtenu=Object.values(n
 
 async function validerCorrection(tentId,totalPts) {
   const notes=window._notesTemp||{},obtenu=Object.values(notes).reduce((a,v)=>a+(parseFloat(v)||0),0),sur20=calculerScore20(obtenu,totalPts),valide=sur20>=SEUIL
-  const {data:tent2}=await db.from('tentatives').select('aspirant_id,quiz(module_id)').eq('id',tentId).single()
+  const {data:tent2}=await db.from('tentatives').select('aspirant_id,quiz(module_id,mode_examen)').eq('id',tentId).single()
   await db.from('tentatives').update({notes_libres:notes,note_admin:sur20,score:Math.round(sur20),total_points:20,valide}).eq('id',tentId)
-  if(valide&&tent2?.quiz?.module_id) await db.from('carnet_bord').upsert({aspirant_id:tent2.aspirant_id,module_id:tent2.quiz.module_id,score_final:sur20,valide_at:new Date().toISOString()},{ignoreDuplicates:false})
+  if(valide&&tent2?.quiz?.mode_examen&&tent2?.quiz?.module_id) await db.from('carnet_bord').upsert({aspirant_id:tent2.aspirant_id,module_id:tent2.quiz.module_id,score_final:sur20,valide_at:new Date().toISOString()},{ignoreDuplicates:false})
   toast('Correction validée ! Score : '+sur20+'/20','ok')
   document.getElementById('modal-correction')?.remove();chargerRendusAdmin()
 }
@@ -3214,10 +3215,29 @@ async function chargerCarnet(aspirantId) {
   const id=aspirantId||G.profil.id
   const {data:p}=aspirantId?await db.from('profils').select('*').eq('id',aspirantId).single():{data:G.profil}
   const {data:carnet}=await db.from('carnet_bord').select('*').eq('aspirant_id',id).order('valide_at')
-  const {data:tents}=await db.from('tentatives').select('*, quiz(module_id,titre)').eq('aspirant_id',id)
+  const {data:tents}=await db.from('tentatives').select('*, quiz(module_id,titre,mode_examen)').eq('aspirant_id',id)
   const el=$('carnet-body');if(!el) return
-  const modulesValides=carnet||[],nb=modulesValides.length
-  let html=`<div class="card" style="margin-bottom:1rem"><div class="card-body"><div style="display:flex;align-items:center;gap:14px">
+  // Bandeau lorsqu'un gacheur consulte le carnet d'un aspirant
+  let bandeau=''
+  if(aspirantId&&p){
+    bandeau='<div class="card" style="margin-bottom:1rem;background:var(--dark)">'
+      +'<div style="display:flex;align-items:center;gap:12px;padding:13px 16px">'
+      +'<i class="ti ti-eye" style="color:#fff;font-size:1.1rem;flex-shrink:0"></i>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600;color:#fff">Carnet de '+(p.prenom||'')+' '+(p.nom||'')+'</div>'
+      +'<div style="font-size:.72rem;color:#888">Consultation par un gâcheur</div></div>'
+      +'<button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.15);color:#fff;flex-shrink:0" onclick="_carnetAspirant=null;chargerCarnet()">Mon carnet</button>'
+      +'</div></div>'
+  }
+  // Fusionner les validations : par examens (carnet_bord) ET manuelles (modules_valides)
+  const manuels=(p&&p.modules_valides||[]).map(Number)
+  const listeCarnet=(carnet||[]).slice()
+  manuels.forEach(function(mid){
+    if(!listeCarnet.find(function(x){return x.module_id===mid})){
+      listeCarnet.push({module_id:mid,valide_at:null,manuel:true})
+    }
+  })
+  const modulesValides=listeCarnet,nb=modulesValides.length
+  let html=bandeau+`<div class="card" style="margin-bottom:1rem"><div class="card-body"><div style="display:flex;align-items:center;gap:14px">
     <div class="sidebar-avatar" style="width:50px;height:50px;font-size:1rem;border-radius:14px;flex-shrink:0">${[(p?.prenom||'')[0],(p?.nom||'')[0]].join('').toUpperCase()||'?'}</div>
     <div style="flex:1"><div style="font-family:var(--fg);font-size:1.1rem;font-weight:700;letter-spacing:-.3px">Pays ${p?.nom||''} ${p?.prenom||''}</div>
     <div style="font-size:.78rem;color:var(--t3);margin-bottom:8px">Tour de France · ${nb}/4 module${nb>1?'s':''} validé${nb>1?'s':''}</div>
@@ -3227,12 +3247,14 @@ async function chargerCarnet(aspirantId) {
   html+='<div class="card"><div class="card-head"><span class="card-title">Modules</span></div><div class="card-body">'
   MODULES.forEach(m=>{const c=modulesValides.find(x=>x.module_id===m.id),enCours=!c&&(tents||[]).some(t=>t.quiz?.module_id===m.id)
     html+=`<div class="res-row"><div style="width:40px;height:40px;border-radius:12px;background:${c?'var(--vl)':enCours?m.bg:'var(--bg)'};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${c?'ti-circle-check':enCours?m.icon:'ti-circle'}" style="color:${c?'var(--v)':enCours?m.ic:'var(--t3)'};font-size:1.1rem"></i></div>
-      <div style="flex:1"><div style="font-size:.875rem;font-weight:700">${m.nom}</div><div style="font-size:.72rem;color:var(--t3)">${c?'Validé le '+new Date(c.valide_at).toLocaleDateString('fr-FR')+' · '+c.ville:enCours?'En cours':'Non commencé'}</div></div>
-      ${c?`<span class="badge badge-v" style="font-family:var(--fg)">${c.score_final||'—'}/20</span>`:''}
+      <div style="flex:1"><div style="font-size:.875rem;font-weight:700">${m.nom}</div><div style="font-size:.72rem;color:var(--t3)">${c?(c.valide_at?'Validé le '+new Date(c.valide_at).toLocaleDateString('fr-FR')+(c.ville?' · '+c.ville:''):'Validé — acquis hors plateforme'):enCours?'En cours':'Non commencé'}</div></div>
+      ${c?`<span class="badge badge-v">Validé</span>`:''}
     </div>`
   })
   // Champ ville pour modules validés non encore dans carnet
-  const tentsValides=(tents||[]).filter(t=>t.valide)
+  // Seuls les EXAMENS valident un module : un exercice reussi ne doit
+  // jamais faire apparaitre de note sur le module.
+  const tentsValides=(tents||[]).filter(t=>t.valide&&t.quiz?.mode_examen)
   const modulesAvecExamen=[...new Set(tentsValides.map(t=>t.quiz?.module_id).filter(Boolean))]
   const modulesNonCarnet=modulesAvecExamen.filter(mid=>!modulesValides.find(c=>c.module_id===mid))
   if(modulesNonCarnet.length&&!aspirantId){
@@ -3287,7 +3309,7 @@ async function exportCarnetPDF() {
     const tm=(tents||[]).filter(t=>t.quiz?.module_id===m.id)
     const val=tm.filter(t=>t.valide).length
     doc.setFont('helvetica','normal');doc.setFontSize(10)
-    if(cb){doc.setTextColor(59,109,17);doc.text('✓ '+m.nom,18,y);doc.setTextColor(100,100,100);doc.text('Validé le '+new Date(cb.valide_at).toLocaleDateString('fr-FR')+' — Score : '+cb.score_final+'/20 — '+cb.ville,80,y)}
+    if(cb){doc.setTextColor(59,109,17);doc.text('✓ '+m.nom,18,y);doc.setTextColor(100,100,100);doc.text(cb.valide_at?'Validé le '+new Date(cb.valide_at).toLocaleDateString('fr-FR'):'Validé'+' — Score : '+cb.score_final+'/20 — '+cb.ville,80,y)}
     else{doc.setTextColor(100,100,100);doc.text('○ '+m.nom,18,y);doc.text(val+' quiz validé(s)',80,y)}
     y+=8
   })
@@ -3934,7 +3956,7 @@ async function marquerSuperviseur() {
   G.profil.superviseur=true;G.profil.profil_complet=true
   document.getElementById('modal-admin-profil')?.remove()
   const savedD=localStorage.getItem('pm_page')||'dashboard'
-  const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module']
+  const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module','carnet']
   nav(okD.includes(savedD)?savedD:'dashboard')
 }
 
@@ -3949,7 +3971,7 @@ async function sauvegarderProfilAdmin() {
   toast('Profil enregistré !','ok')
   // Reprendre la navigation normale
   const savedD=localStorage.getItem('pm_page')||'dashboard'
-  const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module']
+  const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module','carnet']
   nav(okD.includes(savedD)?savedD:'dashboard')
 }
 
@@ -4377,7 +4399,8 @@ function ouvrirFicheCompte(id, roleActuel) {
           +'<input class="finput" id="fc-tel-tous" type="tel" placeholder="06 XX XX XX XX" value="'+echapAttr(p.telephone)+'" style="margin-top:4px"/>'
           +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Corrige ici une ville mal saisie. La casse et les accents sont normalisés automatiquement.</div>'
         +'</div>'
-        +'<button class="btn btn-r btn-full" style="margin-top:1rem" id="fc-btn" onclick="changerRoleCompte(\''+p.id+'\')"><i class="ti ti-check"></i> Enregistrer</button>'
+        +((p.role==='aspirant'||p.role==='apprenti')?'<button class="btn btn-ghost btn-full" style="margin-top:.8rem" onclick="voirCarnetDe(\''+p.id+'\')"><i class="ti ti-notebook"></i> Voir son carnet de bord</button>':'')
+        +'<button class="btn btn-r btn-full" style="margin-top:.6rem" id="fc-btn" onclick="changerRoleCompte(\''+p.id+'\')"><i class="ti ti-check"></i> Enregistrer</button>'
         +'</div>'
       ):'<div style="border-top:1px solid var(--bord);padding-top:1rem;font-size:.75rem;color:var(--t3);line-height:1.5">Seuls les superviseurs peuvent modifier les rôles.</div>')
     +'</div>'
@@ -4400,6 +4423,14 @@ function ouvrirFicheCompte(id, roleActuel) {
     })
   })
 }
+
+function voirCarnetDe(id){
+  document.getElementById('modal-fiche-compte')?.remove()
+  _carnetAspirant=id
+  nav('carnet')
+}
+
+let _carnetAspirant=null
 
 async function changerRoleCompte(id) {
   if(!estAdminSuperviseur()){toast('Action réservée aux superviseurs','err');return}
