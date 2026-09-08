@@ -4303,10 +4303,17 @@ function filtrerComptes(role) {
 
 
 // ─── FICHE COMPTE + CHANGEMENT DE ROLE ──────────────────────────────────────
-function ouvrirFicheCompte(id, roleActuel) {
+async function ouvrirFicheCompte(id, roleActuel) {
   if(!G.admin){toast('Action réservée aux gâcheurs','err');return}
-  const p=_tousComptes.find(x=>x.id===id)
-  if(!p){toast('Compte introuvable','err');return}
+  // La liste peut ne pas etre chargee (ouverture depuis l'onglet Aspirants) :
+  // dans ce cas on va chercher le profil directement en base.
+  let p=_tousComptes.find(x=>x.id===id)
+  if(!p){
+    const {data,error}=await db.from('profils').select('*').eq('id',id).single()
+    if(error||!data){toast('Compte introuvable','err');return}
+    p=data
+    _tousComptes=(_tousComptes||[]).concat([p])
+  }
   const peutModifier=estAdminSuperviseur()
   const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
   const modMap={1:'Thermique & Mécanique',2:'Hydraulique',3:'Conception & Construction',4:'Électrique & Automatisme'}
@@ -4330,8 +4337,9 @@ function ouvrirFicheCompte(id, roleActuel) {
         +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Ville</div><div style="font-size:.85rem;font-weight:600;margin-top:3px">'+(p.ville_sedentaire||'—')+'</div></div>'
         +'<div><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600">Module gâcheur</div><div style="font-size:.85rem;font-weight:600;margin-top:3px">'+(p.superviseur?'Superviseur':(modMap[p.module_gacheur]||'—'))+'</div></div>'
       +'</div>'
-      +(peutModifier?(
+      +(true?(
         '<div style="border-top:1px solid var(--bord);padding-top:1.1rem">'
+        +'<div style="'+(peutModifier?'':'display:none')+'">'
         +'<label class="field-label">Changer le rôle</label>'
         +'<select class="fselect" id="fc-role" style="margin-top:4px" onchange="document.getElementById(\'fc-zone-module\').style.display=(this.value===\'admin\'?\'\':\'none\');document.getElementById(\'fc-zone-jeune\').style.display=((this.value===\'aspirant\'||this.value===\'apprenti\')?\'\':\'none\');document.getElementById(\'fc-zone-valides\').style.display=((this.value===\'aspirant\'||this.value===\'apprenti\')?\'\':\'none\')">'
           +'<option value="aspirant"'+(p.role==='aspirant'?' selected':'')+'>Aspirant — suit la formation</option>'
@@ -4341,6 +4349,7 @@ function ouvrirFicheCompte(id, roleActuel) {
           +'<option value="admin"'+(p.role==='admin'?' selected':'')+'>Admin — Gâcheur (crée les contenus)</option>'
         +'</select>'
         +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.5">Un Admin peut créer les cours, les exercices et les examens. La personne devra se reconnecter pour voir son nouvel espace.</div>'
+        +'</div>'
         +'<div id="fc-zone-valides" style="margin-top:1rem;'+((p.role==='aspirant'||p.role==='apprenti')?'':'display:none')+'">'
           +'<label class="field-label">Modules déjà validés</label>'
           +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px" id="fc-modules-valides">'
@@ -4446,11 +4455,17 @@ function voirCarnetDe(id){
 let _carnetAspirant=null
 
 async function changerRoleCompte(id) {
-  if(!estAdminSuperviseur()){toast('Action réservée aux superviseurs','err');return}
-  const sel=document.getElementById('fc-role');if(!sel) return
-  const nouveauRole=sel.value
+  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}
+  const sel=document.getElementById('fc-role')
   const modSel=document.getElementById('fc-module')
-  const p=_tousComptes.find(x=>x.id===id)
+  let p=_tousComptes.find(x=>x.id===id)
+  if(!p){
+    const {data}=await db.from('profils').select('*').eq('id',id).single()
+    p=data||{}
+  }
+  // Le changement de role reste reserve aux superviseurs
+  const peutRole=estAdminSuperviseur()
+  const nouveauRole=(sel&&peutRole)?sel.value:(p.role||'aspirant')
   const btn=document.getElementById('fc-btn')
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'}
   const maj={role:nouveauRole}
