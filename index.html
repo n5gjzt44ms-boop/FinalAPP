@@ -501,17 +501,37 @@ button,input,select,textarea{font-family:var(--ff)}
       </div>
       <div class="field" id="f-choix-jeune">
         <label>Tu es</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
-          <label id="lbl-aspirant" style="display:block;padding:12px;border:1.5px solid var(--r);border-radius:14px;cursor:pointer;text-align:center;background:var(--rl)">
+        <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:4px">
+          <label id="lbl-aspirant" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--r);border-radius:14px;cursor:pointer;background:var(--rl)">
             <input type="radio" name="type-jeune" value="aspirant" checked onchange="majChoixJeune()" style="display:none"/>
-            <div style="font-size:.9rem;font-weight:700">Aspirant</div>
-            <div style="font-size:.68rem;color:var(--t3);margin-top:3px;line-height:1.4">Je suis la formation et je passe les examens</div>
+            <i class="ti ti-school" style="font-size:1.15rem;color:var(--r);flex-shrink:0"></i>
+            <div><div style="font-size:.9rem;font-weight:700">Aspirant</div>
+            <div style="font-size:.68rem;color:var(--t3);margin-top:2px;line-height:1.4">Je suis la formation et je passe les examens</div></div>
           </label>
-          <label id="lbl-apprenti" style="display:block;padding:12px;border:1.5px solid var(--bord2);border-radius:14px;cursor:pointer;text-align:center">
+          <label id="lbl-apprenti" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--bord2);border-radius:14px;cursor:pointer">
             <input type="radio" name="type-jeune" value="apprenti" onchange="majChoixJeune()" style="display:none"/>
-            <div style="font-size:.9rem;font-weight:700">Apprenti</div>
-            <div style="font-size:.68rem;color:var(--t3);margin-top:3px;line-height:1.4">Je consulte les cours et m'entraîne librement</div>
+            <i class="ti ti-tool" style="font-size:1.15rem;color:var(--t3);flex-shrink:0"></i>
+            <div><div style="font-size:.9rem;font-weight:700">Apprenti</div>
+            <div style="font-size:.68rem;color:var(--t3);margin-top:2px;line-height:1.4">Je consulte les cours et m'entraîne librement</div></div>
           </label>
+          <label id="lbl-compagnon" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--bord2);border-radius:14px;cursor:pointer">
+            <input type="radio" name="type-jeune" value="compagnon" onchange="majChoixJeune()" style="display:none"/>
+            <i class="ti ti-route" style="font-size:1.15rem;color:var(--t3);flex-shrink:0"></i>
+            <div><div style="font-size:.9rem;font-weight:700">Compagnon</div>
+            <div style="font-size:.68rem;color:var(--t3);margin-top:2px;line-height:1.4">Itinérant ou sédentaire — je suis les jeunes et propose des mini-stages</div></div>
+          </label>
+        </div>
+        <div id="f-type-compagnon" style="display:none;margin-top:10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <label id="lbl-itinerant" style="display:block;padding:10px;border:1.5px solid var(--r);border-radius:12px;cursor:pointer;text-align:center;background:var(--rl)">
+              <input type="radio" name="type-comp" value="compagnon" checked onchange="majTypeCompagnon()" style="display:none"/>
+              <div style="font-size:.82rem;font-weight:700">Itinérant</div>
+            </label>
+            <label id="lbl-sedentaire" style="display:block;padding:10px;border:1.5px solid var(--bord2);border-radius:12px;cursor:pointer;text-align:center">
+              <input type="radio" name="type-comp" value="ancien" onchange="majTypeCompagnon()" style="display:none"/>
+              <div style="font-size:.82rem;font-weight:700">Sédentaire</div>
+            </label>
+          </div>
         </div>
         <div style="font-size:.7rem;color:var(--t3);margin-top:8px;line-height:1.5" id="txt-choix-jeune">En tant qu'aspirant, tu choisiras ton module juste après.</div>
       </div>
@@ -1139,13 +1159,71 @@ async function login() {
   await initApp()
 }
 
+// ─── REINITIALISATION DU MOT DE PASSE ──────────────────────────────────────
+// Detecte le retour depuis le lien recu par mail et propose la saisie.
+function afficherNouveauMotDePasse(){
+  const modal=document.createElement('div');modal.id='modal-mdp'
+  modal.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.innerHTML='<div style="background:var(--card);border-radius:24px;width:100%;max-width:400px;padding:1.8rem 1.6rem">'
+    +'<div style="text-align:center;margin-bottom:1.3rem">'
+      +'<div style="width:52px;height:52px;border-radius:16px;background:var(--rl);display:flex;align-items:center;justify-content:center;margin:0 auto .9rem"><i class="ti ti-lock-open" style="color:var(--r);font-size:1.4rem"></i></div>'
+      +'<div style="font-family:var(--fg);font-size:1.15rem;font-weight:700;letter-spacing:-.02em">Nouveau mot de passe</div>'
+      +'<p style="font-size:.8rem;color:var(--t2);margin-top:6px;line-height:1.5">Choisis un mot de passe d au moins 6 caracteres.</p>'
+    +'</div>'
+    +'<div id="mdp-msg"></div>'
+    +'<label class="field-label">Nouveau mot de passe</label>'
+    +'<input class="finput" id="mdp-1" type="password" placeholder="••••••••" style="margin-top:4px;margin-bottom:.8rem" onkeydown="if(event.key===\'Enter\')document.getElementById(\'mdp-2\').focus()"/>'
+    +'<label class="field-label">Confirmer</label>'
+    +'<input class="finput" id="mdp-2" type="password" placeholder="••••••••" style="margin-top:4px" onkeydown="if(event.key===\'Enter\')enregistrerNouveauMdp()"/>'
+    +'<button class="btn btn-r btn-full" style="margin-top:1.2rem" id="mdp-btn" onclick="enregistrerNouveauMdp()"><i class="ti ti-check"></i> Enregistrer</button>'
+  +'</div>'
+  document.body.appendChild(modal)
+  setTimeout(function(){const i=document.getElementById('mdp-1');if(i)i.focus()},150)
+}
+
+async function enregistrerNouveauMdp(){
+  const a=(document.getElementById('mdp-1')||{}).value||''
+  const b=(document.getElementById('mdp-2')||{}).value||''
+  const msg=document.getElementById('mdp-msg')
+  function err(t){if(msg)msg.innerHTML='<div class="alert alert-err" style="margin-bottom:.9rem">'+t+'</div>'}
+  if(a.length<6){err('6 caracteres minimum');return}
+  if(a!==b){err('Les deux mots de passe ne correspondent pas');return}
+  const btn=document.getElementById('mdp-btn')
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement...'}
+  const {error}=await db.auth.updateUser({password:a})
+  if(error){
+    err('Erreur : '+error.message)
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Enregistrer'}
+    return
+  }
+  if(msg) msg.innerHTML='<div class="alert alert-ok" style="margin-bottom:.9rem">Mot de passe modifie. Connexion en cours...</div>'
+  // Nettoyer l'adresse pour ne pas rouvrir cet ecran au rechargement
+  try{history.replaceState({},'',window.location.pathname)}catch(e){}
+  setTimeout(function(){
+    document.getElementById('modal-mdp')?.remove()
+    initApp()
+  },1200)
+}
+
+let _mdpEnvoiEnCours=false
 async function motDePasseOublie() {
-  const email=$('l-email').value.trim()
+  if(_mdpEnvoiEnCours) return
+  const email=($('l-email').value||'').trim()
   if(!email){msgLogin('Saisis d\'abord ton adresse e-mail ci-dessus, puis reclique sur ce lien.');return}
   if(!domaineValide(email)){msgLogin('Adresse e-mail invalide.');return}
-  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]})
-  if(error){msgLogin('Erreur : '+error.message);return}
-  msgLogin('Un lien de réinitialisation vient d\'être envoyé à '+email+'. Pense à regarder dans les indésirables.','ok')
+  _mdpEnvoiEnCours=true
+  msgLogin('Envoi en cours...','ok')
+  // Adresse de retour : sans fragment ni parametre, pour un lien propre
+  const retour=window.location.origin+window.location.pathname
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:retour})
+  _mdpEnvoiEnCours=false
+  if(error){
+    let m=error.message||''
+    if(/rate|limit|seconds/i.test(m)) m='Trop de demandes. Patiente une minute avant de réessayer.'
+    msgLogin('Erreur : '+m)
+    return
+  }
+  msgLogin('Un lien vient d\'être envoyé à '+email+'. Ouvre-le depuis ce même appareil. Pense à regarder dans les indésirables.','ok')
 }
 
 async function register() {
@@ -1156,7 +1234,14 @@ async function register() {
   const zoneJeune=document.getElementById('f-choix-jeune')
   if(zoneJeune&&!zoneJeune.classList.contains('hidden')){
     const rj=document.querySelector('input[name="type-jeune"]:checked')
-    if(rj) role=rj.value
+    if(rj){
+      role=rj.value
+      // Compagnon : itinerant (compagnon) ou sedentaire (ancien)
+      if(role==='compagnon'){
+        const rc=document.querySelector('input[name="type-comp"]:checked')
+        role=rc?rc.value:'compagnon'
+      }
+    }
   }
   if(!domaineValide(email)){msgLogin('Adresse e-mail invalide.');return}
   if(pwd.length<8){msgLogin('Mot de passe : 8 caractères minimum.');return}
@@ -4649,17 +4734,36 @@ function majChoixMetier(){
     : 'Tu auras accès aux cours et aux ressources. Les modules et examens sont réservés aux mécaniciens.'
 }
 
-function majChoixJeune(){
-  const v=(document.querySelector('input[name="type-jeune"]:checked')||{}).value||'aspirant'
-  const la=document.getElementById('lbl-aspirant'),lp=document.getElementById('lbl-apprenti')
-  if(la){la.style.borderColor=v==='aspirant'?'var(--r)':'var(--bord2)';la.style.background=v==='aspirant'?'var(--rl)':''}
-  if(lp){lp.style.borderColor=v==='apprenti'?'var(--r)':'var(--bord2)';lp.style.background=v==='apprenti'?'var(--rl)':''}
-  const t=document.getElementById('txt-choix-jeune')
-  if(t) t.textContent=v==='aspirant'
-    ? "En tant qu'aspirant, tu choisiras ton module juste après."
-    : "En tant qu'apprenti, tu accèdes directement aux cours et aux exercices. Tu pourras t'inscrire à un module plus tard si tu le souhaites."
+function majTypeCompagnon(){
+  const v=(document.querySelector('input[name="type-comp"]:checked')||{}).value||'compagnon'
+  const li=document.getElementById('lbl-itinerant'),ls=document.getElementById('lbl-sedentaire')
+  if(li){li.style.borderColor=v==='compagnon'?'var(--r)':'var(--bord2)';li.style.background=v==='compagnon'?'var(--rl)':''}
+  if(ls){ls.style.borderColor=v==='ancien'?'var(--r)':'var(--bord2)';ls.style.background=v==='ancien'?'var(--rl)':''}
   const sel=document.getElementById('r-role')
   if(sel) sel.value=v
+}
+
+function majChoixJeune(){
+  const v=(document.querySelector('input[name="type-jeune"]:checked')||{}).value||'aspirant'
+  ;[['lbl-aspirant','aspirant'],['lbl-apprenti','apprenti'],['lbl-compagnon','compagnon']].forEach(function(p){
+    const el=document.getElementById(p[0]);if(!el) return
+    const actif=v===p[1]
+    el.style.borderColor=actif?'var(--r)':'var(--bord2)'
+    el.style.background=actif?'var(--rl)':''
+    const ic=el.querySelector('i');if(ic) ic.style.color=actif?'var(--r)':'var(--t3)'
+  })
+  const t=document.getElementById('txt-choix-jeune')
+  if(t) t.textContent=
+    v==='aspirant' ? "En tant qu'aspirant, tu choisiras ton module juste après."
+    : v==='apprenti' ? "En tant qu'apprenti, tu accèdes directement aux cours et aux exercices. Tu pourras t'inscrire à un module plus tard si tu le souhaites."
+    : "En tant que Compagnon, tu auras accès au suivi des jeunes, aux ressources, et tu pourras proposer des mini-stages."
+  // Le metier ne concerne que ceux qui suivent la formation
+  const fm=document.getElementById('f-metier')
+  if(fm) fm.style.display=(v==='compagnon')?'none':''
+  const fc=document.getElementById('f-type-compagnon')
+  if(fc) fc.style.display=(v==='compagnon')?'':'none'
+  const sel=document.getElementById('r-role')
+  if(sel) sel.value=(v==='compagnon')?((document.querySelector('input[name="type-comp"]:checked')||{}).value||'compagnon'):v
 }
 
 function detectUrlParams(){
@@ -4677,11 +4781,35 @@ function detectUrlParams(){
   }
 }
 
+// Detecter un retour depuis le lien de reinitialisation recu par mail.
+// Supabase place les informations soit dans le fragment (#...), soit
+// dans la requete (?code=...) selon la configuration du projet.
+function estRetourMotDePasse(){
+  const h=(window.location.hash||'').toLowerCase()
+  const q=(window.location.search||'').toLowerCase()
+  if(h.indexOf('type=recovery')>=0) return true
+  if(q.indexOf('type=recovery')>=0) return true
+  return false
+}
+
 window.addEventListener('load',async()=>{
+  // Le changement de mot de passe passe avant tout le reste
+  if(estRetourMotDePasse()){
+    try{await db.auth.getSession()}catch(e){}
+    afficherNouveauMotDePasse()
+    return
+  }
   detectUrlParams()
-  // params détectés via detectUrlParams()
   const {data:{session}}=await db.auth.getSession()
   if(session) await initApp()
+})
+
+// Supabase signale aussi l'evenement au moment ou la session de
+// recuperation est etablie : filet de securite si l'adresse est nettoyee.
+db.auth.onAuthStateChange(function(event){
+  if(event==='PASSWORD_RECOVERY'&&!document.getElementById('modal-mdp')){
+    afficherNouveauMotDePasse()
+  }
 })
 
 // ─── GUIDE UTILISATEUR ────────────────────────────────────────────────────────
