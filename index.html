@@ -2783,6 +2783,7 @@ async function loadQuizAdmin() {
     </div>
     <button class="btn btn-ghost btn-sm" onclick="togglePubQuiz('${x.id}',${x.actif})" title="${x.actif?'Rendre privé':'Publier pour tous'}" style="color:${x.actif?'#A08CFF':'var(--v)'};font-size:.68rem;font-weight:700;white-space:nowrap">${x.actif?'Rendre privé':'Publier'}</button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="previsualiserQuiz('${x.id}')" title="Relire les questions et les réponses"><i class="ti ti-eye"></i></button>
+    <button class="btn btn-ghost btn-sm btn-icon" onclick="ouvrirCorrige('${x.id}')" title="${x.corrige_path?'Corrigé attaché':'Ajouter un corrigé'}" style="color:${x.corrige_path?'var(--v)':'var(--t3)'}"><i class="ti ti-file-check"></i></button>
     ${_modeArchives
       ? `<button class="btn btn-ghost btn-sm" onclick="dupliquerQuiz('${x.id}')" title="Créer une copie pour une nouvelle session" style="color:var(--v);font-size:.68rem;font-weight:700">Réutiliser</button>
          <button class="btn btn-ghost btn-sm btn-icon" onclick="archiverQuiz('${x.id}',false)" title="Sortir des archives"><i class="ti ti-archive-off"></i></button>`
@@ -2791,6 +2792,96 @@ async function loadQuizAdmin() {
     <button class="btn btn-ghost btn-sm btn-icon" onclick="dupliquerQuiz('${x.id}')"><i class="ti ti-copy"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="delQuiz('${x.id}')"><i class="ti ti-trash"></i></button>
   </div>`).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz pour ce module.</p>'
+}
+
+// ─── CORRIGE DE REFERENCE (trace pour les futurs gacheurs) ─────────────────
+async function ouvrirCorrige(quizId){
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  const {data:qz}=await db.from('quiz').select('id,titre,corrige_path,corrige_nom').eq('id',quizId).single()
+  if(!qz){toast('Quiz introuvable','err');return}
+  const modal=document.createElement('div');modal.id='modal-corrige'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.onclick=function(e){if(e.target===modal)modal.remove()}
+  const aUn=!!qz.corrige_path
+  modal.innerHTML='<div style="background:var(--card);border-radius:20px;width:100%;max-width:440px;overflow:hidden">'
+    +'<div style="background:var(--dark);padding:1.1rem 1.3rem;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'
+      +'<div style="min-width:0"><div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">Corrigé de référence</div>'
+      +'<div style="font-size:.72rem;color:#888;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+echapAttr(qz.titre)+'</div></div>'
+      +'<button onclick="document.getElementById(\'modal-corrige\').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem;flex-shrink:0"><i class="ti ti-x"></i></button>'
+    +'</div>'
+    +'<div style="padding:1.3rem">'
+      +'<div style="font-size:.78rem;color:var(--t2);line-height:1.55;margin-bottom:1.1rem">Document de correction détaillée — visible des gâcheurs uniquement. Il reste attaché à l\'examen, y compris une fois archivé, pour les formateurs des années suivantes.</div>'
+      +(aUn
+        ? '<div style="display:flex;align-items:center;gap:10px;background:var(--vl);border-radius:14px;padding:12px 14px;margin-bottom:1rem">'
+          +'<i class="ti ti-file-check" style="color:var(--v);font-size:1.2rem;flex-shrink:0"></i>'
+          +'<div style="flex:1;min-width:0;font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+echapAttr(qz.corrige_nom||'Corrigé')+'</div>'
+          +'</div>'
+          +'<button class="btn btn-dark btn-full" style="margin-bottom:.6rem" onclick="telechargerCorrige(\''+quizId+'\')"><i class="ti ti-download"></i> Ouvrir le corrigé</button>'
+          +'<button class="btn btn-ghost btn-full" style="color:var(--r)" onclick="supprimerCorrige(\''+quizId+'\')">Supprimer ce corrigé</button>'
+        : '<div style="font-size:.8rem;color:var(--t3);text-align:center;padding:1rem 0">Aucun corrigé attaché</div>')
+      +'<div style="border-top:1px solid var(--bord);margin-top:1.1rem;padding-top:1.1rem">'
+        +'<label class="field-label">'+(aUn?'Remplacer par un autre fichier':'Ajouter un corrigé')+'</label>'
+        +'<input type="file" id="corrige-fichier" accept=".pdf,.doc,.docx,.odt,.txt,.jpg,.jpeg,.png" style="width:100%;font-size:.8rem;margin-top:6px"/>'
+        +'<div style="font-size:.7rem;color:var(--t3);margin-top:6px">PDF, Word, image — 20 Mo maximum</div>'
+        +'<button class="btn btn-r btn-full" style="margin-top:.9rem" id="corrige-btn" onclick="envoyerCorrige(\''+quizId+'\')"><i class="ti ti-upload"></i> Enregistrer</button>'
+      +'</div>'
+    +'</div>'
+  +'</div>'
+  document.body.appendChild(modal)
+}
+
+async function envoyerCorrige(quizId){
+  const inp=document.getElementById('corrige-fichier')
+  const f=inp&&inp.files&&inp.files[0]
+  if(!f){toast('Choisis un fichier','err');return}
+  if(f.size>20*1024*1024){toast('Fichier trop lourd (20 Mo maximum)','err');return}
+  const btn=document.getElementById('corrige-btn')
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Envoi...'}
+  const nomPropre=f.name.replace(/[^a-zA-Z0-9._-]/g,'-')
+  const path='corriges/'+quizId+'/'+Date.now()+'_'+nomPropre
+  const {error}=await db.storage.from('ressources').upload(path,f)
+  if(error){
+    toast('Erreur : '+error.message,'err')
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-upload"></i> Enregistrer'}
+    return
+  }
+  const {error:e2}=await db.from('quiz').update({corrige_path:path,corrige_nom:f.name}).eq('id',quizId)
+  if(e2){
+    let m=e2.message||''
+    if(/corrige_path|column/i.test(m)) m='Les colonnes du corrigé n existent pas encore. Execute le SQL corriges.sql dans Supabase.'
+    toast('Erreur : '+m,'err')
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-upload"></i> Enregistrer'}
+    return
+  }
+  toast('Corrigé enregistré','ok')
+  document.getElementById('modal-corrige')?.remove()
+  loadQuizAdmin()
+}
+
+async function telechargerCorrige(quizId){
+  let onglet=null
+  try{onglet=window.open('','_blank')}catch(e){onglet=null}
+  const {data:qz}=await db.from('quiz').select('corrige_path').eq('id',quizId).single()
+  let cible=null
+  if(qz&&qz.corrige_path){
+    try{
+      const {data}=await db.storage.from('ressources').createSignedUrl(qz.corrige_path,3600)
+      if(data&&data.signedUrl) cible=data.signedUrl
+    }catch(e){}
+  }
+  if(!cible){if(onglet){try{onglet.close()}catch(e){}}toast('Corrigé introuvable','err');return}
+  if(onglet&&!onglet.closed){try{onglet.location.href=cible;return}catch(e){}}
+  window.location.href=cible
+}
+
+async function supprimerCorrige(quizId){
+  if(!confirm('Supprimer le corrigé attaché à cet examen ?')) return
+  const {data:qz}=await db.from('quiz').select('corrige_path').eq('id',quizId).single()
+  if(qz&&qz.corrige_path){try{await db.storage.from('ressources').remove([qz.corrige_path])}catch(e){}}
+  await db.from('quiz').update({corrige_path:null,corrige_nom:null}).eq('id',quizId)
+  toast('Corrigé supprimé','ok')
+  document.getElementById('modal-corrige')?.remove()
+  loadQuizAdmin()
 }
 
 async function previsualiserQuiz(id){
@@ -2849,6 +2940,7 @@ async function previsualiserQuiz(id){
     +'</div>'
     +'<div style="padding:0 1.3rem;overflow-y:auto;flex:1">'+(questions.length?corps:'<p style="padding:2rem 0;text-align:center;color:var(--t3);font-size:.85rem">Aucune question dans ce quiz.</p>')+'</div>'
     +'<div style="padding:.9rem 1.3rem;border-top:1px solid var(--bord);display:flex;gap:8px">'
+      +'<button class="btn btn-ghost btn-sm" style="flex:1" onclick="document.getElementById(\'modal-previsu\').remove();ouvrirCorrige(\''+id+'\')"><i class="ti ti-file-check"></i> Corrigé</button>'
       +'<button class="btn btn-ghost btn-sm" style="flex:1" onclick="document.getElementById(\'modal-previsu\').remove();editerQuiz(\''+id+'\')"><i class="ti ti-pencil"></i> Modifier</button>'
       +'<button class="btn btn-r btn-sm" style="flex:1" onclick="document.getElementById(\'modal-previsu\').remove();commencer(\''+id+'\')"><i class="ti ti-player-play"></i> Passer en conditions réelles</button>'
     +'</div>'
@@ -2904,6 +2996,8 @@ async function dupliquerQuiz(id){
     mode_examen:qz.mode_examen,
     actif:false,      // la copie repart en prive
     archive:false,
+    corrige_path:qz.corrige_path||null,   // le corrige suit la copie
+    corrige_nom:qz.corrige_nom||null,
     date_debut:null,date_fin:null,   // creneau a redefinir
     created_by:user.id
   }).select().single()
