@@ -1386,6 +1386,87 @@ async function urlImage(val){
 }
 // Place l'image dans un element <img> des que son lien est pret
 // Branche toutes les images marquees data-img presentes dans la page
+// ─── ANNOTATION D'IMAGE (flèches, repères sur un schéma) ───────────────────
+// Permet a l'aspirant de dessiner sur la photo de la question.
+let _annot={canvas:null,ctx:null,dessine:false,vide:true,fond:null}
+
+async function preparerAnnotation(questionId,valImage){
+  const zone=document.getElementById('zone-annot')
+  if(!zone) return
+  const u=await urlImage(valImage)
+  if(!u){zone.style.display='none';return}
+  zone.style.display=''
+  zone.innerHTML='<div style="font-size:.74rem;color:var(--t2);margin-bottom:6px;display:flex;align-items:center;gap:6px">'
+    +'<i class="ti ti-pencil" style="color:var(--r)"></i> Dessine directement sur la photo (doigt ou souris)</div>'
+    +'<div id="annot-boite" style="position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--bord);background:#fff;touch-action:none">'
+    +'<img id="annot-fond" style="width:100%;display:block"/>'
+    +'<canvas id="annot-canvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair"></canvas>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'
+      +'<button type="button" class="btn btn-ghost btn-sm" onclick="effacerAnnotation()"><i class="ti ti-eraser"></i> Effacer</button>'
+      +'<span style="font-size:.72rem;color:var(--t3);align-self:center" id="annot-etat"></span>'
+    +'</div>'
+
+  const img=document.getElementById('annot-fond')
+  const cv=document.getElementById('annot-canvas')
+  img.onload=function(){
+    cv.width=img.naturalWidth
+    cv.height=img.naturalHeight
+    const ctx=cv.getContext('2d')
+    ctx.strokeStyle='#E24B4A'
+    ctx.lineWidth=Math.max(3,Math.round(img.naturalWidth/180))
+    ctx.lineCap='round';ctx.lineJoin='round'
+    _annot={canvas:cv,ctx:ctx,dessine:false,vide:true,fond:img}
+  }
+  img.src=u
+
+  function pos(e){
+    const r=cv.getBoundingClientRect()
+    const x=(e.clientX-r.left)*(cv.width/r.width)
+    const y=(e.clientY-r.top)*(cv.height/r.height)
+    return {x:x,y:y}
+  }
+  cv.addEventListener('pointerdown',function(e){
+    if(!_annot.ctx) return
+    cv.setPointerCapture(e.pointerId)
+    _annot.dessine=true;_annot.vide=false
+    const p=pos(e);_annot.ctx.beginPath();_annot.ctx.moveTo(p.x,p.y)
+    const et=document.getElementById('annot-etat');if(et)et.textContent='Annotation en cours'
+  })
+  cv.addEventListener('pointermove',function(e){
+    if(!_annot.dessine||!_annot.ctx) return
+    e.preventDefault()
+    const p=pos(e);_annot.ctx.lineTo(p.x,p.y);_annot.ctx.stroke()
+  })
+  cv.addEventListener('pointerup',function(){_annot.dessine=false})
+  cv.addEventListener('pointerleave',function(){_annot.dessine=false})
+}
+
+function effacerAnnotation(){
+  if(!_annot.ctx) return
+  _annot.ctx.clearRect(0,0,_annot.canvas.width,_annot.canvas.height)
+  _annot.vide=true
+  const et=document.getElementById('annot-etat');if(et)et.textContent=''
+}
+
+// Fusionne la photo et le dessin en une seule image, puis l'envoie
+async function enregistrerAnnotation(questionId){
+  if(!_annot.ctx||_annot.vide) return null
+  try{
+    const f=document.createElement('canvas')
+    f.width=_annot.canvas.width;f.height=_annot.canvas.height
+    const fx=f.getContext('2d')
+    fx.drawImage(_annot.fond,0,0,f.width,f.height)
+    fx.drawImage(_annot.canvas,0,0)
+    const blob=await new Promise(function(r){f.toBlob(r,'image/jpeg',0.85)})
+    if(!blob) return null
+    const chemin='annotations/'+G.profil.id+'/'+questionId+'_'+Date.now()+'.jpg'
+    const up=await db.storage.from('ressources').upload(chemin,blob,{contentType:'image/jpeg'})
+    if(up.error) return null
+    return chemin
+  }catch(e){return null}
+}
+
 async function brancherImagesMarquees(){
   const els=document.querySelectorAll('img[data-img]:not([data-fait])')
   for(const el of els){
@@ -2149,9 +2230,16 @@ function showQ() {
   const imgWrap=$('q-image-wrap')
   if(imgWrap){if(q.image_url){imgWrap.style.display='';imgWrap.innerHTML=`<img id="img-q-live" style="width:100%;max-height:240px;object-fit:contain;border-radius:12px;border:1px solid var(--bord)"/>`}else{imgWrap.style.display='none';imgWrap.innerHTML=''}}
   if(imgWrap&&q.image_url){const el=document.getElementById("img-q-live");if(el)brancherImage(el,q.image_url)}
+  // Question ouverte avec image : proposer d'annoter directement la photo
+  _annot={canvas:null,ctx:null,dessine:false,vide:true,fond:null}
+  if((q.type_question||'qcm')==='libre'&&q.image_url){
+    if(imgWrap) imgWrap.style.display='none'   // la photo est reprise dans la zone d'annotation
+    setTimeout(function(){preparerAnnotation(q.id,q.image_url)},30)
+  }
   const typeQ=q.type_question||'qcm'
   if(typeQ==='libre'){
-    $('q-opts').innerHTML=`<textarea id="rep-libre" class="ftextarea" rows="4" placeholder="Rédigez votre réponse ici..." style="width:100%;margin-bottom:.8rem"></textarea>
+    $('q-opts').innerHTML=`<div id="zone-annot" style="display:none;margin-bottom:.9rem"></div>
+      <textarea id="rep-libre" class="ftextarea" rows="4" placeholder="Rédigez votre réponse ici..." style="width:100%;margin-bottom:.8rem"></textarea>
       <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px dashed var(--bord2);border-radius:10px;cursor:pointer;font-size:.78rem;color:var(--t2);background:var(--bg)">
         <i class="ti ti-paperclip" style="font-size:1rem;color:var(--r)"></i> Joindre un fichier (optionnel)
         <input type="file" id="fichier-libre" accept="image/*,.pdf,.doc,.docx,.sldprt,.dwg" style="display:none" onchange="uploaderFichierLibre(this)"/>
@@ -2202,8 +2290,17 @@ function choisir(i) {
 async function valider() {
   const typeQ=G.questions[G.etape].type_question||'qcm'
   if(typeQ==='libre'){
+    const qid=G.questions[G.etape].id
     const rep=document.getElementById('rep-libre')?.value?.trim()||''
-    G.reponses[G.questions[G.etape].id]=rep;G.confirme=true;hi('btn-valider')
+    // Enregistrer l'annotation dessinee sur la photo, si elle existe
+    if(_annot.ctx&&!_annot.vide){
+      const btn=document.getElementById('btn-valider')
+      if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement du schéma...'}
+      const chemin=await enregistrerAnnotation(qid)
+      if(chemin) G.fichiersLibres[qid]={nom:'Schéma annoté',path:chemin,annotation:true}
+      if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Valider'}
+    }
+    G.reponses[qid]=rep;G.confirme=true;hi('btn-valider')
     G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
   }
   if(typeQ==='multi'){
@@ -3109,7 +3206,9 @@ async function ouvrirCorrectionAdmin(tentId) {
         ${q.image_url?`<img data-img="${q.image_url}" style="width:100%;max-height:120px;object-fit:contain;border-radius:10px;margin-bottom:6px;border:1px solid var(--bord)"/>`:''  }
         <p style="font-size:.82rem;font-weight:600;margin-bottom:.5rem">${q.enonce}</p>
         ${isLibre?`<div style="background:var(--bl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--b)"><strong>Réponse :</strong><br>${rep||'<em>Aucune réponse</em>'}</div>
-          ${tent.fichiers_libres?.[q.id]?`<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--vl);border-radius:8px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)"><i class="ti ti-paperclip"></i> ${tent.fichiers_libres[q.id].nom}<button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${tent.fichiers_libres[q.id].path||''}')"><i class="ti ti-download"></i></button></div>`:''}
+          ${tent.fichiers_libres?.[q.id]?(tent.fichiers_libres[q.id].annotation
+            ? `<div style="margin-bottom:.5rem"><div style="font-size:.72rem;color:var(--v);font-weight:600;margin-bottom:4px"><i class="ti ti-pencil"></i> Schéma annoté par l'aspirant</div><img data-img="${tent.fichiers_libres[q.id].path||''}" style="width:100%;border-radius:10px;border:1px solid var(--bord)"/></div>`
+            : `<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--vl);border-radius:8px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)"><i class="ti ti-paperclip"></i> ${tent.fichiers_libres[q.id].nom}<button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${tent.fichiers_libres[q.id].path||''}')"><i class="ti ti-download"></i></button></div>`):''}
           ${q.reponse_type?`<div style="background:var(--vl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--v)"><strong>Attendu :</strong><br>${q.reponse_type}</div>`:''}
           <div style="display:flex;align-items:center;gap:8px"><label style="font-size:.78rem;color:var(--t2);white-space:nowrap;font-weight:600">Points :</label>
           <input type="number" min="0" max="${q.points}" step="0.5" value="${noteExist}" style="width:70px;padding:6px 8px;border:1.5px solid var(--bord2);border-radius:8px;font-size:.9rem;text-align:center;font-family:var(--fg);font-weight:700" onchange="majNoteCorr('${q.id}',parseFloat(this.value)||0)"/>
