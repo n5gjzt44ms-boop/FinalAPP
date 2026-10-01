@@ -5020,6 +5020,55 @@ async function editerQuiz(quizId) {
     ta.id='eq-e-'+i; ta.value=q.enonce||''
     ta.style.cssText='width:100%;padding:8px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.82rem;resize:vertical;min-height:52px;font-family:var(--ff);margin-bottom:.5rem'
     div.appendChild(ta)
+
+    // ── Image de la question (schema, photo de piece...) ──
+    const zoneImg=document.createElement('div')
+    zoneImg.id='eq-img-zone-'+i
+    zoneImg.style.cssText='margin-bottom:.6rem'
+    function rendreImage(){
+      const url=questions[i].image_url
+      zoneImg.innerHTML=''
+      if(url){
+        const img=document.createElement('img')
+        img.src=url
+        img.style.cssText='max-width:100%;max-height:150px;border-radius:10px;border:1px solid var(--bord);display:block;margin-bottom:6px'
+        const sup=document.createElement('button')
+        sup.className='btn btn-ghost btn-sm'
+        sup.style.cssText='color:var(--r);font-size:.72rem'
+        sup.textContent='Retirer l image'
+        sup.onclick=function(){questions[i].image_url=null;rendreImage()}
+        zoneImg.appendChild(img);zoneImg.appendChild(sup)
+      } else {
+        const lab=document.createElement('label')
+        lab.style.cssText='display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px dashed var(--bord2);border-radius:10px;cursor:pointer;font-size:.76rem;color:var(--t3)'
+        lab.innerHTML='<i class="ti ti-photo-plus" style="font-size:1rem"></i> Ajouter une image a cette question'
+        const inp=document.createElement('input')
+        inp.type='file';inp.accept='image/*';inp.style.display='none'
+        inp.onchange=async function(){
+          const f=inp.files&&inp.files[0];if(!f) return
+          if(f.size>5*1024*1024){toast('Image trop lourde (5 Mo maximum)','err');return}
+          lab.innerHTML='<i class="ti ti-loader spin"></i> Envoi en cours...'
+          const nom=f.name.replace(/[^a-zA-Z0-9._-]/g,'-')
+          const chemin='questions/'+quizId+'/'+Date.now()+'_'+nom
+          const up=await db.storage.from('ressources').upload(chemin,f)
+          if(up.error){toast('Erreur : '+up.error.message,'err');rendreImage();return}
+          const pub=db.storage.from('ressources').getPublicUrl(chemin)
+          let url=pub&&pub.data&&pub.data.publicUrl
+          if(!url){
+            const sg=await db.storage.from('ressources').createSignedUrl(chemin,60*60*24*365*5)
+            url=sg&&sg.data&&sg.data.signedUrl
+          }
+          if(!url){toast('Lien de l image introuvable','err');rendreImage();return}
+          questions[i].image_url=url
+          rendreImage()
+          toast('Image ajoutee','ok')
+        }
+        lab.appendChild(inp)
+        zoneImg.appendChild(lab)
+      }
+    }
+    rendreImage()
+    div.appendChild(zoneImg)
     if(!isLibre){
       const lbl=document.createElement('div'); lbl.style.cssText='font-size:.68rem;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px'
       lbl.textContent='Options (cochez la/les bonne(s) réponse(s))'; div.appendChild(lbl)
@@ -5134,10 +5183,21 @@ async function editerQuiz(quizId) {
         bonnes=[0,1,2,3].filter(function(j){return document.getElementById('eq-cb-'+i+'-'+j)&&document.getElementById('eq-cb-'+i+'-'+j).checked})
         if(!bonnes.length)bonnes=[0]
       }
-      return{quiz_id:qzId,enonce:enonce,type_question:type,options:opts,bonne_reponse:bonnes[0]||0,bonnes_reponses:bonnes,reponse_type:expl||null,points:pts,ordre:i}
+      const o={quiz_id:qzId,enonce:enonce,type_question:type,options:opts,bonne_reponse:bonnes[0]||0,bonnes_reponses:bonnes,reponse_type:expl||null,points:pts,ordre:i}
+      // Conserver l'image de la question (sinon elle serait perdue a chaque enregistrement)
+      if(q.image_url) o.image_url=q.image_url
+      return o
     })
     await db.from('questions').delete().eq('quiz_id',qzId)
-    const res=await db.from('questions').insert(qsToSave)
+    let res=await db.from('questions').insert(qsToSave)
+    // Repli si une colonne optionnelle manque en base
+    if(res.error&&/image_url|bonnes_reponses|column/i.test(res.error.message||'')){
+      const secours=qsToSave.map(function(l){
+        const x=Object.assign({},l);delete x.image_url;delete x.bonnes_reponses;return x
+      })
+      res=await db.from('questions').insert(secours)
+      if(!res.error) toast('Enregistre, mais les images n ont pas pu etre conservees','err')
+    }
     if(res.error){toast('Erreur : '+res.error.message,'err');btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Enregistrer';return}
     await db.from('quiz').update({total_points:qsToSave.reduce(function(a,q){return a+q.points},0)}).eq('id',qzId)
     document.getElementById('modal-edit-quiz').remove()
