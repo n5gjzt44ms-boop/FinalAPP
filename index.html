@@ -584,6 +584,7 @@ button,input,select,textarea{font-family:var(--ff)}
     <div class="nav-icon hidden" id="n-quiz-admin" data-tip="Gérer les quiz" onclick="nav('quiz-admin')"><i class="ti ti-help-circle"></i></div>
     <div class="nav-icon hidden" id="n-annonces-admin" data-tip="Annonces" onclick="nav('annonces-admin')"><i class="ti ti-speakerphone"></i></div>
     <div class="nav-icon hidden" id="n-inscriptions-admin" data-tip="Inscriptions" onclick="nav('inscriptions-admin')"><i class="ti ti-calendar-event"></i></div>
+    <div class="nav-icon hidden" id="n-corrections" data-tip="Copies à corriger" onclick="nav('corrections')"><i class="ti ti-checkbox"></i><span id="pastille-corr" style="position:absolute;top:2px;right:2px;min-width:16px;height:16px;border-radius:9px;background:var(--r);color:#fff;font-size:.58rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 3px"></span></div>
     <div class="nav-icon hidden" id="n-aspirants" data-tip="Aspirants" onclick="nav('aspirants')"><i class="ti ti-users"></i></div>
     <div class="nav-icon hidden" id="n-comptes-admin" data-tip="Tous les comptes" onclick="nav('comptes-admin')"><i class="ti ti-list-check"></i></div>
     <div class="nav-icon hidden" id="n-anciens-admin" data-tip="Anciens" onclick="nav('anciens-admin')"><i class="ti ti-star"></i></div>
@@ -619,6 +620,22 @@ button,input,select,textarea{font-family:var(--ff)}
       <div id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
       <div id="d-activite"></div>
 
+    </div>
+
+    <!-- CORRECTIONS -->
+    <div class="vue" id="v-corrections">
+      <div style="margin-bottom:1.2rem">
+        <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Copies à corriger</div>
+        <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Toutes les copies en attente, tous modules confondus.</p>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap" id="filtres-corr">
+        <button class="btn btn-dark btn-sm" data-cm="0" onclick="filtrerCorrections(0)">Tous les modules</button>
+        <button class="btn btn-ghost btn-sm" data-cm="1" onclick="filtrerCorrections(1)">Thermique</button>
+        <button class="btn btn-ghost btn-sm" data-cm="2" onclick="filtrerCorrections(2)">Hydraulique</button>
+        <button class="btn btn-ghost btn-sm" data-cm="3" onclick="filtrerCorrections(3)">Conception</button>
+        <button class="btn btn-ghost btn-sm" data-cm="4" onclick="filtrerCorrections(4)">Électrique</button>
+      </div>
+      <div id="corr-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
     </div>
 
     <!-- DASHBOARD ANCIEN -->
@@ -1409,6 +1426,13 @@ async function preparerAnnotation(questionId,valImage){
 
   const img=document.getElementById('annot-fond')
   const cv=document.getElementById('annot-canvas')
+  // Indispensable : sans cela le navigateur interdit d'exporter le dessin
+  // puisque la photo provient d'un autre domaine.
+  img.crossOrigin='anonymous'
+  img.onerror=function(){
+    const et=document.getElementById('annot-etat')
+    if(et){et.style.color='var(--r)';et.textContent='Image indisponible'}
+  }
   img.onload=function(){
     cv.width=img.naturalWidth
     cv.height=img.naturalHeight
@@ -1456,15 +1480,32 @@ async function enregistrerAnnotation(questionId){
     const f=document.createElement('canvas')
     f.width=_annot.canvas.width;f.height=_annot.canvas.height
     const fx=f.getContext('2d')
+    fx.imageSmoothingEnabled=true;fx.imageSmoothingQuality='high'
     fx.drawImage(_annot.fond,0,0,f.width,f.height)
     fx.drawImage(_annot.canvas,0,0)
-    const blob=await new Promise(function(r){f.toBlob(r,'image/jpeg',0.85)})
-    if(!blob) return null
-    const chemin='annotations/'+G.profil.id+'/'+questionId+'_'+Date.now()+'.jpg'
-    const up=await db.storage.from('ressources').upload(chemin,blob,{contentType:'image/jpeg'})
-    if(up.error) return null
+    // PNG : pas de perte, les traits fins restent nets
+    const blob=await new Promise(function(r){f.toBlob(r,'image/png')})
+    if(!blob){toast('Impossible de générer le schéma','err');return null}
+    const chemin='annotations/'+G.profil.id+'/'+questionId+'_'+Date.now()+'.png'
+    const up=await db.storage.from('ressources').upload(chemin,blob,{contentType:'image/png'})
+    if(up.error){toast('Schéma non enregistré : '+up.error.message,'err');return null}
     return chemin
-  }catch(e){return null}
+  }catch(e){
+    // Erreur de securite : la photo n'autorise pas l'export du dessin
+    toast('Schéma non enregistré : '+(e.message||'erreur'),'err')
+    return null
+  }
+}
+
+// Agrandir une image en plein ecran (lecture de details fins)
+function agrandirImage(src){
+  if(!src) return
+  const m=document.createElement('div');m.id='modal-zoom'
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10001;display:flex;align-items:center;justify-content:center;padding:.5rem;overflow:auto'
+  m.onclick=function(){m.remove()}
+  m.innerHTML='<img src="'+src+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px"/>'
+    +'<button style="position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;background:rgba(255,255,255,.18);border:none;color:#fff;width:38px;height:38px;border-radius:50%;font-size:1.1rem;cursor:pointer"><i class="ti ti-x"></i></button>'
+  document.body.appendChild(m)
 }
 
 async function brancherImagesMarquees(){
@@ -1472,7 +1513,12 @@ async function brancherImagesMarquees(){
   for(const el of els){
     el.setAttribute('data-fait','1')
     const u=await urlImage(el.getAttribute('data-img'))
-    if(u) el.src=u; else el.style.display='none'
+    if(u){
+      el.src=u
+      el.style.cursor='zoom-in'
+      el.onclick=function(){agrandirImage(u)}
+      el.title='Cliquer pour agrandir'
+    } else el.style.display='none'
   }
 }
 // Verifie regulierement : couvre tous les ecrans sans les modifier un par un
@@ -1605,7 +1651,7 @@ async function initApp() {
   else{badge.textContent='Aspirant';badge.className='badge badge-g'}
 
   // Navigation selon le rôle — on repart toujours d'un menu vierge
-  const MENUS_ADMIN=['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin','stats-admin']
+  const MENUS_ADMIN=['corrections','ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin','stats-admin']
   const sep=document.getElementById('sep-admin')
   if(G.admin){
     if(sep) sep.style.display=''
@@ -1622,6 +1668,11 @@ async function initApp() {
   initDark()
   demarrerAutoRefresh()
   chargerVilles()
+  // Pastille du nombre de copies a corriger
+  if(G.admin){
+    db.from('tentatives').select('id',{count:'exact',head:true}).not('notes_libres','is',null).is('note_admin',null)
+      .then(function(r){majPastilleCorr(r.count||0)}).catch(function(){})
+  }
   // Vérifier messages non lus
   setTimeout(async()=>{
     const {data}=await db.from('messages').select('id').eq('to_id',user.id).eq('lu',false)
@@ -1656,7 +1707,7 @@ async function initApp() {
     nav(savedA&&okA.includes(savedA)?savedA:'dashboard-ancien')
   } else if(G.admin) {
     const savedD=localStorage.getItem('pm_page')
-    const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module','carnet']
+    const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module','carnet','corrections']
     if(savedD&&okD.includes(savedD)){
       if(savedD==='module'){
         const savedMod=parseInt(localStorage.getItem('pm_module')||'0')
@@ -1689,7 +1740,7 @@ async function initApp() {
 
 // ─── NAVIGATION ────────────────────────────────────────────────────────────
 // Pages réservées aux admins (gâcheurs)
-const PAGES_ADMIN=['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin','stats-admin']
+const PAGES_ADMIN=['ressources','quiz-admin','annonces-admin','inscriptions-admin','aspirants','anciens-admin','comptes-admin','stats-admin','corrections']
 const PAGES_ANCIEN=['dashboard-ancien']
 
 function nav(page,sansHistorique) {
@@ -1724,6 +1775,7 @@ function nav(page,sansHistorique) {
   if(page==='suivi') loadSuivi()
   if(page==='ressources') loadResAdmin()
   if(page==='quiz-admin'){loadQuizAdmin();chargerBrouillons();recupererLocal()}
+  if(page==='corrections') chargerCorrections()
   if(page==='aspirants') loadAspirants()
   if(page==='annonces-admin') chargerAnnoncesAdmin()
   if(page==='carnet') chargerCarnet(_carnetAspirant)
@@ -2228,8 +2280,8 @@ function showQ() {
   $('q-pts').textContent=`${q.points} pt${q.points>1?'s':''}`
   $('q-enonce').textContent=q.enonce
   const imgWrap=$('q-image-wrap')
-  if(imgWrap){if(q.image_url){imgWrap.style.display='';imgWrap.innerHTML=`<img id="img-q-live" style="width:100%;max-height:240px;object-fit:contain;border-radius:12px;border:1px solid var(--bord)"/>`}else{imgWrap.style.display='none';imgWrap.innerHTML=''}}
-  if(imgWrap&&q.image_url){const el=document.getElementById("img-q-live");if(el)brancherImage(el,q.image_url)}
+  if(imgWrap){if(q.image_url){imgWrap.style.display='';imgWrap.innerHTML=`<img id="img-q-live" style="width:100%;max-height:min(46vh,420px);object-fit:contain;cursor:zoom-in;border-radius:12px;border:1px solid var(--bord)"/>`}else{imgWrap.style.display='none';imgWrap.innerHTML=''}}
+  if(imgWrap&&q.image_url){const el=document.getElementById("img-q-live");if(el){brancherImage(el,q.image_url);el.onclick=function(){agrandirImage(el.src)}}}
   // Question ouverte avec image : proposer d'annoter directement la photo
   _annot={canvas:null,ctx:null,dessine:false,vide:true,fond:null}
   if((q.type_question||'qcm')==='libre'&&q.image_url){
@@ -3178,6 +3230,86 @@ async function dupliquerQuiz(id) {
 }
 
 // ─── CORRECTION ADMIN ──────────────────────────────────────────────────────
+// ─── ESPACE DE CORRECTION ──────────────────────────────────────────────────
+let _corrAll=[],_corrFiltre=0
+
+async function chargerCorrections(){
+  const el=$('corr-body');if(!el) return
+  el.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
+  const {data,error}=await db.from('tentatives')
+    .select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,quiz(titre,module_id,mode_examen)')
+    .not('notes_libres','is',null)
+    .is('note_admin',null)
+    .order('completed_at',{ascending:true})
+  if(error){el.innerHTML='<p style="color:var(--r);font-size:.82rem">Erreur : '+error.message+'</p>';return}
+  const tents=data||[]
+  // Noms des aspirants
+  const ids=[...new Set(tents.map(function(t){return t.aspirant_id}))]
+  let profs={}
+  if(ids.length){
+    const {data:ps}=await db.from('profils').select('id,prenom,nom').in('id',ids)
+    ;(ps||[]).forEach(function(p){profs[p.id]=p})
+  }
+  _corrAll=tents.map(function(t){t._p=profs[t.aspirant_id]||{};return t})
+  majPastilleCorr(_corrAll.length)
+  afficherCorrections()
+}
+
+function majPastilleCorr(n){
+  const p=document.getElementById('pastille-corr')
+  if(p){p.textContent=n>99?'99+':n;p.style.display=n?'flex':'none'}
+}
+
+function filtrerCorrections(m){
+  _corrFiltre=m
+  document.querySelectorAll('#filtres-corr button').forEach(function(b){
+    b.className=parseInt(b.dataset.cm)===m?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'
+  })
+  afficherCorrections()
+}
+
+function afficherCorrections(){
+  const el=$('corr-body');if(!el) return
+  const liste=_corrFiltre?_corrAll.filter(function(t){return t.quiz&&t.quiz.module_id===_corrFiltre}):_corrAll
+  if(!liste.length){
+    el.innerHTML='<div class="card"><div style="padding:2rem 1rem;text-align:center">'
+      +'<i class="ti ti-circle-check" style="font-size:2rem;color:var(--v)"></i>'
+      +'<div style="font-size:.9rem;font-weight:600;margin-top:.6rem">Aucune copie en attente</div>'
+      +'<div style="font-size:.78rem;color:var(--t3);margin-top:3px">Tout est corrigé.</div>'
+      +'</div></div>'
+    return
+  }
+  // Regrouper par examen
+  const parQuiz={}
+  liste.forEach(function(t){
+    const k=t.quiz_id
+    if(!parQuiz[k]) parQuiz[k]={titre:(t.quiz&&t.quiz.titre)||'Quiz',mod:(t.quiz&&t.quiz.module_id)||0,examen:t.quiz&&t.quiz.mode_examen,copies:[]}
+    parQuiz[k].copies.push(t)
+  })
+  el.innerHTML=Object.keys(parQuiz).map(function(k){
+    const g=parQuiz[k]
+    const m=MODULES.find(function(x){return x.id===g.mod})
+    return '<div class="card">'
+      +'<div class="card-head"><div style="display:flex;align-items:center;gap:8px;min-width:0">'
+        +(m?'<div style="width:30px;height:30px;border-radius:10px;background:'+m.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+m.icon+'" style="color:'+m.ic+';font-size:.82rem"></i></div>':'')
+        +'<div style="min-width:0"><div class="card-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+g.titre+'</div>'
+        +'<div style="font-size:.68rem;color:var(--t3)">'+(m?m.nom:'')+(g.examen?' · Examen':'')+'</div></div>'
+      +'</div><span class="badge badge-a">'+g.copies.length+'</span></div>'
+      +'<div class="card-body">'
+      +g.copies.map(function(t){
+        const nom=((t._p.prenom||'')+' '+(t._p.nom||'')).trim()||'Aspirant'
+        const d=t.completed_at?new Date(t.completed_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):''
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bord)">'
+          +'<div class="sidebar-avatar" style="flex-shrink:0">'+([(t._p.prenom||'')[0],(t._p.nom||'')[0]].join('').toUpperCase()||'?')+'</div>'
+          +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600">'+nom+'</div>'
+          +'<div style="font-size:.7rem;color:var(--t3)">Rendue le '+d+'</div></div>'
+          +'<button class="btn btn-r btn-sm" style="flex-shrink:0" onclick="ouvrirCorrectionAdmin(\''+t.id+'\')">Corriger</button>'
+        +'</div>'
+      }).join('')
+      +'</div></div>'
+  }).join('')
+}
+
 async function ouvrirCorrectionAdmin(tentId) {
   const {data:tent}=await db.from('tentatives').select('*, quiz(titre,total_points)').eq('id',tentId).single()
   const {data:questions}=await db.from('questions').select('*').eq('quiz_id',tent.quiz_id).order('ordre')
@@ -3232,7 +3364,7 @@ async function validerCorrection(tentId,totalPts) {
   await db.from('tentatives').update({notes_libres:notes,note_admin:sur20,score:Math.round(sur20),total_points:20,valide}).eq('id',tentId)
   if(valide&&tent2?.quiz?.mode_examen&&tent2?.quiz?.module_id) await db.from('carnet_bord').upsert({aspirant_id:tent2.aspirant_id,module_id:tent2.quiz.module_id,score_final:sur20,valide_at:new Date().toISOString()},{ignoreDuplicates:false})
   toast('Correction validée ! Score : '+sur20+'/20','ok')
-  document.getElementById('modal-correction')?.remove();chargerRendusAdmin()
+  document.getElementById('modal-correction')?.remove();chargerRendusAdmin();if(localStorage.getItem('pm_page')==='corrections')chargerCorrections()
 }
 
 // ─── ANNONCES ──────────────────────────────────────────────────────────────
@@ -4051,7 +4183,8 @@ function ouvrirMenuAdmin() {
   const items=[
     {p:'quiz-admin',i:'ti-help-circle',t:'Gérer les quiz',d:'Créer, modifier, publier'},
     {p:'ressources',i:'ti-upload',t:'Ressources et devoirs',d:'Cours, documents, travaux'},
-    {p:'aspirants',i:'ti-users',t:'Aspirants',d:'Suivi, corrections, rattrapages'},
+    {p:'corrections',i:'ti-checkbox',t:'Copies à corriger',d:'Toutes les copies en attente'},
+    {p:'aspirants',i:'ti-users',t:'Aspirants',d:'Suivi, rattrapages, validations'},
     {p:'annonces-admin',i:'ti-speakerphone',t:'Annonces',d:'Informer tout le monde'},
     {p:'inscriptions-admin',i:'ti-calendar',t:'Inscriptions',d:'Ouvrir les périodes'},
     {p:'comptes-admin',i:'ti-list-check',t:'Tous les comptes',d:'Rôles et coordonnées'},
@@ -4340,7 +4473,7 @@ async function marquerSuperviseur() {
   G.profil.superviseur=true;G.profil.profil_complet=true
   document.getElementById('modal-admin-profil')?.remove()
   const savedD=localStorage.getItem('pm_page')||'dashboard'
-  const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module','carnet']
+  const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module','carnet','corrections']
   nav(okD.includes(savedD)?savedD:'dashboard')
 }
 
@@ -4355,7 +4488,7 @@ async function sauvegarderProfilAdmin() {
   toast('Profil enregistré !','ok')
   // Reprendre la navigation normale
   const savedD=localStorage.getItem('pm_page')||'dashboard'
-  const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module','carnet']
+  const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module','carnet','corrections']
   nav(okD.includes(savedD)?savedD:'dashboard')
 }
 
@@ -4489,6 +4622,11 @@ function afficherQuestionnaireAncien() {
   initDark()
   demarrerAutoRefresh()
   chargerVilles()
+  // Pastille du nombre de copies a corriger
+  if(G.admin){
+    db.from('tentatives').select('id',{count:'exact',head:true}).not('notes_libres','is',null).is('note_admin',null)
+      .then(function(r){majPastilleCorr(r.count||0)}).catch(function(){})
+  }
   // Vérifier messages non lus
   setTimeout(async()=>{
     const {data}=await db.from('messages').select('id').eq('to_id',user.id).eq('lu',false)
