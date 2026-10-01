@@ -1358,6 +1358,51 @@ document.addEventListener('visibilitychange',function(){
   if(_dernierMasquage&&Date.now()-_dernierMasquage>30000) rafraichirPage()
 })
 
+// ─── IMAGES DES QUESTIONS ──────────────────────────────────────────────────
+// image_url peut contenir soit une adresse complete (http...), soit un chemin
+// dans le stockage. Dans ce second cas il faut un lien signe, car le stockage
+// n'est pas public : une adresse publique serait refusee a l'affichage.
+const _cacheImg={}
+async function urlImage(val){
+  if(!val) return null
+  if(/^data:/i.test(val)) return val
+  if(/^https?:\/\//i.test(val)){
+    // Une adresse publique enregistree avant correction peut etre refusee si
+    // le stockage est prive : on en extrait le chemin pour signer a nouveau.
+    const m=val.match(/\/object\/(?:public|sign)\/ressources\/([^?]+)/)
+    if(m&&m[1]){
+      const chemin=decodeURIComponent(m[1])
+      const signe=await urlImage(chemin)
+      if(signe) return signe
+    }
+    return val
+  }
+  if(_cacheImg[val]) return _cacheImg[val]
+  try{
+    const {data,error}=await db.storage.from('ressources').createSignedUrl(val,60*60*8)
+    if(!error&&data&&data.signedUrl){_cacheImg[val]=data.signedUrl;return data.signedUrl}
+  }catch(e){}
+  return null
+}
+// Place l'image dans un element <img> des que son lien est pret
+// Branche toutes les images marquees data-img presentes dans la page
+async function brancherImagesMarquees(){
+  const els=document.querySelectorAll('img[data-img]:not([data-fait])')
+  for(const el of els){
+    el.setAttribute('data-fait','1')
+    const u=await urlImage(el.getAttribute('data-img'))
+    if(u) el.src=u; else el.style.display='none'
+  }
+}
+// Verifie regulierement : couvre tous les ecrans sans les modifier un par un
+setInterval(brancherImagesMarquees,600)
+
+async function brancherImage(img,val){
+  const u=await urlImage(val)
+  if(u){img.src=u;img.style.display=''}
+  else{img.style.display='none'}
+}
+
 // ─── VILLES : saisie assistee et normalisee ────────────────────────────────
 // Evite les doublons du type "albi" / "ALBI" / "Albi " en normalisant,
 // et propose les villes deja enregistrees pour limiter les fautes de frappe.
@@ -2102,7 +2147,8 @@ function showQ() {
   $('q-pts').textContent=`${q.points} pt${q.points>1?'s':''}`
   $('q-enonce').textContent=q.enonce
   const imgWrap=$('q-image-wrap')
-  if(imgWrap){if(q.image_url){imgWrap.style.display='';imgWrap.innerHTML=`<img src="${q.image_url}" style="width:100%;max-height:240px;object-fit:contain;border-radius:12px;border:1px solid var(--bord)"/>`}else{imgWrap.style.display='none';imgWrap.innerHTML=''}}
+  if(imgWrap){if(q.image_url){imgWrap.style.display='';imgWrap.innerHTML=`<img id="img-q-live" style="width:100%;max-height:240px;object-fit:contain;border-radius:12px;border:1px solid var(--bord)"/>`}else{imgWrap.style.display='none';imgWrap.innerHTML=''}}
+  if(imgWrap&&q.image_url){const el=document.getElementById("img-q-live");if(el)brancherImage(el,q.image_url)}
   const typeQ=q.type_question||'qcm'
   if(typeQ==='libre'){
     $('q-opts').innerHTML=`<textarea id="rep-libre" class="ftextarea" rows="4" placeholder="Rédigez votre réponse ici..." style="width:100%;margin-bottom:.8rem"></textarea>
@@ -2350,7 +2396,7 @@ function afficheRes() {
     else{repTexte=q.options?.[rep]??'—';bonneTexte=q.options?.[q.bonne_reponse]??'—'}
     return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:${i<questions.length-1?'1px solid var(--bord)':'none'}">
       <i class="ti ${isLibre?'ti-pencil':ok?'ti-circle-check':'ti-circle-x'}" style="color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--r)'};font-size:1rem;flex-shrink:0;margin-top:2px"></i>
-      <div style="flex:1">${q.image_url?`<img src="${q.image_url}" style="width:100%;max-height:80px;object-fit:contain;border-radius:8px;border:1px solid var(--bord);margin-bottom:4px"/>`:''}<div style="font-size:.82rem;font-weight:500;margin-bottom:2px">${q.enonce}</div>
+      <div style="flex:1">${q.image_url?`<img data-img="${q.image_url}" style="width:100%;max-height:80px;object-fit:contain;border-radius:8px;border:1px solid var(--bord);margin-bottom:4px"/>`:''}<div style="font-size:.82rem;font-weight:500;margin-bottom:2px">${q.enonce}</div>
       ${isLibre?`<div style="font-size:.72rem;color:var(--b);margin-bottom:4px"><strong>Votre réponse :</strong> ${repTexte}</div>${q.reponse_type?`<div style="background:var(--vl);border:1px solid var(--v);border-radius:8px;padding:7px 10px;margin-top:4px"><div style="font-size:.65rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--v);margin-bottom:3px">Corrigé</div><div style="font-size:.75rem;color:var(--v);line-height:1.5">${q.reponse_type}</div></div>`:`<div style="font-size:.72rem;color:var(--amber);font-style:italic;margin-top:3px">En attente de correction par le formateur</div>`}`:!ok?`<div style="font-size:.72rem;color:var(--r)">Votre réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--v);font-weight:600">Bonne réponse : ${bonneTexte} ✓</div>`:''}
       </div>
       ${G.admin?`<span style="font-size:.72rem;font-weight:700;font-family:var(--fg);color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--t3)'};flex-shrink:0">${isLibre?noteQ:ok?'+'+q.points:'0'}pt</span>`:''}
@@ -2922,7 +2968,7 @@ async function previsualiserQuiz(id){
         +'<span style="font-family:var(--fg);font-weight:700;color:var(--t3);flex-shrink:0">'+(i+1)+'</span>'
         +'<div style="flex:1;min-width:0">'
           +'<div style="font-size:.88rem;font-weight:500;line-height:1.5">'+(q.enonce||'<span style="color:var(--r)">Énoncé manquant</span>')+'</div>'
-          +(q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;border-radius:10px;margin-top:8px"/>':'')
+          +(q.image_url?'<img data-img="'+echapAttr(q.image_url)+'" style="max-width:100%;border-radius:10px;margin-top:8px"/>':'')
         +'</div>'
         +'<span style="font-size:.7rem;color:var(--t3);flex-shrink:0">'+(q.points||0)+' pt</span>'
       +'</div>'
@@ -3060,7 +3106,7 @@ async function ouvrirCorrectionAdmin(tentId) {
           <span class="badge ${isLibre?'badge-a':'badge-g'}">${isLibre?'À corriger':'Auto'}</span>
           <span class="badge badge-rl">${q.points}pt</span>
         </div>
-        ${q.image_url?`<img src="${q.image_url}" style="width:100%;max-height:120px;object-fit:contain;border-radius:10px;margin-bottom:6px;border:1px solid var(--bord)"/>`:''  }
+        ${q.image_url?`<img data-img="${q.image_url}" style="width:100%;max-height:120px;object-fit:contain;border-radius:10px;margin-bottom:6px;border:1px solid var(--bord)"/>`:''  }
         <p style="font-size:.82rem;font-weight:600;margin-bottom:.5rem">${q.enonce}</p>
         ${isLibre?`<div style="background:var(--bl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--b)"><strong>Réponse :</strong><br>${rep||'<em>Aucune réponse</em>'}</div>
           ${tent.fichiers_libres?.[q.id]?`<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--vl);border-radius:8px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)"><i class="ti ti-paperclip"></i> ${tent.fichiers_libres[q.id].nom}<button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${tent.fichiers_libres[q.id].path||''}')"><i class="ti ti-download"></i></button></div>`:''}
@@ -5030,7 +5076,7 @@ async function editerQuiz(quizId) {
       zoneImg.innerHTML=''
       if(url){
         const img=document.createElement('img')
-        img.src=url
+        brancherImage(img,url)
         img.style.cssText='max-width:100%;max-height:150px;border-radius:10px;border:1px solid var(--bord);display:block;margin-bottom:6px'
         const sup=document.createElement('button')
         sup.className='btn btn-ghost btn-sm'
@@ -5052,14 +5098,8 @@ async function editerQuiz(quizId) {
           const chemin='questions/'+quizId+'/'+Date.now()+'_'+nom
           const up=await db.storage.from('ressources').upload(chemin,f)
           if(up.error){toast('Erreur : '+up.error.message,'err');rendreImage();return}
-          const pub=db.storage.from('ressources').getPublicUrl(chemin)
-          let url=pub&&pub.data&&pub.data.publicUrl
-          if(!url){
-            const sg=await db.storage.from('ressources').createSignedUrl(chemin,60*60*24*365*5)
-            url=sg&&sg.data&&sg.data.signedUrl
-          }
-          if(!url){toast('Lien de l image introuvable','err');rendreImage();return}
-          questions[i].image_url=url
+          // On enregistre le CHEMIN : le lien d'affichage est genere a la demande
+          questions[i].image_url=chemin
           rendreImage()
           toast('Image ajoutee','ok')
         }
