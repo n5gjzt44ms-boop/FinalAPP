@@ -1474,38 +1474,73 @@ function effacerAnnotation(){
 }
 
 // Fusionne la photo et le dessin en une seule image, puis l'envoie
+// Le schema annote est enregistre AVEC la copie, sous forme d'image integree.
+// Aucune dependance au stockage : pas de risque de blocage par les droits.
 async function enregistrerAnnotation(questionId){
   if(!_annot.ctx||_annot.vide) return null
   try{
+    const src=_annot.canvas
+    // Limiter a 1400 px de large : net a l'ecran, poids raisonnable
+    const maxL=1400
+    const ech=src.width>maxL?maxL/src.width:1
     const f=document.createElement('canvas')
-    f.width=_annot.canvas.width;f.height=_annot.canvas.height
+    f.width=Math.round(src.width*ech);f.height=Math.round(src.height*ech)
     const fx=f.getContext('2d')
     fx.imageSmoothingEnabled=true;fx.imageSmoothingQuality='high'
-    fx.drawImage(_annot.fond,0,0,f.width,f.height)
-    fx.drawImage(_annot.canvas,0,0)
-    // PNG : pas de perte, les traits fins restent nets
-    const blob=await new Promise(function(r){f.toBlob(r,'image/png')})
-    if(!blob){toast('Impossible de générer le schéma','err');return null}
-    const chemin='annotations/'+G.profil.id+'/'+questionId+'_'+Date.now()+'.png'
-    const up=await db.storage.from('ressources').upload(chemin,blob,{contentType:'image/png'})
-    if(up.error){toast('Schéma non enregistré : '+up.error.message,'err');return null}
-    return chemin
+    fx.fillStyle='#fff';fx.fillRect(0,0,f.width,f.height)
+    try{fx.drawImage(_annot.fond,0,0,f.width,f.height)}catch(e){}
+    fx.drawImage(src,0,0,f.width,f.height)
+    const data=f.toDataURL('image/jpeg',0.88)
+    if(!data||data.length<200){toast('Schéma non enregistré','err');return null}
+    return data
   }catch(e){
-    // Erreur de securite : la photo n'autorise pas l'export du dessin
     toast('Schéma non enregistré : '+(e.message||'erreur'),'err')
     return null
   }
 }
 
 // Agrandir une image en plein ecran (lecture de details fins)
+// Ouvre un PDF en plein ecran, avec repli vers un nouvel onglet
+function ouvrirDocument(url,nom){
+  const m=document.createElement('div');m.id='modal-doc'
+  m.style.cssText='position:fixed;inset:0;background:#111;z-index:10001;display:flex;flex-direction:column'
+  m.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));background:#000;color:#fff;flex-shrink:0">'
+    +'<span style="flex:1;min-width:0;font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+echapAttr(nom||'Document')+'</span>'
+    +'<button onclick="window.open(\''+url+'\',\'_blank\')" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:7px 12px;border-radius:9px;font-size:.76rem;cursor:pointer">Ouvrir</button>'
+    +'<button onclick="document.getElementById(\'modal-doc\').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer"><i class="ti ti-x"></i></button>'
+    +'</div>'
+    +'<iframe src="'+url+'" style="flex:1;width:100%;border:none;background:#fff"></iframe>'
+  document.body.appendChild(m)
+}
+
 function agrandirImage(src){
   if(!src) return
   const m=document.createElement('div');m.id='modal-zoom'
-  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10001;display:flex;align-items:center;justify-content:center;padding:.5rem;overflow:auto'
-  m.onclick=function(){m.remove()}
-  m.innerHTML='<img src="'+src+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px"/>'
-    +'<button style="position:fixed;top:max(12px,env(safe-area-inset-top));right:14px;background:rgba(255,255,255,.18);border:none;color:#fff;width:38px;height:38px;border-radius:50%;font-size:1.1rem;cursor:pointer"><i class="ti ti-x"></i></button>'
+  m.style.cssText='position:fixed;inset:0;background:#0b0b0b;z-index:10001;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pinch-zoom'
+  const img=document.createElement('img')
+  img.src=src
+  // Affichage a la taille reelle : le pincer-zoom et le defilement
+  // permettent de lire les details fins.
+  img.style.cssText='display:block;margin:auto;max-width:100%;height:auto;image-rendering:auto'
+  let agrandi=false
+  img.onclick=function(e){
+    e.stopPropagation()
+    agrandi=!agrandi
+    img.style.maxWidth=agrandi?'none':'100%'
+    img.style.width=agrandi?(img.naturalWidth+'px'):'auto'
+    img.style.cursor=agrandi?'zoom-out':'zoom-in'
+  }
+  img.style.cursor='zoom-in'
+  m.appendChild(img)
+  const barre=document.createElement('div')
+  barre.style.cssText='position:fixed;top:max(10px,env(safe-area-inset-top));right:12px;display:flex;gap:8px;z-index:2'
+  barre.innerHTML='<button id="zoom-reel" style="background:rgba(255,255,255,.18);border:none;color:#fff;padding:8px 13px;border-radius:9px;font-size:.76rem;cursor:pointer">Taille réelle</button>'
+    +'<button id="zoom-fermer" style="background:rgba(255,255,255,.18);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer"><i class="ti ti-x"></i></button>'
+  m.appendChild(barre)
   document.body.appendChild(m)
+  document.getElementById('zoom-reel').onclick=function(e){e.stopPropagation();img.onclick(e)}
+  document.getElementById('zoom-fermer').onclick=function(e){e.stopPropagation();m.remove()}
+  m.onclick=function(e){if(e.target===m)m.remove()}
 }
 
 async function brancherImagesMarquees(){
@@ -2281,12 +2316,53 @@ function showQ() {
   $('q-enonce').textContent=q.enonce
   const imgWrap=$('q-image-wrap')
   if(imgWrap){if(q.image_url){imgWrap.style.display='';imgWrap.innerHTML=`<img id="img-q-live" style="width:100%;max-height:min(46vh,420px);object-fit:contain;cursor:zoom-in;border-radius:12px;border:1px solid var(--bord)"/>`}else{imgWrap.style.display='none';imgWrap.innerHTML=''}}
-  if(imgWrap&&q.image_url){const el=document.getElementById("img-q-live");if(el){brancherImage(el,q.image_url);el.onclick=function(){agrandirImage(el.src)}}}
+  // Pieces jointes : photos et PDF, affichees en pleine qualite
+  if(imgWrap){
+    const medias=Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url,n:'Image'}]:[])
+    if(medias.length){
+      imgWrap.style.display=''
+      imgWrap.innerHTML=''
+      medias.forEach(function(m,k){
+        if(m.t==='pdf'){
+          const b=document.createElement('button')
+          b.className='btn btn-ghost btn-sm'
+          b.style.cssText='width:100%;justify-content:flex-start;margin-bottom:6px;gap:8px'
+          b.innerHTML='<i class="ti ti-file-type-pdf" style="color:var(--r);font-size:1.1rem"></i> '+(m.n||'Document')+' <span style="margin-left:auto;font-size:.7rem;color:var(--t3)">Ouvrir</span>'
+          b.onclick=async function(){
+            const u=await urlImage(m.p)
+            if(u) ouvrirDocument(u,m.n||'Document'); else toast('Document indisponible','err')
+          }
+          imgWrap.appendChild(b)
+        } else {
+          const img=document.createElement('img')
+          img.style.cssText='width:100%;max-height:min(50vh,520px);object-fit:contain;border-radius:12px;border:1px solid var(--bord);margin-bottom:6px;cursor:zoom-in;background:#fff'
+          brancherImage(img,m.p)
+          img.onclick=function(){if(img.src)agrandirImage(img.src)}
+          imgWrap.appendChild(img)
+        }
+      })
+      if(medias.filter(function(m){return m.t==='img'}).length){
+        const aide=document.createElement('div')
+        aide.style.cssText='font-size:.7rem;color:var(--t3);text-align:center;margin-bottom:4px'
+        aide.textContent='Touche l image pour l agrandir'
+        imgWrap.appendChild(aide)
+      }
+    } else imgWrap.style.display='none'
+  }
   // Question ouverte avec image : proposer d'annoter directement la photo
   _annot={canvas:null,ctx:null,dessine:false,vide:true,fond:null}
-  if((q.type_question||'qcm')==='libre'&&q.image_url){
-    if(imgWrap) imgWrap.style.display='none'   // la photo est reprise dans la zone d'annotation
-    setTimeout(function(){preparerAnnotation(q.id,q.image_url)},30)
+  if((q.type_question||'qcm')==='libre'){
+    const mds=Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url}]:[])
+    const premiereImage=mds.find(function(m){return m.t==='img'})
+    if(premiereImage){
+      // La premiere photo passe dans la zone d'annotation ; les autres
+      // pieces jointes restent consultables au-dessus.
+      if(imgWrap){
+        const restants=mds.filter(function(m){return m!==premiereImage})
+        if(!restants.length) imgWrap.style.display='none'
+      }
+      setTimeout(function(){preparerAnnotation(q.id,premiereImage.p)},30)
+    }
   }
   const typeQ=q.type_question||'qcm'
   if(typeQ==='libre'){
@@ -2348,8 +2424,9 @@ async function valider() {
     if(_annot.ctx&&!_annot.vide){
       const btn=document.getElementById('btn-valider')
       if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement du schéma...'}
-      const chemin=await enregistrerAnnotation(qid)
-      if(chemin) G.fichiersLibres[qid]={nom:'Schéma annoté',path:chemin,annotation:true}
+      const img=await enregistrerAnnotation(qid)
+      if(img) G.fichiersLibres[qid]={nom:'Schéma annoté',image:img,annotation:true}
+      else toast('Le schéma n a pas pu être joint','err')
       if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Valider'}
     }
     G.reponses[qid]=rep;G.confirme=true;hi('btn-valider')
@@ -3339,7 +3416,7 @@ async function ouvrirCorrectionAdmin(tentId) {
         <p style="font-size:.82rem;font-weight:600;margin-bottom:.5rem">${q.enonce}</p>
         ${isLibre?`<div style="background:var(--bl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--b)"><strong>Réponse :</strong><br>${rep||'<em>Aucune réponse</em>'}</div>
           ${tent.fichiers_libres?.[q.id]?(tent.fichiers_libres[q.id].annotation
-            ? `<div style="margin-bottom:.5rem"><div style="font-size:.72rem;color:var(--v);font-weight:600;margin-bottom:4px"><i class="ti ti-pencil"></i> Schéma annoté par l'aspirant</div><img data-img="${tent.fichiers_libres[q.id].path||''}" style="width:100%;border-radius:10px;border:1px solid var(--bord)"/></div>`
+            ? `<div style="margin-bottom:.5rem"><div style="font-size:.72rem;color:var(--v);font-weight:600;margin-bottom:4px"><i class="ti ti-pencil"></i> Schéma annoté par l'aspirant</div>${tent.fichiers_libres[q.id].image?`<img src="${tent.fichiers_libres[q.id].image}" onclick="agrandirImage(this.src)" style="width:100%;border-radius:10px;border:1px solid var(--bord);cursor:zoom-in"/>`:`<img data-img="${tent.fichiers_libres[q.id].path||''}" style="width:100%;border-radius:10px;border:1px solid var(--bord)"/>`}</div>`
             : `<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--vl);border-radius:8px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)"><i class="ti ti-paperclip"></i> ${tent.fichiers_libres[q.id].nom}<button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${tent.fichiers_libres[q.id].path||''}')"><i class="ti ti-download"></i></button></div>`):''}
           ${q.reponse_type?`<div style="background:var(--vl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--v)"><strong>Attendu :</strong><br>${q.reponse_type}</div>`:''}
           <div style="display:flex;align-items:center;gap:8px"><label style="font-size:.78rem;color:var(--t2);white-space:nowrap;font-weight:600">Points :</label>
@@ -5304,45 +5381,65 @@ async function editerQuiz(quizId) {
     ta.style.cssText='width:100%;padding:8px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.82rem;resize:vertical;min-height:52px;font-family:var(--ff);margin-bottom:.5rem'
     div.appendChild(ta)
 
-    // ── Image de la question (schema, photo de piece...) ──
+    // ── Pieces jointes de la question : photos et/ou PDF ──
     const zoneImg=document.createElement('div')
     zoneImg.id='eq-img-zone-'+i
     zoneImg.style.cssText='margin-bottom:.6rem'
+    if(!Array.isArray(questions[i].medias)){
+      // Reprendre une ancienne image unique
+      questions[i].medias=questions[i].image_url?[{t:'img',p:questions[i].image_url,n:'Image'}]:[]
+    }
     function rendreImage(){
-      const url=questions[i].image_url
+      const liste=questions[i].medias||[]
       zoneImg.innerHTML=''
-      if(url){
-        const img=document.createElement('img')
-        brancherImage(img,url)
-        img.style.cssText='max-width:100%;max-height:150px;border-radius:10px;border:1px solid var(--bord);display:block;margin-bottom:6px'
+      liste.forEach(function(m,k){
+        const bloc=document.createElement('div')
+        bloc.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 9px;background:var(--field);border-radius:10px;margin-bottom:5px'
+        if(m.t==='img'){
+          const img=document.createElement('img')
+          brancherImage(img,m.p)
+          img.style.cssText='width:54px;height:54px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:zoom-in'
+          img.onclick=function(){if(img.src)agrandirImage(img.src)}
+          bloc.appendChild(img)
+        } else {
+          const ic=document.createElement('div')
+          ic.style.cssText='width:54px;height:54px;border-radius:8px;background:var(--rl);display:flex;align-items:center;justify-content:center;flex-shrink:0'
+          ic.innerHTML='<i class="ti ti-file-type-pdf" style="color:var(--r);font-size:1.3rem"></i>'
+          bloc.appendChild(ic)
+        }
+        const nm=document.createElement('div')
+        nm.style.cssText='flex:1;min-width:0;font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'
+        nm.textContent=m.n||(m.t==='img'?'Image':'Document')
+        bloc.appendChild(nm)
         const sup=document.createElement('button')
-        sup.className='btn btn-ghost btn-sm'
-        sup.style.cssText='color:var(--r);font-size:.72rem'
-        sup.textContent='Retirer l image'
-        sup.onclick=function(){questions[i].image_url=null;rendreImage()}
-        zoneImg.appendChild(img);zoneImg.appendChild(sup)
-      } else {
-        const lab=document.createElement('label')
-        lab.style.cssText='display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px dashed var(--bord2);border-radius:10px;cursor:pointer;font-size:.76rem;color:var(--t3)'
-        lab.innerHTML='<i class="ti ti-photo-plus" style="font-size:1rem"></i> Ajouter une image a cette question'
-        const inp=document.createElement('input')
-        inp.type='file';inp.accept='image/*';inp.style.display='none'
-        inp.onchange=async function(){
-          const f=inp.files&&inp.files[0];if(!f) return
-          if(f.size>5*1024*1024){toast('Image trop lourde (5 Mo maximum)','err');return}
-          lab.innerHTML='<i class="ti ti-loader spin"></i> Envoi en cours...'
+        sup.className='btn btn-ghost btn-sm btn-icon'
+        sup.style.cssText='color:var(--r);flex-shrink:0'
+        sup.innerHTML='<i class="ti ti-trash"></i>'
+        sup.onclick=function(){questions[i].medias.splice(k,1);rendreImage()}
+        bloc.appendChild(sup)
+        zoneImg.appendChild(bloc)
+      })
+      const lab=document.createElement('label')
+      lab.style.cssText='display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px dashed var(--bord2);border-radius:10px;cursor:pointer;font-size:.76rem;color:var(--t3)'
+      lab.innerHTML='<i class="ti ti-paperclip" style="font-size:1rem"></i> Ajouter une photo ou un PDF'
+      const inp=document.createElement('input')
+      inp.type='file';inp.accept='image/*,.pdf';inp.multiple=true;inp.style.display='none'
+      inp.onchange=async function(){
+        const fs=Array.from(inp.files||[]);if(!fs.length) return
+        lab.innerHTML='<i class="ti ti-loader spin"></i> Envoi en cours...'
+        for(const f of fs){
+          if(f.size>15*1024*1024){toast(f.name+' : trop lourd (15 Mo max)','err');continue}
           const nom=f.name.replace(/[^a-zA-Z0-9._-]/g,'-')
           const chemin='questions/'+quizId+'/'+Date.now()+'_'+nom
           const up=await db.storage.from('ressources').upload(chemin,f)
-          if(up.error){toast('Erreur : '+up.error.message,'err');rendreImage();return}
-          // On enregistre le CHEMIN : le lien d'affichage est genere a la demande
-          questions[i].image_url=chemin
-          rendreImage()
-          toast('Image ajoutee','ok')
+          if(up.error){toast(f.name+' : '+up.error.message,'err');continue}
+          questions[i].medias.push({t:(f.type==='application/pdf'||/\.pdf$/i.test(f.name))?'pdf':'img',p:chemin,n:f.name})
         }
-        lab.appendChild(inp)
-        zoneImg.appendChild(lab)
+        rendreImage()
+        toast('Pièce(s) jointe(s) ajoutée(s)','ok')
       }
+      lab.appendChild(inp)
+      zoneImg.appendChild(lab)
     }
     rendreImage()
     div.appendChild(zoneImg)
@@ -5461,8 +5558,12 @@ async function editerQuiz(quizId) {
         if(!bonnes.length)bonnes=[0]
       }
       const o={quiz_id:qzId,enonce:enonce,type_question:type,options:opts,bonne_reponse:bonnes[0]||0,bonnes_reponses:bonnes,reponse_type:expl||null,points:pts,ordre:i}
-      // Conserver l'image de la question (sinon elle serait perdue a chaque enregistrement)
-      if(q.image_url) o.image_url=q.image_url
+      // Conserver les pieces jointes (sinon elles seraient perdues)
+      if(Array.isArray(q.medias)&&q.medias.length){
+        o.medias=q.medias
+        const prem=q.medias.find(function(m){return m.t==='img'})
+        if(prem) o.image_url=prem.p   // compatibilite avec l'affichage existant
+      } else if(q.image_url) o.image_url=q.image_url
       return o
     })
     await db.from('questions').delete().eq('quiz_id',qzId)
@@ -5470,7 +5571,7 @@ async function editerQuiz(quizId) {
     // Repli si une colonne optionnelle manque en base
     if(res.error&&/image_url|bonnes_reponses|column/i.test(res.error.message||'')){
       const secours=qsToSave.map(function(l){
-        const x=Object.assign({},l);delete x.image_url;delete x.bonnes_reponses;return x
+        const x=Object.assign({},l);delete x.image_url;delete x.medias;delete x.bonnes_reponses;return x
       })
       res=await db.from('questions').insert(secours)
       if(!res.error) toast('Enregistre, mais les images n ont pas pu etre conservees','err')
