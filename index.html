@@ -891,6 +891,20 @@ button,input,select,textarea{font-family:var(--ff)}
             <button class="btn btn-r btn-full" onclick="pubQuizManuel()"><i class="ti ti-check"></i> Créer le quiz</button>
           </div>
         </div>
+        <div class="card" id="carte-config-mod">
+          <div class="card-head"><span class="card-title">Validation du module</span></div>
+          <div class="card-body">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <label class="field-label" style="margin:0">Examens nécessaires pour valider</label>
+              <select class="fselect" id="cfg-nb-examens" style="width:auto;padding:6px 10px" onchange="enregistrerNbExamens()">
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4" selected>4</option><option value="5">5</option><option value="6">6</option>
+              </select>
+              <span style="font-size:.72rem;color:var(--v)" id="cfg-etat"></span>
+            </div>
+            <div style="font-size:.7rem;color:var(--t3);margin-top:8px;line-height:1.5">L'aspirant verra « X sur ce nombre », quel que soit le nombre d'examens déjà publiés. Sans ce réglage, un aspirant qui réussit le premier examen verrait son module marqué validé à tort.</div>
+          </div>
+        </div>
         <div class="card">
           <div class="card-head" style="flex-wrap:wrap;gap:8px">
             <span class="card-title" id="titre-liste-quiz">Quiz du module</span>
@@ -1073,6 +1087,23 @@ function suitLesModules(p){
   if(!prof.metier) return true          // metier non renseigne : on ne bloque rien
   const m=METIERS.find(function(x){return x.id===prof.metier})
   return m?m.modules:true
+}
+
+// Nombre d'examens requis pour valider chaque module. Fixe a l'avance pour
+// que le compteur ne depende pas du rythme de publication.
+let _nbExamensRequis={}
+async function chargerConfigModules(){
+  try{
+    const {data}=await db.from('modules_config').select('module_id,nb_examens')
+    const m={};(data||[]).forEach(function(x){m[x.module_id]=x.nb_examens})
+    _nbExamensRequis=m
+  }catch(e){_nbExamensRequis={}}
+}
+// Repli : le reglage, sinon le nombre d'examens existants du module
+function examensRequis(moduleId,nbExistants){
+  const n=_nbExamensRequis[moduleId]
+  if(n&&n>0) return n
+  return nbExistants||0
 }
 
 const ADMINS_SUPERVISEURS = ['b.prudhomme18@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
@@ -1703,6 +1734,7 @@ async function initApp() {
   initDark()
   demarrerAutoRefresh()
   chargerVilles()
+  chargerConfigModules()
   // Pastille du nombre de copies a corriger
   if(G.admin){
     db.from('tentatives').select('id',{count:'exact',head:true}).not('notes_libres','is',null).is('note_admin',null)
@@ -1809,7 +1841,7 @@ function nav(page,sansHistorique) {
   if(page==='modules') loadModules()
   if(page==='suivi') loadSuivi()
   if(page==='ressources') loadResAdmin()
-  if(page==='quiz-admin'){loadQuizAdmin();chargerBrouillons();recupererLocal()}
+  if(page==='quiz-admin'){loadQuizAdmin();chargerBrouillons();recupererLocal();chargerConfigModules().then(majReglageModule)}
   if(page==='corrections') chargerCorrections()
   if(page==='aspirants') loadAspirants()
   if(page==='annonces-admin') chargerAnnoncesAdmin()
@@ -1875,17 +1907,18 @@ async function loadDashboard() {
   $('d-modules').innerHTML=MODULES.map(m=>{
     const exM=allExD.filter(x=>x.module_id===m.id)
     const exVal=exM.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
-    const fini=exM.length>0&&exVal===exM.length
+    const nbReq=examensRequis(m.id,exM.length)
+    const fini=nbReq>0&&exVal>=nbReq
     const inscrit=monMod===m.id
     // Pastilles : une par examen du module
     const dejaAcquis=(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0
-    const pastilles=(dejaAcquis||!suitLesModules()||G.profil.sans_module||!exM.length)?'':exM.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')
+    const pastilles=(dejaAcquis||!suitLesModules()||G.profil.sans_module||!nbReq)?'':Array.from({length:nbReq}).map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')
     const etat=dejaAcquis?'<span class="badge badge-v"><i class="ti ti-check"></i> Validé</span>'
       :!suitLesModules()?'<span style="font-size:.8rem;color:var(--t3)">Cours et ressources</span>'
       :G.profil.sans_module?'<span style="font-size:.8rem;color:var(--t3)">Cours et exercices</span>'
-      :!exM.length?'<span style="font-size:.8rem;color:var(--t3)">Bientôt disponible</span>'
+      :!nbReq?'<span style="font-size:.8rem;color:var(--t3)">Bientôt disponible</span>'
       :fini?'<span class="badge badge-v"><i class="ti ti-check"></i> Validé</span>'
-      :`<span style="font-size:.82rem;font-weight:600;color:var(--t2)">${exVal} sur ${exM.length}</span>`
+      :`<span style="font-size:.82rem;font-weight:600;color:var(--t2)">${exVal} sur ${nbReq}</span>`
     return `<div class="card" style="cursor:pointer;margin-bottom:10px" onclick="ouvrirModule(${m.id})">
       <div style="display:flex;align-items:center;gap:14px;padding:16px 18px">
         <div style="width:46px;height:46px;border-radius:14px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:1.25rem"></i></div>
@@ -1959,8 +1992,9 @@ async function loadModules() {
     const tm=tents.filter(x=>x.quiz?.module_id===m.id)
     const exM=allEx.filter(x=>x.module_id===m.id)
     const exVal=exM.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
-    const pct=exM.length?Math.round(exVal/exM.length*100):0
-    const termine=exM.length>0&&exVal===exM.length
+    const nbReq=examensRequis(m.id,exM.length)
+    const pct=nbReq?Math.round(exVal/nbReq*100):0
+    const termine=nbReq>0&&exVal>=nbReq
     const encours=tm.length>0&&!termine
     return `<div class="card" style="cursor:pointer" onclick="ouvrirModule(${m.id})">
       <div style="padding:1.1rem">
@@ -1990,14 +2024,16 @@ async function ouvrirModule(id) {
   const tents=(t||[]).filter(x=>x.quiz?.module_id===id),quiz=q||[]
   const examens=quiz.filter(x=>x.mode_examen&&x.actif!==false)
   const exValides=examens.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
-  const moduleValide=examens.length>0&&exValides===examens.length
-  const pct=examens.length?Math.round(exValides/examens.length*100):0
+  // Le total vient du reglage du module, pas du nombre d'examens publies
+  const nbRequis=examensRequis(id,examens.length)
+  const moduleValide=nbRequis>0&&exValides>=nbRequis
+  const pct=nbRequis?Math.round(exValides/nbRequis*100):0
   $('m-header').innerHTML=`<div style="display:flex;align-items:center;gap:14px;padding:1.1rem;border-bottom:1px solid var(--bord)">
     <div style="width:50px;height:50px;border-radius:14px;background:${m.bg};display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic}"></i></div>
     <div style="flex:1"><div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${m.num}</div>
     <div style="font-family:var(--fg);font-size:1.15rem;font-weight:700;letter-spacing:-.3px;margin-bottom:6px">${m.nom}</div>
-    <div style="display:flex;align-items:center;gap:8px;max-width:300px">${examens.length?examens.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exValides?'var(--v)':'var(--field)'};display:inline-block"></span>`).join(''):''}
-    <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${(G.profil.modules_valides||[]).map(Number).indexOf(id)>=0?'Module déjà validé':G.profil.sans_module?'Cours et exercices':(examens.length?exValides+'/'+examens.length+' examen'+(examens.length>1?'s':'')+' validé'+(exValides>1?'s':''):'Aucun examen planifié')}</span>
+    <div style="display:flex;align-items:center;gap:8px;max-width:300px">${nbRequis?Array.from({length:nbRequis}).map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exValides?'var(--v)':'var(--field)'};display:inline-block"></span>`).join(''):''}
+    <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${(G.profil.modules_valides||[]).map(Number).indexOf(id)>=0?'Module déjà validé':G.profil.sans_module?'Cours et exercices':(nbRequis?exValides+'/'+nbRequis+' examen'+(nbRequis>1?'s':'')+' validé'+(exValides>1?'s':''):'Aucun examen planifié')}</span>
     ${(moduleValide&&!G.profil.sans_module)?'<span class="badge badge-v" style="font-size:.65rem;font-weight:800">MODULE VALIDÉ</span>':''}</div>
     <div style="font-size:.68rem;color:var(--t3);margin-top:4px">${G.profil.sans_module?"Tu ne valides pas de module cette année : profite des cours et des exercices pour t'entraîner.":"Seuls les examens comptent pour la validation du module — les exercices servent à s'entraîner."}</div></div>
   </div>`
@@ -3058,6 +3094,7 @@ async function pubQuizManuel() {
 
 async function loadQuizAdmin() {
   const sel=$('fil-mod-quiz');if(!sel) return;const m=parseInt(sel.value)
+  majReglageModule()
   const voirArchives=_modeArchives
   let req=db.from('quiz').select('*').eq('module_id',m)
   req=voirArchives?req.eq('archive',true):req.or('archive.is.null,archive.eq.false')
@@ -3309,6 +3346,29 @@ async function dupliquerQuiz(id){
   toast('Copie créée en privé — pense à définir son créneau','ok')
   _modeArchives=false
   basculerArchives()
+}
+
+async function enregistrerNbExamens(){
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  const sel=document.getElementById('fil-mod-quiz');if(!sel) return
+  const mod=parseInt(sel.value)
+  const n=parseInt((document.getElementById('cfg-nb-examens')||{}).value||'4')
+  const et=document.getElementById('cfg-etat')
+  const {error}=await db.from('modules_config').upsert({module_id:mod,nb_examens:n,updated_at:new Date().toISOString()},{onConflict:'module_id'})
+  if(error){
+    let m=error.message||''
+    if(/modules_config|relation/i.test(m)) m='Table manquante — exécute nb_examens_module.sql dans Supabase'
+    toast('Erreur : '+m,'err');return
+  }
+  _nbExamensRequis[mod]=n
+  if(et){et.textContent='Enregistré';setTimeout(function(){et.textContent=''},1800)}
+}
+
+function majReglageModule(){
+  const sel=document.getElementById('fil-mod-quiz');if(!sel) return
+  const mod=parseInt(sel.value)
+  const el=document.getElementById('cfg-nb-examens')
+  if(el) el.value=String(_nbExamensRequis[mod]||4)
 }
 
 async function togglePubQuiz(id,actuel){
@@ -4732,6 +4792,7 @@ function afficherQuestionnaireAncien() {
   initDark()
   demarrerAutoRefresh()
   chargerVilles()
+  chargerConfigModules()
   // Pastille du nombre de copies a corriger
   if(G.admin){
     db.from('tentatives').select('id',{count:'exact',head:true}).not('notes_libres','is',null).is('note_admin',null)
