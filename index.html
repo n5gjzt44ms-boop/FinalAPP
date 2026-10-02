@@ -694,8 +694,8 @@ button,input,select,textarea{font-family:var(--ff)}
               <span style="font-size:.68rem;color:var(--r);font-weight:700;text-transform:uppercase;letter-spacing:1px" id="q-num">Question 1</span>
               <span class="badge badge-rl" id="q-pts">2 pts</span>
             </div>
-            <div id="q-image-wrap" style="display:none;margin-bottom:.9rem"></div>
             <p class="quiz-q" id="q-enonce">—</p>
+            <div id="q-image-wrap" style="display:none;margin:.9rem 0"></div>
             <div id="q-opts"></div>
           </div>
           <div class="card-foot">
@@ -2435,8 +2435,17 @@ async function valider() {
   if(typeQ==='multi'){
     const rep=[..._multiSelect]
     G.reponses[G.questions[G.etape].id]=rep;G.confirme=true
-    // Afficher la correction multi
     const q=G.questions[G.etape]
+    // En EXAMEN : aucune correction revelee. La copie est corrigee par un gacheur.
+    if(G.quizActif&&G.quizActif.mode_examen){
+      q.options.forEach(function(_,j){const b=$('o'+j);if(b)b.style.pointerEvents='none'})
+      const att=document.createElement('div')
+      att.style.cssText='margin-top:.8rem;padding:10px 14px;background:var(--field);border-radius:10px;font-size:.76rem;color:var(--t2);line-height:1.5;text-align:center'
+      att.innerHTML='<i class="ti ti-lock"></i> Réponse enregistrée — la correction sera faite par ton gâcheur'
+      $('q-opts').appendChild(att)
+      hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
+    }
+    // Afficher la correction multi (exercices d'entrainement uniquement)
     const {data:qr}=await db.from('questions').select('bonnes_reponses,reponse_type').eq('id',q.id).single()
     const bonnes=new Set((qr?.bonnes_reponses||[]).map(Number))
     q.options.forEach((_,j)=>{
@@ -2457,6 +2466,15 @@ async function valider() {
     hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
   }
   if(G.choix===null) return;G.confirme=true;G.reponses[G.questions[G.etape].id]=G.choix
+  // En EXAMEN : aucune correction revelee
+  if(G.quizActif&&G.quizActif.mode_examen){
+    G.questions[G.etape].options.forEach(function(_,j){const b=$('o'+j);if(b)b.style.pointerEvents='none'})
+    const att=document.createElement('div')
+    att.style.cssText='margin-top:.8rem;padding:10px 14px;background:var(--field);border-radius:10px;font-size:.76rem;color:var(--t2);line-height:1.5;text-align:center'
+    att.innerHTML='<i class="ti ti-lock"></i> Réponse enregistrée — la correction sera faite par ton gâcheur'
+    $('q-opts').appendChild(att)
+    hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
+  }
   const {data:qr}=await db.from('questions').select('bonne_reponse').eq('id',G.questions[G.etape].id).single()
   const bonne=qr?.bonne_reponse
   G.questions[G.etape].options.forEach((_,j)=>{const b=$('o'+j);b.disabled=true;if(j===bonne)b.classList.add('ok');else if(j===G.choix&&j!==bonne)b.classList.add('ko')})
@@ -2471,7 +2489,9 @@ async function terminer() {
   $('r-detail').innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
   const {data:qr}=await db.from('questions').select('*').eq('quiz_id',G.quizActif.id)
   if(!qr?.length){toast('Erreur chargement questions','err');return}
-  const aDesLibres=qr.some(q=>q.type_question==='libre')
+  // Tout EXAMEN est soumis a la validation d'un gacheur, meme en QCM pur :
+  // l'aspirant ne voit aucun resultat tant que la copie n'est pas corrigee.
+  const aDesLibres=qr.some(q=>q.type_question==='libre')||!!(G.quizActif&&G.quizActif.mode_examen)
   let score=0;const parComp={}
   qr.forEach(q=>{
     if(q.type_question==='libre') return
@@ -2622,7 +2642,7 @@ function afficheRes() {
     else{repTexte=q.options?.[rep]??'—';bonneTexte=q.options?.[q.bonne_reponse]??'—'}
     return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:${i<questions.length-1?'1px solid var(--bord)':'none'}">
       <i class="ti ${isLibre?'ti-pencil':ok?'ti-circle-check':'ti-circle-x'}" style="color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--r)'};font-size:1rem;flex-shrink:0;margin-top:2px"></i>
-      <div style="flex:1">${q.image_url?`<img data-img="${q.image_url}" style="width:100%;max-height:80px;object-fit:contain;border-radius:8px;border:1px solid var(--bord);margin-bottom:4px"/>`:''}<div style="font-size:.82rem;font-weight:500;margin-bottom:2px">${q.enonce}</div>
+      <div style="flex:1"><div style="font-size:.82rem;font-weight:500;margin-bottom:4px">${q.enonce}</div>${q.image_url?`<img data-img="${q.image_url}" style="width:100%;max-height:80px;object-fit:contain;border-radius:8px;border:1px solid var(--bord);margin-bottom:4px"/>`:''}
       ${isLibre?`<div style="font-size:.72rem;color:var(--b);margin-bottom:4px"><strong>Votre réponse :</strong> ${repTexte}</div>${q.reponse_type?`<div style="background:var(--vl);border:1px solid var(--v);border-radius:8px;padding:7px 10px;margin-top:4px"><div style="font-size:.65rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--v);margin-bottom:3px">Corrigé</div><div style="font-size:.75rem;color:var(--v);line-height:1.5">${q.reponse_type}</div></div>`:`<div style="font-size:.72rem;color:var(--amber);font-style:italic;margin-top:3px">En attente de correction par le formateur</div>`}`:!ok?`<div style="font-size:.72rem;color:var(--r)">Votre réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--v);font-weight:600">Bonne réponse : ${bonneTexte} ✓</div>`:''}
       </div>
       ${G.admin?`<span style="font-size:.72rem;font-weight:700;font-family:var(--fg);color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--t3)'};flex-shrink:0">${isLibre?noteQ:ok?'+'+q.points:'0'}pt</span>`:''}
@@ -3393,7 +3413,20 @@ async function ouvrirCorrectionAdmin(tentId) {
   const {data:profil}=await db.from('profils').select('prenom,nom').eq('id',tent.aspirant_id).single()
   const reponses=tent.reponses||{},totalPts=questions.reduce((a,q)=>a+(parseFloat(q.points)||2),0)
   window._notesTemp={};window._totalPtsCorr=totalPts
-  questions.forEach(q=>{if(q.type_question!=='libre')window._notesTemp[q.id]=reponses[q.id]===q.bonne_reponse?parseFloat(q.points)||2:0;else window._notesTemp[q.id]=(tent.notes_libres||{})[q.id]||0})
+  // Pre-calcul des points : gere aussi les questions a choix multiples
+  questions.forEach(function(q){
+    const pts=parseFloat(q.points)||2
+    if(q.type_question==='libre'){window._notesTemp[q.id]=(tent.notes_libres||{})[q.id]||0;return}
+    let juste=false
+    if(q.type_question==='multi'){
+      const bonnes=new Set((q.bonnes_reponses||[]).map(Number))
+      const rep=new Set((reponses[q.id]||[]).map(Number))
+      juste=bonnes.size===rep.size&&[...bonnes].every(function(b){return rep.has(b)})
+    } else {
+      juste=reponses[q.id]===q.bonne_reponse
+    }
+    window._notesTemp[q.id]=juste?pts:0
+  })
   const modal=document.createElement('div');modal.id='modal-correction'
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto'
   modal.innerHTML=`<div style="background:var(--card);border-radius:16px;width:100%;max-width:620px;margin:auto;overflow:hidden">
