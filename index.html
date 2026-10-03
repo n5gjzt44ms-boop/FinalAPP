@@ -798,9 +798,8 @@ button,input,select,textarea{font-family:var(--ff)}
           <div class="card-body">
             <div class="field-row" style="margin-bottom:.9rem">
               <div><label class="field-label">Module</label>
-                <select class="fselect" id="up-mod" onchange="loadResAdmin()">
-                  <option value="1">Module 1 — Thermique</option><option value="2">Module 2 — Hydraulique</option>
-                  <option value="3">Module 3 — Conception</option><option value="4">Module 4 — Électrique</option>
+                <select class="fselect" id="up-mod" onchange="synchroniserModuleRes(this.value);loadResAdmin()">
+                  <option value="1">Thermique &amp; Mécanique</option><option value="2">Hydraulique</option><option value="3">Conception &amp; Construction</option><option value="4">Électrique &amp; Automatisme</option>
                 </select>
               </div>
               <div><label class="field-label">Type</label>
@@ -820,8 +819,8 @@ button,input,select,textarea{font-family:var(--ff)}
           <div class="card-head">
             <span class="card-title">Ressources publiées</span>
             <div style="display:flex;gap:6px;align-items:center">
-              <select class="fselect" style="width:auto;padding:5px 8px;font-size:.78rem" id="fil-mod-res" onchange="loadResAdmin()">
-                <option value="1">Module 1</option><option value="2">Module 2</option><option value="3">Module 3</option><option value="4">Module 4</option>
+              <select class="fselect" style="width:auto;padding:5px 8px;font-size:.78rem" id="fil-mod-res" onchange="synchroniserModuleRes(this.value,true);loadResAdmin()">
+                <option value="1">Thermique &amp; Mécanique</option><option value="2">Hydraulique</option><option value="3">Conception &amp; Construction</option><option value="4">Électrique &amp; Automatisme</option>
               </select>
               <button class="btn btn-ghost btn-sm" onclick="afficherCreerDossier()"><i class="ti ti-folder-plus"></i></button>
             </div>
@@ -856,9 +855,8 @@ button,input,select,textarea{font-family:var(--ff)}
             <div class="field-row" style="margin-bottom:.9rem">
               <div><label class="field-label">Titre</label><input class="finput" id="mq-titre" placeholder="Quiz Hydraulique niveau 1" oninput="sauverBrouillon()"/></div>
               <div><label class="field-label">Module</label>
-                <select class="fselect" id="mq-mod" onchange="sauverBrouillon()">
-                  <option value="1">Module 1 — Thermique</option><option value="2">Module 2 — Hydraulique</option>
-                  <option value="3">Module 3 — Conception</option><option value="4">Module 4 — Électrique</option>
+                <select class="fselect" id="mq-mod" onchange="synchroniserModuleQuiz(this.value);sauverBrouillon()">
+                  <option value="1">Thermique &amp; Mécanique</option><option value="2">Hydraulique</option><option value="3">Conception &amp; Construction</option><option value="4">Électrique &amp; Automatisme</option>
                 </select>
               </div>
             </div>
@@ -891,26 +889,12 @@ button,input,select,textarea{font-family:var(--ff)}
             <button class="btn btn-r btn-full" onclick="pubQuizManuel()"><i class="ti ti-check"></i> Créer le quiz</button>
           </div>
         </div>
-        <div class="card" id="carte-config-mod">
-          <div class="card-head"><span class="card-title">Validation du module</span></div>
-          <div class="card-body">
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-              <label class="field-label" style="margin:0">Examens nécessaires pour valider</label>
-              <select class="fselect" id="cfg-nb-examens" style="width:auto;padding:6px 10px" onchange="enregistrerNbExamens()">
-                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-                <option value="4" selected>4</option><option value="5">5</option><option value="6">6</option>
-              </select>
-              <span style="font-size:.72rem;color:var(--v)" id="cfg-etat"></span>
-            </div>
-            <div style="font-size:.7rem;color:var(--t3);margin-top:8px;line-height:1.5">L'aspirant verra « X sur ce nombre », quel que soit le nombre d'examens déjà publiés. Sans ce réglage, un aspirant qui réussit le premier examen verrait son module marqué validé à tort.</div>
-          </div>
-        </div>
         <div class="card">
           <div class="card-head" style="flex-wrap:wrap;gap:8px">
             <span class="card-title" id="titre-liste-quiz">Quiz du module</span>
             <button class="btn btn-ghost btn-sm" id="btn-archives" onclick="basculerArchives()"><i class="ti ti-archive"></i> Archives</button>
-            <select class="fselect" style="width:auto;padding:5px 8px;font-size:.78rem" id="fil-mod-quiz" onchange="loadQuizAdmin()">
-              <option value="1">Module 1</option><option value="2">Module 2</option><option value="3">Module 3</option><option value="4">Module 4</option>
+            <select class="fselect" style="width:auto;padding:5px 8px;font-size:.78rem" id="fil-mod-quiz" onchange="synchroniserModuleQuiz(this.value,true);loadQuizAdmin()">
+              <option value="1">Thermique &amp; Mécanique</option><option value="2">Hydraulique</option><option value="3">Conception &amp; Construction</option><option value="4">Électrique &amp; Automatisme</option>
             </select>
           </div>
           <div class="card-body" id="quiz-admin-body"><p style="font-size:.78rem;color:var(--t3)">Chargement...</p></div>
@@ -1089,22 +1073,11 @@ function suitLesModules(p){
   return m?m.modules:true
 }
 
-// Nombre d'examens requis pour valider chaque module. Fixe a l'avance pour
-// que le compteur ne depende pas du rythme de publication.
-let _nbExamensRequis={}
-async function chargerConfigModules(){
-  try{
-    const {data}=await db.from('modules_config').select('module_id,nb_examens')
-    const m={};(data||[]).forEach(function(x){m[x.module_id]=x.nb_examens})
-    _nbExamensRequis=m
-  }catch(e){_nbExamensRequis={}}
-}
-// Repli : le reglage, sinon le nombre d'examens existants du module
-function examensRequis(moduleId,nbExistants){
-  const n=_nbExamensRequis[moduleId]
-  if(n&&n>0) return n
-  return nbExistants||0
-}
+// Chaque module se valide par 4 examens. Valeur fixe : le compteur affiche
+// toujours "X sur 4", quel que soit le nombre d'examens deja publies.
+const NB_EXAMENS_PAR_MODULE = 4
+function examensRequis(){ return NB_EXAMENS_PAR_MODULE }
+async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 const ADMINS_SUPERVISEURS = ['b.prudhomme18@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
 function estAdminSuperviseur(){
@@ -1734,7 +1707,6 @@ async function initApp() {
   initDark()
   demarrerAutoRefresh()
   chargerVilles()
-  chargerConfigModules()
   // Pastille du nombre de copies a corriger
   if(G.admin){
     db.from('tentatives').select('id',{count:'exact',head:true}).not('notes_libres','is',null).is('note_admin',null)
@@ -1841,7 +1813,7 @@ function nav(page,sansHistorique) {
   if(page==='modules') loadModules()
   if(page==='suivi') loadSuivi()
   if(page==='ressources') loadResAdmin()
-  if(page==='quiz-admin'){loadQuizAdmin();chargerBrouillons();recupererLocal();chargerConfigModules().then(majReglageModule)}
+  if(page==='quiz-admin'){loadQuizAdmin();chargerBrouillons();recupererLocal()}
   if(page==='corrections') chargerCorrections()
   if(page==='aspirants') loadAspirants()
   if(page==='annonces-admin') chargerAnnoncesAdmin()
@@ -1907,7 +1879,7 @@ async function loadDashboard() {
   $('d-modules').innerHTML=MODULES.map(m=>{
     const exM=allExD.filter(x=>x.module_id===m.id)
     const exVal=exM.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
-    const nbReq=examensRequis(m.id,exM.length)
+    const nbReq=examensRequis()
     const fini=nbReq>0&&exVal>=nbReq
     const inscrit=monMod===m.id
     // Pastilles : une par examen du module
@@ -1917,7 +1889,7 @@ async function loadDashboard() {
       :!suitLesModules()?'<span style="font-size:.8rem;color:var(--t3)">Cours et ressources</span>'
       :G.profil.sans_module?'<span style="font-size:.8rem;color:var(--t3)">Cours et exercices</span>'
       :!nbReq?'<span style="font-size:.8rem;color:var(--t3)">Bientôt disponible</span>'
-      :fini?'<span class="badge badge-v"><i class="ti ti-check"></i> Validé</span>'
+      :fini?'<span class="badge badge-v"><i class="ti ti-check"></i> Théorie OK</span>'
       :`<span style="font-size:.82rem;font-weight:600;color:var(--t2)">${exVal} sur ${nbReq}</span>`
     return `<div class="card" style="cursor:pointer;margin-bottom:10px" onclick="ouvrirModule(${m.id})">
       <div style="display:flex;align-items:center;gap:14px;padding:16px 18px">
@@ -1992,7 +1964,7 @@ async function loadModules() {
     const tm=tents.filter(x=>x.quiz?.module_id===m.id)
     const exM=allEx.filter(x=>x.module_id===m.id)
     const exVal=exM.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
-    const nbReq=examensRequis(m.id,exM.length)
+    const nbReq=examensRequis()
     const pct=nbReq?Math.round(exVal/nbReq*100):0
     const termine=nbReq>0&&exVal>=nbReq
     const encours=tm.length>0&&!termine
@@ -2002,10 +1974,10 @@ async function loadModules() {
           <div style="width:48px;height:48px;border-radius:14px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:1.4rem"></i></div>
           <div style="flex:1"><div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${m.num}</div>
           <div style="font-family:var(--fg);font-size:1rem;font-weight:700;letter-spacing:-.3px">${m.nom}</div></div>
-          ${(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0?'<span class="badge badge-v">Validé</span>':G.profil.sans_module?'':`<span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}">${termine?'Validé':encours?'En cours':'À faire'}</span>`}
+          ${(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0?'<span class="badge badge-v">Théorie OK</span>':G.profil.sans_module?'':`<span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}">${termine?'Théorie OK':encours?'En cours':'À faire'}</span>`}
         </div>
         <p style="font-size:.78rem;color:var(--t2);margin-bottom:10px;line-height:1.5">${m.desc}</p>
-        <div style="display:flex;align-items:center;gap:8px">${(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0?'<span style="font-size:.8rem;color:var(--v);font-weight:600">Module acquis</span>':G.profil.sans_module?'<span style="font-size:.8rem;color:var(--t3)">Cours et exercices</span>':(exM.length?exM.map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')+`<span style="font-size:.82rem;font-weight:600;color:${termine?'var(--v)':'var(--t2)'};margin-left:4px">${termine?'Module validé':exVal+' sur '+exM.length}</span>`:'<span style="font-size:.8rem;color:var(--t3)">Examens à venir</span>')}</div>
+        <div style="display:flex;align-items:center;gap:8px">${(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0?'<span style="font-size:.8rem;color:var(--v);font-weight:600">Théorie acquise</span>':G.profil.sans_module?'<span style="font-size:.8rem;color:var(--t3)">Cours et exercices</span>':(nbReq?Array.from({length:nbReq}).map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')+`<span style="font-size:.82rem;font-weight:600;color:${termine?'var(--v)':'var(--t2)'};margin-left:4px">${termine?'Théorie validée':exVal+' sur '+nbReq}</span>`:'<span style="font-size:.8rem;color:var(--t3)">Examens à venir</span>')}</div>
       </div>
     </div>`
   }).join('')
@@ -2025,7 +1997,7 @@ async function ouvrirModule(id) {
   const examens=quiz.filter(x=>x.mode_examen&&x.actif!==false)
   const exValides=examens.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
   // Le total vient du reglage du module, pas du nombre d'examens publies
-  const nbRequis=examensRequis(id,examens.length)
+  const nbRequis=examensRequis()
   const moduleValide=nbRequis>0&&exValides>=nbRequis
   const pct=nbRequis?Math.round(exValides/nbRequis*100):0
   $('m-header').innerHTML=`<div style="display:flex;align-items:center;gap:14px;padding:1.1rem;border-bottom:1px solid var(--bord)">
@@ -2033,9 +2005,9 @@ async function ouvrirModule(id) {
     <div style="flex:1"><div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${m.num}</div>
     <div style="font-family:var(--fg);font-size:1.15rem;font-weight:700;letter-spacing:-.3px;margin-bottom:6px">${m.nom}</div>
     <div style="display:flex;align-items:center;gap:8px;max-width:300px">${nbRequis?Array.from({length:nbRequis}).map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exValides?'var(--v)':'var(--field)'};display:inline-block"></span>`).join(''):''}
-    <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${(G.profil.modules_valides||[]).map(Number).indexOf(id)>=0?'Module déjà validé':G.profil.sans_module?'Cours et exercices':(nbRequis?exValides+'/'+nbRequis+' examen'+(nbRequis>1?'s':'')+' validé'+(exValides>1?'s':''):'Aucun examen planifié')}</span>
-    ${(moduleValide&&!G.profil.sans_module)?'<span class="badge badge-v" style="font-size:.65rem;font-weight:800">MODULE VALIDÉ</span>':''}</div>
-    <div style="font-size:.68rem;color:var(--t3);margin-top:4px">${G.profil.sans_module?"Tu ne valides pas de module cette année : profite des cours et des exercices pour t'entraîner.":"Seuls les examens comptent pour la validation du module — les exercices servent à s'entraîner."}</div></div>
+    <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${(G.profil.modules_valides||[]).map(Number).indexOf(id)>=0?'Théorie déjà validée':G.profil.sans_module?'Cours et exercices':(nbRequis?exValides+'/'+nbRequis+' examen'+(nbRequis>1?'s':'')+' validé'+(exValides>1?'s':''):'Aucun examen planifié')}</span>
+    ${(moduleValide&&!G.profil.sans_module)?'<span class="badge badge-v" style="font-size:.65rem;font-weight:800">THÉORIE VALIDÉE</span>':''}</div>
+    <div style="font-size:.68rem;color:var(--t3);margin-top:4px">${G.profil.sans_module?"Tu ne valides pas de module cette année : profite des cours et des exercices pour t'entraîner.":(moduleValide?"Partie théorique acquise. La validation complète du module demande aussi la partie pratique, évaluée hors de la plateforme.":"Seuls les examens comptent pour la validation de la théorie — les exercices servent à s'entraîner. La partie pratique est évaluée séparément.")}</div></div>
   </div>`
   await renderCours(id)
   await renderEval(id,quiz,tents)
@@ -2734,8 +2706,8 @@ async function loadSuivi() {
     const qm=allQ.filter(q=>q.module_id===m.id)
     const exM=qm.filter(q=>q.mode_examen)
     const exVal=exM.filter(q=>tents.some(x=>x.quiz_id===q.id&&x.valide)).length
-    const modValide=exM.length>0&&exVal===exM.length
-    return `<div class="card"><div class="card-head"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span class="card-title">${m.nom}</span>${(modValide&&!G.profil.sans_module)?'<span class="badge badge-v" style="font-size:.6rem;font-weight:800">VALIDÉ</span>':''}</div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${G.profil.sans_module?'—':(exM.length?exVal+'/'+exM.length+' examens':'—')}</span></div><div class="card-body">${qm.length?qm.map(q=>{const _tt=tents.filter(x=>x.quiz_id===q.id);const tent=_tt.find(x=>x.valide)||_tt.sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at))[0];const statut=tent?.valide?'Validé':tent?'Non validé':'—';return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)"><i class="ti ${tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:1rem;flex-shrink:0"></i><span style="flex:1;font-size:.82rem;font-weight:500">${q.titre}${q.mode_examen?' <span style="background:var(--rl);color:var(--r);padding:0 6px;border-radius:20px;font-weight:700;font-size:.6rem">EXAMEN</span>':''}</span><span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${statut}</span></div>`}).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'}</div></div>`}).join('')
+    const modValide=exVal>=examensRequis()
+    return `<div class="card"><div class="card-head"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span class="card-title">${m.nom}</span>${(modValide&&!G.profil.sans_module)?'<span class="badge badge-v" style="font-size:.6rem;font-weight:800">THÉORIE OK</span>':''}</div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${G.profil.sans_module?'—':(exM.length?exVal+'/'+exM.length+' examens':'—')}</span></div><div class="card-body">${qm.length?qm.map(q=>{const _tt=tents.filter(x=>x.quiz_id===q.id);const tent=_tt.find(x=>x.valide)||_tt.sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at))[0];const statut=tent?.valide?'Validé':tent?'Non validé':'—';return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)"><i class="ti ${tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:1rem;flex-shrink:0"></i><span style="flex:1;font-size:.82rem;font-weight:500">${q.titre}${q.mode_examen?' <span style="background:var(--rl);color:var(--r);padding:0 6px;border-radius:20px;font-weight:700;font-size:.6rem">EXAMEN</span>':''}</span><span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${statut}</span></div>`}).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'}</div></div>`}).join('')
 }
 
 // ─── RÉVISION ──────────────────────────────────────────────────────────────
@@ -3094,7 +3066,6 @@ async function pubQuizManuel() {
 
 async function loadQuizAdmin() {
   const sel=$('fil-mod-quiz');if(!sel) return;const m=parseInt(sel.value)
-  majReglageModule()
   const voirArchives=_modeArchives
   let req=db.from('quiz').select('*').eq('module_id',m)
   req=voirArchives?req.eq('archive',true):req.or('archive.is.null,archive.eq.false')
@@ -3348,27 +3319,19 @@ async function dupliquerQuiz(id){
   basculerArchives()
 }
 
-async function enregistrerNbExamens(){
-  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
-  const sel=document.getElementById('fil-mod-quiz');if(!sel) return
-  const mod=parseInt(sel.value)
-  const n=parseInt((document.getElementById('cfg-nb-examens')||{}).value||'4')
-  const et=document.getElementById('cfg-etat')
-  const {error}=await db.from('modules_config').upsert({module_id:mod,nb_examens:n,updated_at:new Date().toISOString()},{onConflict:'module_id'})
-  if(error){
-    let m=error.message||''
-    if(/modules_config|relation/i.test(m)) m='Table manquante — exécute nb_examens_module.sql dans Supabase'
-    toast('Erreur : '+m,'err');return
-  }
-  _nbExamensRequis[mod]=n
-  if(et){et.textContent='Enregistré';setTimeout(function(){et.textContent=''},1800)}
+// Un seul choix de module par page : les deux listes restent alignees
+function synchroniserModuleQuiz(val,depuisBas){
+  const haut=document.getElementById('mq-mod')
+  const bas=document.getElementById('fil-mod-quiz')
+  if(depuisBas){ if(haut) haut.value=val }
+  else { if(bas&&bas.value!==val){bas.value=val;loadQuizAdmin()} }
 }
 
-function majReglageModule(){
-  const sel=document.getElementById('fil-mod-quiz');if(!sel) return
-  const mod=parseInt(sel.value)
-  const el=document.getElementById('cfg-nb-examens')
-  if(el) el.value=String(_nbExamensRequis[mod]||4)
+function synchroniserModuleRes(val,depuisBas){
+  const haut=document.getElementById('up-mod')
+  const bas=document.getElementById('fil-mod-res')
+  if(depuisBas){ if(haut) haut.value=val }
+  else { if(bas) bas.value=val }
 }
 
 async function togglePubQuiz(id,actuel){
@@ -3839,7 +3802,7 @@ function afficherAspirants(){
           +(aCorriger?'<span class="badge badge-a" style="font-size:.6rem">À corriger</span>':'')+'</div>'
           +'<div style="font-size:.7rem;color:var(--t3);margin-top:2px">'+metierNom(p.metier||'mecanicien')+((p.metier&&p.metier!=='mecanicien')?'':' · '+(p.sans_module?'<span style="color:var(--amber);font-weight:600">Année blanche</span>':(mod?mod.nom:'Pas encore inscrit')))+'</div>'
         +'</div>'
-        +'<span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:'+(exM.length&&exVal===exM.length?'var(--v)':'var(--t3)')+';flex-shrink:0">'+(p.sans_module?'—':(exM.length?exVal+'/'+exM.length:'—'))+'</span>'
+        +'<span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:'+(exVal>=examensRequis()?'var(--v)':'var(--t3)')+';flex-shrink:0">'+(p.sans_module?'—':(exVal+'/'+examensRequis()))+'</span>'
         +'<i class="ti ti-chevron-'+(ouvert?'up':'down')+'" style="color:var(--t3);flex-shrink:0"></i>'
       +'</div>'
       +detail
@@ -4792,7 +4755,6 @@ function afficherQuestionnaireAncien() {
   initDark()
   demarrerAutoRefresh()
   chargerVilles()
-  chargerConfigModules()
   // Pastille du nombre de copies a corriger
   if(G.admin){
     db.from('tentatives').select('id',{count:'exact',head:true}).not('notes_libres','is',null).is('note_admin',null)
