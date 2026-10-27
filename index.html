@@ -91,6 +91,9 @@ function ouvrirGuide() {
 
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <meta name="theme-color" content="#EDECE9"/>
 <meta name="description" content="ProgMéca — plateforme de suivi de la formation théorique des Compagnons du Devoir : cours, exercices et examens en mécanique, hydraulique, conception et électrotechnique."/>
 <meta name="keywords" content="ProgMéca, Progmeca, Compagnons du Devoir, formation théorique, mécanique, hydraulique, électrotechnique, conception"/>
@@ -1085,6 +1088,29 @@ const NB_EXAMENS_PAR_MODULE = 4
 function examensRequis(){ return NB_EXAMENS_PAR_MODULE }
 async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
+// Version du fichier : permet de verifier que le telephone a bien
+// la derniere mise en ligne et non une copie gardee en cache.
+const VERSION_APP = '2026.10.27-1700'
+
+// ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
+//   - le module est coche « acquis hors plateforme » (modules_valides), ou
+//   - 4 EXAMENS DIFFERENTS du module sont valides (copies corrigees).
+// Les anciennes lignes du carnet de bord ne comptent plus : elles ont pu
+// etre creees a tort des le premier examen par une ancienne version.
+function examensValidesDistincts(tents,moduleId){
+  const ids={}
+  ;(tents||[]).forEach(function(t){
+    const q=t.quiz||t._q
+    if(t.valide&&q&&q.mode_examen&&q.module_id===moduleId) ids[t.quiz_id]=1
+  })
+  return Object.keys(ids).length
+}
+function statutTheorie(profil,tents,moduleId){
+  if(((profil&&profil.modules_valides)||[]).map(Number).indexOf(moduleId)>=0) return 'acquis'
+  if(examensValidesDistincts(tents,moduleId)>=examensRequis()) return 'examens'
+  return null
+}
+
 const ADMINS_SUPERVISEURS = ['b.prudhomme18@compagnons-du-devoir.fr','b.beauvais22@compagnons-du-devoir.fr']
 function estAdminSuperviseur(){
   if(!G.admin) return false
@@ -1816,6 +1842,18 @@ async function initApp() {
   initDark()
   demarrerAutoRefresh()
   chargerVilles()
+  // Version affichee dans la barre du haut : permet de verifier d'un
+  // coup d'oeil que le telephone a bien la derniere mise en ligne.
+  try{
+    const lg=document.querySelector('.topbar-logo')
+    if(lg&&!document.getElementById('badge-version')){
+      const b=document.createElement('span')
+      b.id='badge-version'
+      b.style.cssText='font-size:.58rem;font-weight:600;color:var(--t3);margin-left:5px;font-family:var(--ff)'
+      b.textContent='v'+VERSION_APP
+      lg.appendChild(b)
+    }
+  }catch(e){}
   // Copie interrompue : proposer de reprendre la ou l'aspirant s'est arrete
   setTimeout(proposerRepriseCopie,600)
   // Pastille du nombre de copies a corriger
@@ -2085,10 +2123,10 @@ async function loadModules() {
           <div style="width:48px;height:48px;border-radius:14px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:1.4rem"></i></div>
           <div style="flex:1"><div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${m.num}</div>
           <div style="font-family:var(--fg);font-size:1rem;font-weight:700;letter-spacing:-.3px">${m.nom}</div></div>
-          ${(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0?'<span class="badge badge-v">Théorie OK</span>':G.profil.sans_module?'':`<span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}">${termine?'Théorie OK':encours?'En cours':'À faire'}</span>`}
+          ${(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0?'<span class="badge badge-v" title="Validé hors plateforme"><i class="ti ti-certificate"></i> Acquis</span>':G.profil.sans_module?'':`<span class="badge ${termine?'badge-v':encours?'badge-a':'badge-g'}">${termine?'Théorie OK':encours?'En cours':'À faire'}</span>`}
         </div>
         <p style="font-size:.78rem;color:var(--t2);margin-bottom:10px;line-height:1.5">${m.desc}</p>
-        <div style="display:flex;align-items:center;gap:8px">${(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0?'<span style="font-size:.8rem;color:var(--v);font-weight:600">Théorie acquise</span>':G.profil.sans_module?'<span style="font-size:.8rem;color:var(--t3)">Cours et exercices</span>':(nbReq?Array.from({length:nbReq}).map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')+`<span style="font-size:.82rem;font-weight:600;color:${termine?'var(--v)':'var(--t2)'};margin-left:4px">${termine?'Théorie validée':exVal+' sur '+nbReq}</span>`:'<span style="font-size:.8rem;color:var(--t3)">Examens à venir</span>')}</div>
+        <div style="display:flex;align-items:center;gap:8px">${(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0?'<span style="font-size:.8rem;color:var(--v);font-weight:600"><i class="ti ti-certificate"></i> Acquis hors plateforme</span>':G.profil.sans_module?'<span style="font-size:.8rem;color:var(--t3)">Cours et exercices</span>':(nbReq?Array.from({length:nbReq}).map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')+`<span style="font-size:.82rem;font-weight:600;color:${termine?'var(--v)':'var(--t2)'};margin-left:4px">${termine?'Théorie validée':exVal+' sur '+nbReq}</span>`:'<span style="font-size:.8rem;color:var(--t3)">Examens à venir</span>')}</div>
       </div>
     </div>`
   }).join('')
@@ -2116,7 +2154,7 @@ async function ouvrirModule(id) {
     <div style="flex:1"><div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${m.num}</div>
     <div style="font-family:var(--fg);font-size:1.15rem;font-weight:700;letter-spacing:-.3px;margin-bottom:6px">${m.nom}</div>
     <div style="display:flex;align-items:center;gap:8px;max-width:300px">${nbRequis?Array.from({length:nbRequis}).map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exValides?'var(--v)':'var(--field)'};display:inline-block"></span>`).join(''):''}
-    <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${(G.profil.modules_valides||[]).map(Number).indexOf(id)>=0?'Théorie déjà validée':G.profil.sans_module?'Cours et exercices':(nbRequis?exValides+'/'+nbRequis+' examen'+(nbRequis>1?'s':'')+' validé'+(exValides>1?'s':''):'Aucun examen planifié')}</span>
+    <span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${(G.profil.modules_valides||[]).map(Number).indexOf(id)>=0?'Théorie acquise hors plateforme':G.profil.sans_module?'Cours et exercices':(nbRequis?exValides+'/'+nbRequis+' examen'+(nbRequis>1?'s':'')+' validé'+(exValides>1?'s':''):'Aucun examen planifié')}</span>
     ${(moduleValide&&!G.profil.sans_module)?'<span class="badge badge-v" style="font-size:.65rem;font-weight:800">THÉORIE VALIDÉE</span>':''}</div>
     <div style="font-size:.68rem;color:var(--t3);margin-top:4px">${G.profil.sans_module?"Tu ne valides pas de module cette année : profite des cours et des exercices pour t'entraîner.":(moduleValide?"Partie théorique acquise. La validation complète du module demande aussi la partie pratique, évaluée hors de la plateforme.":"Seuls les examens comptent pour la validation de la théorie — les exercices servent à s'entraîner. La partie pratique est évaluée séparément.")}</div></div>
   </div>`
@@ -2408,8 +2446,8 @@ async function commencer(qid) {
       aDroitRattrapage=!!rt
     }catch(e){}
     if(!aDroitRattrapage){toast('Examen déjà passé. Score définitif.','err');return}
-    // La copie precedente est remplacee par celle du rattrapage
-    await db.from('tentatives').delete().eq('id',exist.id)
+    // On ne supprime RIEN ici : l'ancienne copie reste en base tant que la
+    // nouvelle n'est pas envoyee. Rien ne peut etre perdu en cas de plantage.
   }
   // Un gacheur peut refaire un examen autant de fois qu'il veut : c'est un test
   if(isExamen&&exist&&G.admin){await db.from('tentatives').delete().eq('id',exist.id)}
@@ -2648,12 +2686,32 @@ async function terminer() {
   })
   const totalPts=qr.reduce((a,q)=>a+(parseFloat(q.points)||2),0)
   const sur20=calculerScore20(score,totalPts),valide=!aDesLibres&&sur20>=SEUIL
-  const {data:tent,error:tentErr}=await db.from('tentatives').insert({
+  // Copie deja presente (rattrapage) : on la garde jusqu'a l'envoi reussi
+  // de la nouvelle, puis on archive et on retire l'ancienne.
+  let ancienneCopie=null
+  if(G.quizActif.mode_examen){
+    try{
+      const {data:ex}=await db.from('tentatives').select('id,score,valide,completed_at').eq('aspirant_id',G.profil.id).eq('quiz_id',G.quizActif.id)
+      ancienneCopie=(ex||[])
+    }catch(e){ancienneCopie=null}
+  }
+  const ligneCopie={
     aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:Math.round(sur20),total_points:20,valide,
     reponses:G.reponses,resultats_par_competence:parComp,
     notes_libres:aDesLibres?{}:null,
     fichiers_libres:Object.keys(G.fichiersLibres).length?G.fichiersLibres:null
-  }).select().single()
+  }
+  let {data:tent,error:tentErr}=await db.from('tentatives').insert(ligneCopie).select().single()
+  // Contrainte d'unicite (une copie par examen) : on retire l'ancienne puis on renvoie
+  if(tentErr&&(tentErr.code==='23505'||/duplicate|unique/i.test(tentErr.message||''))&&ancienneCopie&&ancienneCopie.length){
+    for(const a of ancienneCopie){
+      try{await db.from('historique_tentatives').insert({aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:a.score,valide:a.valide,completed_at:a.completed_at})}catch(e){}
+      await db.from('tentatives').delete().eq('id',a.id)
+    }
+    const rr=await db.from('tentatives').insert(ligneCopie).select().single()
+    tent=rr.data;tentErr=rr.error
+    ancienneCopie=null
+  }
   if(tentErr){
     // La copie ne doit JAMAIS etre perdue : on reessaie sans les pieces
     // jointes (souvent la cause : donnees trop volumineuses).
@@ -2668,7 +2726,7 @@ async function terminer() {
       // Dernier recours : enregistrer au moins les reponses brutes
       const r3=await db.from('tentatives').insert({
         aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:0,total_points:20,valide:false,
-        notes_libres:{}
+        reponses:G.reponses||{},notes_libres:{}
       }).select().single()
       if(r3.error){
         alert("Ta copie n'a pas pu être envoyée.\n\nNe ferme pas l'application : elle est conservée sur ton téléphone. Préviens ton gâcheur et reconnecte-toi plus tard pour la renvoyer.\n\nDétail : "+(r2.error.message||''))
@@ -2683,6 +2741,14 @@ async function terminer() {
     effacerCopieEnCours();afficheRes();return
   }
   effacerCopieEnCours()
+  // Nouvelle copie bien enregistree : l'ancienne (rattrapage) est archivee puis retiree
+  if(ancienneCopie&&ancienneCopie.length){
+    for(const a of ancienneCopie){
+      if(tent&&a.id===tent.id) continue
+      try{await db.from('historique_tentatives').insert({aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:a.score,valide:a.valide,completed_at:a.completed_at})}catch(e){}
+      try{await db.from('tentatives').delete().eq('id',a.id)}catch(e){}
+    }
+  }
   // Le rattrapage est à usage unique : on le retire une fois l'examen passé
   if(G.quizActif.mode_examen){try{await db.from('rattrapages').delete().eq('quiz_id',G.quizActif.id).eq('aspirant_id',G.profil.id)}catch(e){}}
   G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
@@ -3522,7 +3588,7 @@ async function chargerCorrections(){
   const [rT,rQ,rP,rR]=await Promise.all([
     db.from('tentatives').select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide').order('completed_at',{ascending:false}).limit(5000),
     db.from('quiz').select('id,titre,module_id,mode_examen,date_debut,actif').limit(2000),
-    db.from('profils').select('id,prenom,nom,email,telephone,module_inscrit,sans_module,role').in('role',['aspirant','apprenti']),
+    db.from('profils').select('*').limit(5000),
     db.from('rattrapages').select('quiz_id,aspirant_id')
   ])
   if(rT.error){el.innerHTML='<p style="color:var(--r);font-size:.82rem">Erreur : '+rT.error.message+'</p>';return}
@@ -3545,13 +3611,6 @@ async function chargerCorrections(){
     }
     rQ.data=recup
   }
-  // Compteur visible : ce que l'application lit reellement
-  const zoneC=document.getElementById('corr-compteur')
-  if(zoneC){
-    const nExam=_corrAll.filter(function(t){return t._q&&t._q.mode_examen}).length
-    const nAtt=_corrAll.filter(function(t){return t._q&&t._q.mode_examen&&estEnAttente(t)}).length
-    zoneC.textContent=(rT.data||[]).length+' copies · '+(rQ.data||[]).length+' quiz lus · '+nExam+' copies d examen · '+nAtt+' à corriger'
-  }
   // Diagnostic : des copies existent-elles sans etre lisibles ?
   try{
     const {count}=await db.from('tentatives').select('id',{count:'exact',head:true})
@@ -3563,16 +3622,25 @@ async function chargerCorrections(){
     }
   }catch(e){}
   _corrExamens=rQ.data||[]
-  _corrAspirants=rP.data||[]
+  const tousProfils=rP.data||[]
+  // Pour les absents : uniquement les aspirants / apprentis
+  _corrAspirants=tousProfils.filter(function(p){return p.role==='aspirant'||p.role==='apprenti'})
   _corrRatt=rR.data||[]
   const mapQ={};_corrExamens.forEach(function(q){mapQ[q.id]=q})
-  const mapP={};_corrAspirants.forEach(function(p){mapP[p.id]=p})
+  const mapP={};tousProfils.forEach(function(p){mapP[p.id]=p})
   // On garde TOUTES les copies : une copie rattachee a un quiz non marque
   // "examen" doit rester visible, sinon elle semble avoir disparu.
   _corrAll=(rT.data||[]).map(function(t){
     t._q=mapQ[t.quiz_id]||null;t._p=mapP[t.aspirant_id]||{};return t
   })
   _corrExamens=_corrExamens.filter(function(q){return q.mode_examen})
+  // Compteur visible, calcule APRES le tri (il affichait 0 a tort avant)
+  const zoneC=document.getElementById('corr-compteur')
+  if(zoneC){
+    const ex=_corrAll.filter(function(t){return t._q&&t._q.mode_examen})
+    const nAtt=ex.filter(estEnAttente).length
+    zoneC.textContent=(rT.data||[]).length+' copies en base lisibles · '+ex.length+' copies d examen · '+nAtt+' à corriger · '+(ex.length-nAtt)+' corrigées'
+  }
   // La pastille ne compte que les examens en attente
   majPastilleCorr(_corrAll.filter(function(t){return t._q&&t._q.mode_examen&&estEnAttente(t)}).length)
   afficherCorrections()
@@ -3607,13 +3675,29 @@ function afficherCorrections(){
 
   // ── Vue ABSENTS ──
   if(_corrVue==='absents'){
-    const exs=_corrFiltre?_corrExamens.filter(function(q){return q.module_id===_corrFiltre}):_corrExamens
+    // Seuls les examens dont le creneau a commence peuvent avoir des absents
+    const maintenant=new Date()
+    const exs=(_corrFiltre?_corrExamens.filter(function(q){return q.module_id===_corrFiltre}):_corrExamens)
+      .filter(function(q){return q.actif&&q.date_debut&&new Date(q.date_debut)<=maintenant})
     let h=''
+    const sansModule=_corrAspirants.filter(function(p){return !p.module_inscrit&&!p.sans_module})
+    if(sansModule.length){
+      h+='<div class="alert" style="background:var(--amberl);color:var(--amber);margin-bottom:1rem;font-size:.8rem;line-height:1.5">'
+        +'<b>'+sansModule.length+' aspirant(s) sans module renseigné</b> : ils ne peuvent passer aucun examen et ne sont pas comptés absents. '
+        +sansModule.slice(0,12).map(function(p){return ((p.prenom||'')+' '+(p.nom||'')).trim()}).join(', ')+(sansModule.length>12?'…':'')
+        +'</div>'
+    }
     let total=0
     exs.sort(function(a,b){return new Date(b.date_debut||0)-new Date(a.date_debut||0)}).forEach(function(q){
+      // Attendu = inscrit a CE module, mecanicien, pas en annee blanche,
+      // module pas deja acquis hors plateforme. Un aspirant sans module
+      // n'est plus compte absent a tous les examens.
       const attendus=_corrAspirants.filter(function(p){
         if(p.sans_module) return false
-        return !p.module_inscrit||p.module_inscrit===q.module_id
+        if(p.module_inscrit!==q.module_id) return false
+        if(p.metier&&p.metier!=='mecanicien') return false
+        if((p.modules_valides||[]).map(Number).indexOf(q.module_id)>=0) return false
+        return true
       })
       const absents=attendus.filter(function(p){
         return !_corrAll.some(function(t){return t.quiz_id===q.id&&t.aspirant_id===p.id})
@@ -3644,8 +3728,16 @@ function afficherCorrections(){
   }
 
   // ── Vues EN ATTENTE / TOUTES ──
-  if(_corrVue==='attente') liste=liste.filter(function(t){return t._q&&t._q.mode_examen&&estEnAttente(t)})
-  else liste=liste.slice().sort(function(a,b){return new Date(b.completed_at||0)-new Date(a.completed_at||0)})
+  // Les exercices d'entrainement n'ont rien a faire ici : ils noyaient les examens
+  liste=liste.filter(function(t){return t._q&&t._q.mode_examen})
+  if(_corrVue==='attente') liste=liste.filter(estEnAttente)
+  liste=liste.slice().sort(function(a,b){
+    const na=((a._p.nom||'')+' '+(a._p.prenom||'')).toLowerCase(),nb=((b._p.nom||'')+' '+(b._p.prenom||'')).toLowerCase()
+    return na<nb?-1:na>nb?1:0
+  })
+  // Plusieurs copies pour un meme aspirant et un meme examen (rattrapage)
+  const nbParCle={}
+  liste.forEach(function(t){const k=t.quiz_id+'|'+t.aspirant_id;nbParCle[k]=(nbParCle[k]||0)+1})
   if(!liste.length){
     el.innerHTML='<div class="card"><div style="padding:2rem 1rem;text-align:center">'
       +'<i class="ti ti-circle-check" style="font-size:2rem;color:var(--v)"></i>'
@@ -3673,10 +3765,10 @@ function afficherCorrections(){
         +(m?'<div style="width:30px;height:30px;border-radius:10px;background:'+m.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+m.icon+'" style="color:'+m.ic+';font-size:.82rem"></i></div>':'')
         +'<div style="min-width:0"><div class="card-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+g.titre+'</div>'
         +'<div style="font-size:.68rem;color:var(--t3)">'+(m?m.nom:'')+(g.examen?' · Examen':' · Exercice')+'</div></div>'
-      +'</div><span class="badge badge-a">'+g.copies.length+'</span></div>'
+      +'</div><span class="badge badge-a">'+g.copies.length+' copie'+(g.copies.length>1?'s':'')+'</span></div>'
       +'<div class="card-body">'
       +g.copies.map(function(t){
-        const nom=((t._p.prenom||'')+' '+(t._p.nom||'')).trim()||'Aspirant'
+        const nom=(((t._p.prenom||'')+' '+(t._p.nom||'')).trim()||('Compte inconnu ('+String(t.aspirant_id||'').slice(0,8)+')'))+(nbParCle[t.quiz_id+'|'+t.aspirant_id]>1?' · plusieurs copies':'')
         const d=t.completed_at?new Date(t.completed_at).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''
         const att=estEnAttente(t)
         return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bord)">'
@@ -3789,7 +3881,11 @@ function majScoreLive(){const notes=window._notesTemp||{},obtenu=Object.values(n
 async function validerCorrection(tentId,totalPts) {
   const notes=window._notesTemp||{},obtenu=Object.values(notes).reduce((a,v)=>a+(parseFloat(v)||0),0),sur20=calculerScore20(obtenu,totalPts),valide=sur20>=SEUIL
   const {data:tent2}=await db.from('tentatives').select('aspirant_id,quiz(module_id,mode_examen)').eq('id',tentId).single()
-  await db.from('tentatives').update({notes_libres:notes,note_admin:sur20,score:Math.round(sur20),total_points:20,valide}).eq('id',tentId)
+  const maj=await db.from('tentatives').update({notes_libres:notes,note_admin:sur20,score:Math.round(sur20),total_points:20,valide}).eq('id',tentId).select('id')
+  if(maj.error||!maj.data||!maj.data.length){
+    alert("La correction n'a PAS été enregistrée.\n\n"+((maj.error&&maj.error.message)||"Aucune ligne modifiée : droits insuffisants sur la table des copies."))
+    return
+  }
   // Le carnet n'est alimente que lorsque TOUS les examens du module sont
   // valides : un seul examen reussi ne vaut pas validation de la theorie.
   if(valide&&tent2&&tent2.quiz&&tent2.quiz.mode_examen&&tent2.quiz.module_id){
@@ -4167,6 +4263,7 @@ async function chargerCarnet(aspirantId) {
   const {data:carnet}=await db.from('carnet_bord').select('*').eq('aspirant_id',id).order('valide_at')
   const {data:tents}=await db.from('tentatives').select('*, quiz(module_id,titre,mode_examen)').eq('aspirant_id',id)
   const el=$('carnet-body');if(!el) return
+  const dateCarnet={};(carnet||[]).forEach(function(x){dateCarnet[x.module_id]=x})
   // Bandeau lorsqu'un gacheur consulte le carnet d'un aspirant
   let bandeau=''
   if(aspirantId&&p){
@@ -4178,15 +4275,15 @@ async function chargerCarnet(aspirantId) {
       +'<button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.15);color:#fff;flex-shrink:0" onclick="_carnetAspirant=null;chargerCarnet()">Mon carnet</button>'
       +'</div></div>'
   }
-  // Fusionner les validations : par examens (carnet_bord) ET manuelles (modules_valides)
-  const manuels=(p&&p.modules_valides||[]).map(Number)
-  const listeCarnet=(carnet||[]).slice()
-  manuels.forEach(function(mid){
-    if(!listeCarnet.find(function(x){return x.module_id===mid})){
-      listeCarnet.push({module_id:mid,valide_at:null,manuel:true})
-    }
+  // Validation recalculee a partir des copies reelles (regle unique)
+  const modulesValides=[]
+  MODULES.forEach(function(m){
+    const st=statutTheorie(p,tents,m.id)
+    if(!st) return
+    const cb=dateCarnet[m.id]
+    modulesValides.push({module_id:m.id,manuel:st==='acquis',valide_at:(st==='examens'&&cb)?cb.valide_at:null,ville:cb&&cb.ville})
   })
-  const modulesValides=listeCarnet,nb=modulesValides.length
+  const nb=modulesValides.length
   let html=bandeau+`<div class="card" style="margin-bottom:1rem"><div class="card-body"><div style="display:flex;align-items:center;gap:14px">
     <div class="sidebar-avatar" style="width:50px;height:50px;font-size:1rem;border-radius:14px;flex-shrink:0">${[(p?.prenom||'')[0],(p?.nom||'')[0]].join('').toUpperCase()||'?'}</div>
     <div style="flex:1"><div style="font-family:var(--fg);font-size:1.1rem;font-weight:700;letter-spacing:-.3px">Pays ${p?.nom||''} ${p?.prenom||''}</div>
@@ -4203,17 +4300,10 @@ async function chargerCarnet(aspirantId) {
   })
   // Les modules dont les examens sont valides sont inscrits automatiquement
   // au carnet : la ville est deja connue par le profil.
-  const tentsValides=(tents||[]).filter(t=>t.valide&&t.quiz?.mode_examen)
-  // Un module n'entre au carnet que si TOUS ses examens sont valides
-  const compte={}
-  tentsValides.forEach(function(t){
-    const mid=t.quiz&&t.quiz.module_id
-    if(mid) compte[mid]=(compte[mid]||0)+1
+  // Inscription au carnet : seulement si 4 examens distincts sont valides
+  const aInscrire=MODULES.map(function(m){return m.id}).filter(function(mid){
+    return examensValidesDistincts(tents,mid)>=examensRequis()&&!dateCarnet[mid]
   })
-  const modulesAvecExamen=Object.keys(compte)
-    .filter(function(mid){return compte[mid]>=examensRequis()})
-    .map(Number)
-  const aInscrire=modulesAvecExamen.filter(mid=>!modulesValides.find(c=>c.module_id===mid))
   if(aInscrire.length&&!aspirantId){
     const villeP=p&&p.ville_sedentaire||null
     for(const mid of aInscrire){
@@ -4254,7 +4344,7 @@ async function exportCarnetPDF() {
   const doc=new jsPDF({unit:'mm',format:'a4'})
   const p=G.profil
   const {data:carnet}=await db.from('carnet_bord').select('*').eq('aspirant_id',p.id)
-  const {data:tents}=await db.from('tentatives').select('*,quiz(titre,module_id)').eq('aspirant_id',p.id)
+  const {data:tents}=await db.from('tentatives').select('*,quiz(titre,module_id,mode_examen)').eq('aspirant_id',p.id)
   // Header
   doc.setFillColor(26,26,26);doc.rect(0,0,210,40,'F')
   doc.setTextColor(226,75,74);doc.setFont('helvetica','bold');doc.setFontSize(28)
@@ -4272,8 +4362,8 @@ async function exportCarnetPDF() {
   doc.setFontSize(12);doc.setFont('helvetica','bold');doc.setTextColor(26,26,26)
   doc.text('Progression par module',15,y);y+=8
   mods.forEach(m=>{
-    const cb=(carnet||[]).find(c=>c.module_id===m.id)
     const tm=(tents||[]).filter(t=>t.quiz?.module_id===m.id)
+    const cb=statutTheorie(p,tents,m.id)?((carnet||[]).find(c=>c.module_id===m.id)||{valide_at:null}):null
     const val=tm.filter(t=>t.valide).length
     doc.setFont('helvetica','normal');doc.setFontSize(10)
     if(cb){doc.setTextColor(59,109,17);doc.text('✓ '+m.nom,18,y);doc.setTextColor(100,100,100);doc.text(cb.valide_at?'Validé le '+new Date(cb.valide_at).toLocaleDateString('fr-FR'):'Validé'+' — Score : '+cb.score_final+'/20 — '+cb.ville,80,y)}
@@ -4561,7 +4651,7 @@ async function ouvrirProfilAspirantAncien(aspirantId, nom) {
   document.body.appendChild(modal)
   const [{data:profil},{data:tents},{data:allQuiz},{data:carnet}]=await Promise.all([
     db.from('profils').select('*').eq('id',aspirantId).single(),
-    db.from('tentatives').select('*,quiz(id,titre,module_id,niveau)').eq('aspirant_id',aspirantId).order('completed_at',{ascending:false}),
+    db.from('tentatives').select('*,quiz(id,titre,module_id,niveau,mode_examen)').eq('aspirant_id',aspirantId).order('completed_at',{ascending:false}),
     db.from('quiz').select('*').eq('actif',true).or('archive.is.null,archive.eq.false').order('module_id').order('niveau'),
     db.from('carnet_bord').select('*').eq('aspirant_id',aspirantId)
   ])
@@ -4576,14 +4666,16 @@ async function ouvrirProfilAspirantAncien(aspirantId, nom) {
   </div>`
   MODULES.forEach(m=>{
     const qm=q.filter(x=>x.module_id===m.id),tm=t.filter(x=>x.quiz?.module_id===m.id)
-    const pct=qm.length?Math.round(tm.filter(x=>x.valide).length/qm.length*100):0
-    const cb=(carnet||[]).find(c=>c.module_id===m.id)
+    const nbExV=examensValidesDistincts(tm,m.id)
+    const pct=Math.round(Math.min(nbExV,examensRequis())/examensRequis()*100)
+    const stT=statutTheorie(profil,tm,m.id)
+    const cb=stT
     html+=`<div style="background:var(--bg);border:1px solid var(--bord);border-radius:12px;padding:.9rem;margin-bottom:.8rem">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
         <div style="width:36px;height:36px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic}"></i></div>
         <div style="flex:1"><div style="font-size:.875rem;font-weight:700">${m.nom}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px"><div class="pbar" style="flex:1"><div class="pfill ${pct===100?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div><span style="font-family:var(--fg);font-size:.78rem;font-weight:700">${pct}%</span></div></div>
-        ${cb?'<span class="badge badge-v">✓ Carnet</span>':''}
+        ${stT==='acquis'?'<span class="badge badge-v">Acquis hors plateforme</span>':stT==='examens'?'<span class="badge badge-v">Théorie validée</span>':'<span class="badge badge-g">'+nbExV+'/'+examensRequis()+' examens</span>'}
       </div>
       ${qm.map(qz=>{const tent=tm.find(x=>x.quiz_id===qz.id);const enAttente=tent?.notes_libres!==null&&tent?.notes_libres!==undefined&&!tent?.note_admin
         return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--bord)">
@@ -5082,6 +5174,18 @@ function afficherQuestionnaireAncien() {
   initDark()
   demarrerAutoRefresh()
   chargerVilles()
+  // Version affichee dans la barre du haut : permet de verifier d'un
+  // coup d'oeil que le telephone a bien la derniere mise en ligne.
+  try{
+    const lg=document.querySelector('.topbar-logo')
+    if(lg&&!document.getElementById('badge-version')){
+      const b=document.createElement('span')
+      b.id='badge-version'
+      b.style.cssText='font-size:.58rem;font-weight:600;color:var(--t3);margin-left:5px;font-family:var(--ff)'
+      b.textContent='v'+VERSION_APP
+      lg.appendChild(b)
+    }
+  }catch(e){}
   // Copie interrompue : proposer de reprendre la ou l'aspirant s'est arrete
   setTimeout(proposerRepriseCopie,600)
   // Pastille du nombre de copies a corriger
