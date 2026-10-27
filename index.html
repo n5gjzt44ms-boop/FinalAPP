@@ -628,6 +628,11 @@ button,input,select,textarea{font-family:var(--ff)}
         <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Copies à corriger</div>
         <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Toutes les copies en attente, tous modules confondus.</p>
       </div>
+      <div style="display:flex;gap:6px;margin-bottom:.7rem;flex-wrap:wrap" id="vues-corr">
+        <button class="btn btn-dark btn-sm" data-cv="attente" onclick="vueCorrections('attente')"><i class="ti ti-clock"></i> À corriger</button>
+        <button class="btn btn-ghost btn-sm" data-cv="toutes" onclick="vueCorrections('toutes')"><i class="ti ti-files"></i> Toutes les copies</button>
+        <button class="btn btn-ghost btn-sm" data-cv="absents" onclick="vueCorrections('absents')"><i class="ti ti-user-x"></i> Absents</button>
+      </div>
       <div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap" id="filtres-corr">
         <button class="btn btn-dark btn-sm" data-cm="0" onclick="filtrerCorrections(0)">Tous les modules</button>
         <button class="btn btn-ghost btn-sm" data-cm="1" onclick="filtrerCorrections(1)">Thermique</button>
@@ -2393,7 +2398,18 @@ async function commencer(qid) {
   const {data:qinfo}=await db.from('quiz').select('mode_examen').eq('id',qid).single()
   const isExamen=qinfo?.mode_examen
   const {data:exist}=await db.from('tentatives').select('id').eq('aspirant_id',G.profil.id).eq('quiz_id',qid).maybeSingle()
-  if(isExamen&&exist&&!G.admin){toast('Examen déjà passé. Score définitif.','err');return}
+  // Un rattrapage accorde par un gacheur permet de repasser l'examen,
+  // meme si une copie incomplete a deja ete enregistree.
+  let aDroitRattrapage=false
+  if(isExamen&&exist&&!G.admin){
+    try{
+      const {data:rt}=await db.from('rattrapages').select('id').eq('quiz_id',qid).eq('aspirant_id',G.profil.id).maybeSingle()
+      aDroitRattrapage=!!rt
+    }catch(e){}
+    if(!aDroitRattrapage){toast('Examen déjà passé. Score définitif.','err');return}
+    // La copie precedente est remplacee par celle du rattrapage
+    await db.from('tentatives').delete().eq('id',exist.id)
+  }
   // Un gacheur peut refaire un examen autant de fois qu'il veut : c'est un test
   if(isExamen&&exist&&G.admin){await db.from('tentatives').delete().eq('id',exist.id)}
   if(!isExamen&&exist){
@@ -3467,29 +3483,35 @@ async function dupliquerQuiz(id) {
 
 // ─── CORRECTION ADMIN ──────────────────────────────────────────────────────
 // ─── ESPACE DE CORRECTION ──────────────────────────────────────────────────
-let _corrAll=[],_corrFiltre=0
+
+let _corrAll=[],_corrFiltre=0,_corrVue='attente',_corrExamens=[],_corrAspirants=[],_corrRatt=[]
 
 async function chargerCorrections(){
   const el=$('corr-body');if(!el) return
   el.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
-  const {data,error}=await db.from('tentatives')
-    .select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,quiz(titre,module_id,mode_examen)')
-    .not('notes_libres','is',null)
-    .is('note_admin',null)
-    .order('completed_at',{ascending:true})
-  if(error){el.innerHTML='<p style="color:var(--r);font-size:.82rem">Erreur : '+error.message+'</p>';return}
-  const tents=data||[]
-  // Noms des aspirants
-  const ids=[...new Set(tents.map(function(t){return t.aspirant_id}))]
-  let profs={}
-  if(ids.length){
-    const {data:ps}=await db.from('profils').select('id,prenom,nom').in('id',ids)
-    ;(ps||[]).forEach(function(p){profs[p.id]=p})
-  }
-  _corrAll=tents.map(function(t){t._p=profs[t.aspirant_id]||{};return t})
-  majPastilleCorr(_corrAll.length)
+  // TOUTES les copies d'examen, pas seulement celles en attente :
+  // une copie auto-validee doit rester visible et corrigeable.
+  const [rT,rQ,rP,rR]=await Promise.all([
+    db.from('tentatives').select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide').order('completed_at',{ascending:false}),
+    db.from('quiz').select('id,titre,module_id,mode_examen,date_debut,actif').eq('mode_examen',true),
+    db.from('profils').select('id,prenom,nom,email,telephone,module_inscrit,sans_module,role').in('role',['aspirant','apprenti']),
+    db.from('rattrapages').select('quiz_id,aspirant_id')
+  ])
+  if(rT.error){el.innerHTML='<p style="color:var(--r);font-size:.82rem">Erreur : '+rT.error.message+'</p>';return}
+  _corrExamens=rQ.data||[]
+  _corrAspirants=rP.data||[]
+  _corrRatt=rR.data||[]
+  const mapQ={};_corrExamens.forEach(function(q){mapQ[q.id]=q})
+  const mapP={};_corrAspirants.forEach(function(p){mapP[p.id]=p})
+  // Ne garder que les copies d'examen
+  _corrAll=(rT.data||[]).filter(function(t){return mapQ[t.quiz_id]}).map(function(t){
+    t._q=mapQ[t.quiz_id];t._p=mapP[t.aspirant_id]||{};return t
+  })
+  majPastilleCorr(_corrAll.filter(estEnAttente).length)
   afficherCorrections()
 }
+
+function estEnAttente(t){ return t.note_admin===null||t.note_admin===undefined }
 
 function majPastilleCorr(n){
   const p=document.getElementById('pastille-corr')
@@ -3504,22 +3526,69 @@ function filtrerCorrections(m){
   afficherCorrections()
 }
 
+function vueCorrections(v){
+  _corrVue=v
+  document.querySelectorAll('#vues-corr button').forEach(function(b){
+    b.className=b.dataset.cv===v?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'
+  })
+  afficherCorrections()
+}
+
 function afficherCorrections(){
   const el=$('corr-body');if(!el) return
-  const liste=_corrFiltre?_corrAll.filter(function(t){return t.quiz&&t.quiz.module_id===_corrFiltre}):_corrAll
+  let liste=_corrFiltre?_corrAll.filter(function(t){return t._q&&t._q.module_id===_corrFiltre}):_corrAll
+
+  // ── Vue ABSENTS ──
+  if(_corrVue==='absents'){
+    const exs=_corrFiltre?_corrExamens.filter(function(q){return q.module_id===_corrFiltre}):_corrExamens
+    let h=''
+    let total=0
+    exs.sort(function(a,b){return new Date(b.date_debut||0)-new Date(a.date_debut||0)}).forEach(function(q){
+      const attendus=_corrAspirants.filter(function(p){
+        if(p.sans_module) return false
+        return !p.module_inscrit||p.module_inscrit===q.module_id
+      })
+      const absents=attendus.filter(function(p){
+        return !_corrAll.some(function(t){return t.quiz_id===q.id&&t.aspirant_id===p.id})
+      })
+      if(!absents.length) return
+      total+=absents.length
+      const m=MODULES.find(function(x){return x.id===q.module_id})
+      h+='<div class="card"><div class="card-head"><div style="min-width:0">'
+        +'<div class="card-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+q.titre+'</div>'
+        +'<div style="font-size:.68rem;color:var(--t3)">'+(m?m.nom:'')+(q.date_debut?' · '+new Date(q.date_debut).toLocaleDateString('fr-FR'):'')+'</div></div>'
+        +'<span class="badge badge-a">'+absents.length+'</span></div><div class="card-body">'
+        +'<button class="btn btn-ghost btn-sm btn-full" style="margin-bottom:.7rem" onclick="rattrapageTous(\''+q.id+'\')"><i class="ti ti-player-play"></i> Rouvrir pour tous les absents</button>'
+        +absents.map(function(p){
+          const ouvert=_corrRatt.some(function(r){return r.quiz_id===q.id&&r.aspirant_id===p.id})
+          return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord)">'
+            +'<div class="sidebar-avatar" style="flex-shrink:0">'+([(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?')+'</div>'
+            +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600">'+((p.prenom||'')+' '+(p.nom||'')).trim()+'</div>'
+            +'<div style="font-size:.7rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(p.email||'')+'</div></div>'
+            +(ouvert?'<span class="badge badge-v" style="flex-shrink:0">Rouvert</span>'
+                    :'<button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="ouvrirRattrapage(\''+q.id+'\',\''+p.id+'\')">Rouvrir</button>')
+            +'</div>'
+        }).join('')
+        +'</div></div>'
+    })
+    el.innerHTML=h||'<div class="card"><div style="padding:2rem 1rem;text-align:center"><i class="ti ti-circle-check" style="font-size:2rem;color:var(--v)"></i><div style="font-size:.9rem;font-weight:600;margin-top:.6rem">Personne ne manque à l appel</div></div></div>'
+    return
+  }
+
+  // ── Vues EN ATTENTE / TOUTES ──
+  if(_corrVue==='attente') liste=liste.filter(estEnAttente)
   if(!liste.length){
     el.innerHTML='<div class="card"><div style="padding:2rem 1rem;text-align:center">'
       +'<i class="ti ti-circle-check" style="font-size:2rem;color:var(--v)"></i>'
-      +'<div style="font-size:.9rem;font-weight:600;margin-top:.6rem">Aucune copie en attente</div>'
-      +'<div style="font-size:.78rem;color:var(--t3);margin-top:3px">Tout est corrigé.</div>'
+      +'<div style="font-size:.9rem;font-weight:600;margin-top:.6rem">'+(_corrVue==='attente'?'Aucune copie en attente':'Aucune copie')+'</div>'
+      +'<div style="font-size:.78rem;color:var(--t3);margin-top:3px">'+(_corrVue==='attente'?'Bascule sur « Toutes les copies » pour revoir celles déjà corrigées.':'')+'</div>'
       +'</div></div>'
     return
   }
-  // Regrouper par examen
   const parQuiz={}
   liste.forEach(function(t){
     const k=t.quiz_id
-    if(!parQuiz[k]) parQuiz[k]={titre:(t.quiz&&t.quiz.titre)||'Quiz',mod:(t.quiz&&t.quiz.module_id)||0,examen:t.quiz&&t.quiz.mode_examen,copies:[]}
+    if(!parQuiz[k]) parQuiz[k]={titre:(t._q&&t._q.titre)||'Examen',mod:(t._q&&t._q.module_id)||0,copies:[]}
     parQuiz[k].copies.push(t)
   })
   el.innerHTML=Object.keys(parQuiz).map(function(k){
@@ -3529,21 +3598,44 @@ function afficherCorrections(){
       +'<div class="card-head"><div style="display:flex;align-items:center;gap:8px;min-width:0">'
         +(m?'<div style="width:30px;height:30px;border-radius:10px;background:'+m.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+m.icon+'" style="color:'+m.ic+';font-size:.82rem"></i></div>':'')
         +'<div style="min-width:0"><div class="card-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+g.titre+'</div>'
-        +'<div style="font-size:.68rem;color:var(--t3)">'+(m?m.nom:'')+(g.examen?' · Examen':'')+'</div></div>'
+        +'<div style="font-size:.68rem;color:var(--t3)">'+(m?m.nom:'')+'</div></div>'
       +'</div><span class="badge badge-a">'+g.copies.length+'</span></div>'
       +'<div class="card-body">'
       +g.copies.map(function(t){
         const nom=((t._p.prenom||'')+' '+(t._p.nom||'')).trim()||'Aspirant'
-        const d=t.completed_at?new Date(t.completed_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):''
+        const d=t.completed_at?new Date(t.completed_at).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''
+        const att=estEnAttente(t)
         return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bord)">'
           +'<div class="sidebar-avatar" style="flex-shrink:0">'+([(t._p.prenom||'')[0],(t._p.nom||'')[0]].join('').toUpperCase()||'?')+'</div>'
           +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600">'+nom+'</div>'
-          +'<div style="font-size:.7rem;color:var(--t3)">Rendue le '+d+'</div></div>'
-          +'<button class="btn btn-r btn-sm" style="flex-shrink:0" onclick="ouvrirCorrectionAdmin(\''+t.id+'\')">Corriger</button>'
+          +'<div style="font-size:.7rem;color:var(--t3)">Rendue le '+d+(att?'':' · '+(t.valide?'validé':'non validé')+' ('+(t.note_admin!=null?t.note_admin:t.score)+'/20)')+'</div></div>'
+          +'<button class="btn '+(att?'btn-r':'btn-ghost')+' btn-sm" style="flex-shrink:0" onclick="ouvrirCorrectionAdmin(\''+t.id+'\')">'+(att?'Corriger':'Revoir')+'</button>'
         +'</div>'
       }).join('')
       +'</div></div>'
   }).join('')
+}
+
+async function rattrapageTous(quizId){
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  const q=_corrExamens.find(function(x){return x.id===quizId})
+  const attendus=_corrAspirants.filter(function(p){
+    if(p.sans_module) return false
+    return !p.module_inscrit||p.module_inscrit===(q&&q.module_id)
+  })
+  const absents=attendus.filter(function(p){
+    return !_corrAll.some(function(t){return t.quiz_id===quizId&&t.aspirant_id===p.id})
+      && !_corrRatt.some(function(r){return r.quiz_id===quizId&&r.aspirant_id===p.id})
+  })
+  if(!absents.length){toast('Personne à rouvrir','err');return}
+  if(!confirm('Rouvrir cet examen pour '+absents.length+' aspirant(s) ?')) return
+  let ok=0
+  for(const p of absents){
+    const {error}=await db.from('rattrapages').insert({quiz_id:quizId,aspirant_id:p.id})
+    if(!error) ok++
+  }
+  toast(ok+' rattrapage(s) ouvert(s)','ok')
+  chargerCorrections()
 }
 
 async function ouvrirCorrectionAdmin(tentId) {
@@ -3775,7 +3867,8 @@ async function ouvrirRattrapage(quizId,aspirantId){
   const {error}=await db.from('rattrapages').insert({quiz_id:quizId,aspirant_id:aspirantId})
   if(error){toast('Erreur : '+error.message,'err');return}
   toast('Rattrapage ouvert — l aspirant peut passer l examen','ok')
-  loadAspirants()
+  if(localStorage.getItem('pm_page')==='corrections') chargerCorrections()
+  else loadAspirants()
 }
 
 async function loadAspirants() {
