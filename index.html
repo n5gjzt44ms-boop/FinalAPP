@@ -3526,12 +3526,31 @@ async function chargerCorrections(){
     db.from('rattrapages').select('quiz_id,aspirant_id')
   ])
   if(rT.error){el.innerHTML='<p style="color:var(--r);font-size:.82rem">Erreur : '+rT.error.message+'</p>';return}
+  // Les erreurs sur les quiz etaient ignorees : sans eux, aucune copie
+  // n'est reconnue comme copie d'examen.
+  if(rQ.error){
+    el.innerHTML='<div class="alert alert-err">Impossible de lire les examens : '+rQ.error.message+'</div>'
+    return
+  }
+  // Repli : si la liste des quiz revient vide alors que des copies existent,
+  // on va chercher les quiz directement par les identifiants des copies.
+  if((!rQ.data||!rQ.data.length)&&(rT.data||[]).length){
+    const ids=[...new Set((rT.data||[]).map(function(t){return t.quiz_id}).filter(Boolean))]
+    const lots=[]
+    for(let i=0;i<ids.length;i+=100) lots.push(ids.slice(i,i+100))
+    let recup=[]
+    for(const lot of lots){
+      const r=await db.from('quiz').select('id,titre,module_id,mode_examen,date_debut,actif').in('id',lot)
+      if(!r.error&&r.data) recup=recup.concat(r.data)
+    }
+    rQ.data=recup
+  }
   // Compteur visible : ce que l'application lit reellement
   const zoneC=document.getElementById('corr-compteur')
   if(zoneC){
     const nExam=_corrAll.filter(function(t){return t._q&&t._q.mode_examen}).length
     const nAtt=_corrAll.filter(function(t){return t._q&&t._q.mode_examen&&estEnAttente(t)}).length
-    zoneC.textContent=(rT.data||[]).length+' copies lues · '+nExam+' d examen · '+nAtt+' à corriger'
+    zoneC.textContent=(rT.data||[]).length+' copies · '+(rQ.data||[]).length+' quiz lus · '+nExam+' copies d examen · '+nAtt+' à corriger'
   }
   // Diagnostic : des copies existent-elles sans etre lisibles ?
   try{
