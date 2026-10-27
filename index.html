@@ -1584,7 +1584,7 @@ async function enregistrerAnnotation(questionId){
   try{
     const src=_annot.canvas
     // Limiter a 1400 px de large : net a l'ecran, poids raisonnable
-    const maxL=1400
+    const maxL=1100
     const ech=src.width>maxL?maxL/src.width:1
     const f=document.createElement('canvas')
     f.width=Math.round(src.width*ech);f.height=Math.round(src.height*ech)
@@ -1593,7 +1593,7 @@ async function enregistrerAnnotation(questionId){
     fx.fillStyle='#fff';fx.fillRect(0,0,f.width,f.height)
     try{fx.drawImage(_annot.fond,0,0,f.width,f.height)}catch(e){}
     fx.drawImage(src,0,0,f.width,f.height)
-    const data=f.toDataURL('image/jpeg',0.88)
+    const data=f.toDataURL('image/jpeg',0.72)
     if(!data||data.length<200){toast('Schéma non enregistré','err');return null}
     return data
   }catch(e){
@@ -2653,7 +2653,34 @@ async function terminer() {
     notes_libres:aDesLibres?{}:null,
     fichiers_libres:Object.keys(G.fichiersLibres).length?G.fichiersLibres:null
   }).select().single()
-  if(tentErr){toast('Erreur sauvegarde : '+tentErr.message,'err');return}
+  if(tentErr){
+    // La copie ne doit JAMAIS etre perdue : on reessaie sans les pieces
+    // jointes (souvent la cause : donnees trop volumineuses).
+    sauverCopieEnCours()
+    const r2=await db.from('tentatives').insert({
+      aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:Math.round(sur20),total_points:20,valide,
+      reponses:G.reponses,resultats_par_competence:parComp,
+      notes_libres:aDesLibres?{}:null,
+      fichiers_libres:null
+    }).select().single()
+    if(r2.error){
+      // Dernier recours : enregistrer au moins les reponses brutes
+      const r3=await db.from('tentatives').insert({
+        aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:0,total_points:20,valide:false,
+        notes_libres:{}
+      }).select().single()
+      if(r3.error){
+        alert("Ta copie n'a pas pu être envoyée.\n\nNe ferme pas l'application : elle est conservée sur ton téléphone. Préviens ton gâcheur et reconnecte-toi plus tard pour la renvoyer.\n\nDétail : "+(r2.error.message||''))
+        return
+      }
+      toast('Copie envoyée, mais les schémas joints n ont pas pu être transmis','err')
+      G.tentResult={tent:r3.data,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
+      effacerCopieEnCours();afficheRes();return
+    }
+    toast('Copie envoyée, mais les schémas joints n ont pas pu être transmis','err')
+    G.tentResult={tent:r2.data,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
+    effacerCopieEnCours();afficheRes();return
+  }
   effacerCopieEnCours()
   // Le rattrapage est à usage unique : on le retire une fois l'examen passé
   if(G.quizActif.mode_examen){try{await db.from('rattrapages').delete().eq('quiz_id',G.quizActif.id).eq('aspirant_id',G.profil.id)}catch(e){}}
@@ -3567,6 +3594,7 @@ function afficherCorrections(){
             +'<div style="font-size:.7rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(p.email||'')+'</div></div>'
             +(ouvert?'<span class="badge badge-v" style="flex-shrink:0">Rouvert</span>'
                     :'<button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="ouvrirRattrapage(\''+q.id+'\',\''+p.id+'\')">Rouvrir</button>')
+            +'<button class="btn btn-ghost btn-sm btn-icon" style="flex-shrink:0" title="Il a composé mais sa copie manque : créer une copie à corriger" onclick="creerCopieManquante(\''+q.id+'\',\''+p.id+'\')"><i class="ti ti-file-plus"></i></button>'
             +'</div>'
         }).join('')
         +'</div></div>'
@@ -3614,6 +3642,23 @@ function afficherCorrections(){
       }).join('')
       +'</div></div>'
   }).join('')
+}
+
+// Un aspirant a compose mais sa copie n'est jamais arrivee :
+// on cree une copie vide a corriger a la main.
+async function creerCopieManquante(quizId,aspirantId){
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  const p=_corrAspirants.find(function(x){return x.id===aspirantId})
+  const nom=p?((p.prenom||'')+' '+(p.nom||'')).trim():'cet aspirant'
+  if(!confirm('Créer une copie vide pour '+nom+' ?\n\nElle apparaîtra dans « À corriger » : tu saisiras ses points question par question, d après sa feuille ou ce qu il te dira.')) return
+  const {data,error}=await db.from('tentatives').insert({
+    aspirant_id:aspirantId,quiz_id:quizId,
+    score:0,total_points:20,valide:false,
+    reponses:{},notes_libres:{}
+  }).select().single()
+  if(error){toast('Erreur : '+error.message,'err');return}
+  toast('Copie créée — elle est dans « À corriger »','ok')
+  chargerCorrections()
 }
 
 async function rattrapageTous(quizId){
