@@ -1090,7 +1090,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.27-1900'
+const VERSION_APP = '2026.10.27-1735'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -2310,8 +2310,10 @@ async function renderEval(modId,quiz,tents) {
   if(!quiz.length){$('o-eval').innerHTML='<p style="font-size:.82rem;color:var(--t3)">Aucun quiz pour ce module.</p>';return}
   // Rattrapages accordés à cet aspirant
   try{
-    const {data:mr}=await db.from('rattrapages').select('quiz_id').eq('aspirant_id',G.profil.id)
-    _mesRattrapages=(mr||[]).map(function(x){return x.quiz_id})
+    const {data:mr}=await db.from('rattrapages').select('*').eq('aspirant_id',G.profil.id)
+    const actifs=(mr||[]).filter(rattrapageActif)
+    window._mesRattLim={};actifs.forEach(function(x){window._mesRattLim[x.quiz_id]=x})
+    _mesRattrapages=actifs.map(function(x){return x.quiz_id})
   }catch(e){_mesRattrapages=[]}
   let h=''
   quiz.forEach(q=>{
@@ -2369,7 +2371,7 @@ async function renderEval(modId,quiz,tents) {
     h+=`</div></div>`
     if(isExamen&&t) h+=`<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide?'Validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR'):(G.admin?'Score définitif : '+t.score+'/20':'Examen passé — non validé')}</div>`
     if(!bonModule&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-lock"></i> ${G.profil.sans_module?'Tu ne valides pas de module cette année':'Réservé aux aspirants inscrits en '+(MODULES.find(m=>m.id===modId)?.nom||'')}</div>`}
-    if(aRattrapage&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--v);background:var(--vl)"><i class="ti ti-unlock"></i> Rattrapage autorisé — tu peux passer cet examen</div>`}
+    if(aRattrapage&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--v);background:var(--vl)"><i class="ti ti-unlock"></i> Rattrapage autorisé — tu peux passer cet examen${(window._mesRattLim&&window._mesRattLim[q.id]&&window._mesRattLim[q.id].date_limite)?' jusqu au '+dateLimiteTexte(window._mesRattLim[q.id]):''}</div>`}
     // Rappel pour le gacheur : il voit l'examen hors de son creneau
     if(G.admin&&isExamen&&((debut&&now<debut)||(fin&&now>fin))){
       h+=`<div class="quiz-lock" style="color:var(--amber);background:var(--amberl)"><i class="ti ti-eye"></i> Accès gâcheur — cet examen est fermé pour les aspirants${debut&&now<debut?' jusqu\'au '+new Date(debut).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}):''}</div>`
@@ -2434,16 +2436,25 @@ function compteARebours(dateDebut,dateFin) {
 
 // ─── QUIZ PASSATION ────────────────────────────────────────────────────────
 async function commencer(qid) {
-  const {data:qinfo}=await db.from('quiz').select('mode_examen').eq('id',qid).single()
+  const {data:qinfo}=await db.from('quiz').select('mode_examen,date_debut,date_fin').eq('id',qid).single()
   const isExamen=qinfo?.mode_examen
+  // Hors creneau : il faut un rattrapage encore valable (date limite non depassee)
+  if(isExamen&&!G.admin){
+    const n=new Date(),deb=qinfo.date_debut?new Date(qinfo.date_debut):null,fin=qinfo.date_fin?new Date(qinfo.date_fin):null
+    if((deb&&n<deb)||(fin&&n>fin)){
+      let okR=false
+      try{const {data:rr}=await db.from('rattrapages').select('*').eq('quiz_id',qid).eq('aspirant_id',G.profil.id);okR=(rr||[]).some(rattrapageActif)}catch(e){}
+      if(!okR){toast(deb&&n<deb?'Examen pas encore ouvert':'Examen fermé — date limite dépassée','err');return}
+    }
+  }
   const {data:exist}=await db.from('tentatives').select('id').eq('aspirant_id',G.profil.id).eq('quiz_id',qid).maybeSingle()
   // Un rattrapage accorde par un gacheur permet de repasser l'examen,
   // meme si une copie incomplete a deja ete enregistree.
   let aDroitRattrapage=false
   if(isExamen&&exist&&!G.admin){
     try{
-      const {data:rt}=await db.from('rattrapages').select('id').eq('quiz_id',qid).eq('aspirant_id',G.profil.id).maybeSingle()
-      aDroitRattrapage=!!rt
+      const {data:rts}=await db.from('rattrapages').select('*').eq('quiz_id',qid).eq('aspirant_id',G.profil.id)
+      aDroitRattrapage=(rts||[]).some(rattrapageActif)
     }catch(e){}
     if(!aDroitRattrapage){toast('Examen déjà passé. Score définitif.','err');return}
     // On ne supprime RIEN ici : l'ancienne copie reste en base tant que la
@@ -3589,7 +3600,7 @@ async function chargerCorrections(){
     db.from('tentatives').select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide').order('completed_at',{ascending:false}).limit(5000),
     db.from('quiz').select('id,titre,module_id,mode_examen,date_debut,actif').limit(2000),
     db.from('profils').select('*').limit(5000),
-    db.from('rattrapages').select('quiz_id,aspirant_id')
+    db.from('rattrapages').select('*')
   ])
   if(rT.error){el.innerHTML='<p style="color:var(--r);font-size:.82rem">Erreur : '+rT.error.message+'</p>';return}
   // Les erreurs sur les quiz etaient ignorees : sans eux, aucune copie
@@ -3711,12 +3722,13 @@ function afficherCorrections(){
         +'<span class="badge badge-a">'+absents.length+'</span></div><div class="card-body">'
         +'<button class="btn btn-ghost btn-sm btn-full" style="margin-bottom:.7rem" onclick="rattrapageTous(\''+q.id+'\')"><i class="ti ti-player-play"></i> Rouvrir pour tous les absents</button>'
         +absents.map(function(p){
-          const ouvert=_corrRatt.some(function(r){return r.quiz_id===q.id&&r.aspirant_id===p.id})
+          const rOuv=_corrRatt.find(function(r){return r.quiz_id===q.id&&r.aspirant_id===p.id&&rattrapageActif(r)})
+          const ouvert=!!rOuv
           return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord)">'
             +'<div class="sidebar-avatar" style="flex-shrink:0">'+([(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?')+'</div>'
             +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600">'+((p.prenom||'')+' '+(p.nom||'')).trim()+'</div>'
             +'<div style="font-size:.7rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(p.email||'')+'</div></div>'
-            +(ouvert?'<span class="badge badge-v" style="flex-shrink:0">Rouvert</span>'
+            +(ouvert?'<span class="badge badge-v" style="flex-shrink:0;cursor:pointer" title="Changer la date limite" onclick="ouvrirRattrapage(\''+q.id+'\',\''+p.id+'\')">'+(rOuv.date_limite?'Rouvert → '+new Date(rOuv.date_limite).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):'Rouvert')+'</span>'
                     :'<button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="ouvrirRattrapage(\''+q.id+'\',\''+p.id+'\')">Rouvrir</button>')
             +'<button class="btn btn-ghost btn-sm btn-icon" style="flex-shrink:0" title="Il a composé mais sa copie manque : créer une copie à corriger" onclick="creerCopieManquante(\''+q.id+'\',\''+p.id+'\')"><i class="ti ti-file-plus"></i></button>'
             +'</div>'
@@ -3808,16 +3820,18 @@ async function rattrapageTous(quizId){
   })
   const absents=attendus.filter(function(p){
     return !_corrAll.some(function(t){return t.quiz_id===quizId&&t.aspirant_id===p.id})
-      && !_corrRatt.some(function(r){return r.quiz_id===quizId&&r.aspirant_id===p.id})
+      && !_corrRatt.some(function(r){return r.quiz_id===quizId&&r.aspirant_id===p.id&&rattrapageActif(r)})
   })
   if(!absents.length){toast('Personne à rouvrir','err');return}
-  if(!confirm('Rouvrir cet examen pour '+absents.length+' aspirant(s) ?')) return
-  let ok=0
+  const limite=demanderDateLimite(absents.length);if(limite===undefined) return
+  let ok=0,sansLim=false
   for(const p of absents){
-    const {error}=await db.from('rattrapages').insert({quiz_id:quizId,aspirant_id:p.id})
-    if(!error) ok++
+    const res=await insererRattrapage(quizId,p.id,limite)
+    if(!res.error) ok++
+    if(res.sansLimite) sansLim=true
   }
-  toast(ok+' rattrapage(s) ouvert(s)','ok')
+  if(sansLim) alert(ok+' rattrapage(s) ouvert(s), mais SANS date limite : la colonne manque dans la base.\nExécute rattrapage_date_limite.sql dans Supabase.')
+  else toast(ok+' rattrapage(s) ouvert(s) jusqu au '+new Date(limite).toLocaleDateString('fr-FR')+' 23h59','ok')
   chargerCorrections()
 }
 
@@ -4115,11 +4129,46 @@ async function chargerRendusAdmin() {
 let _rattrapages=[]
 let _mesRattrapages=[]
 
+// ─── DATE LIMITE DES RATTRAPAGES ───────────────────────────────────────────
+// Un rattrapage leve le creneau horaire, mais seulement jusqu'a une date
+// fixee par le gacheur (23h59 ce jour-la). Sans date : pas de limite.
+function rattrapageActif(r){return !!r&&(!r.date_limite||new Date(r.date_limite)>new Date())}
+function dateLimiteTexte(r){return r&&r.date_limite?new Date(r.date_limite).toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit'})+' 23h59':''}
+function demanderDateLimite(nb){
+  const d=new Date();d.setDate(d.getDate()+7)
+  const def=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()
+  for(;;){
+    const s=prompt('Rattrapage'+(nb>1?' pour '+nb+' aspirants':'')+' : jusqu à quelle date pourront-ils passer l examen ?\n(format JJ/MM/AAAA — accessible jusqu à 23h59 ce jour-là)',def)
+    if(s===null) return undefined
+    const m=String(s).trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/)
+    if(m){
+      const an=Number(m[3])<100?2000+Number(m[3]):Number(m[3])
+      const lim=new Date(an,Number(m[2])-1,Number(m[1]),23,59,0)
+      if(!isNaN(lim)&&lim.getDate()===Number(m[1])){
+        if(lim<new Date()){alert('Cette date est déjà passée.');continue}
+        return lim.toISOString()
+      }
+    }
+    alert('Date non reconnue. Exemple : '+def)
+  }
+}
+async function insererRattrapage(quizId,aspirantId,limite){
+  // Un ancien rattrapage (expire ou non) est remplace par le nouveau
+  try{await db.from('rattrapages').delete().eq('quiz_id',quizId).eq('aspirant_id',aspirantId)}catch(e){}
+  let r=await db.from('rattrapages').insert({quiz_id:quizId,aspirant_id:aspirantId,date_limite:limite})
+  if(r.error&&/date_limite|column/i.test(r.error.message||'')){
+    r=await db.from('rattrapages').insert({quiz_id:quizId,aspirant_id:aspirantId})
+    if(!r.error) r.sansLimite=true
+  }
+  return r
+}
 async function ouvrirRattrapage(quizId,aspirantId){
   if(!G.admin){toast('Action réservée aux gâcheurs','err');return}
-  const {error}=await db.from('rattrapages').insert({quiz_id:quizId,aspirant_id:aspirantId})
-  if(error){toast('Erreur : '+error.message,'err');return}
-  toast('Rattrapage ouvert — l aspirant peut passer l examen','ok')
+  const limite=demanderDateLimite(1);if(limite===undefined) return
+  const res=await insererRattrapage(quizId,aspirantId,limite)
+  if(res.error){toast('Erreur : '+res.error.message,'err');return}
+  if(res.sansLimite) alert('Rattrapage ouvert, mais SANS date limite : la colonne manque dans la base.\nExécute rattrapage_date_limite.sql dans Supabase.')
+  else toast('Rattrapage ouvert jusqu au '+new Date(limite).toLocaleDateString('fr-FR')+' 23h59','ok')
   if(localStorage.getItem('pm_page')==='corrections') chargerCorrections()
   else loadAspirants()
 }
