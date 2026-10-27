@@ -1090,7 +1090,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.27-1755'
+const VERSION_APP = '2026.10.27-1815'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -2352,8 +2352,8 @@ async function renderEval(modId,quiz,tents) {
       const diff=debut-now, jj=Math.floor(diff/86400000), hh=Math.floor((diff%86400000)/3600000), mm=Math.floor((diff%3600000)/60000), ss=Math.floor((diff%60000)/1000)
       const lbl=jj>=1?'J-'+jj:hh>0?hh+'h'+String(mm).padStart(2,'0')+'m':mm>0?mm+'m'+String(ss).padStart(2,'0')+'s':'⚠'+String(ss).padStart(2,'0')+'s'
       h+=`<div class="quiz-countdown-bubble pending" id="cd-${q.id}" data-debut="${q.date_debut||''}" data-fin="${q.date_fin||''}" data-qid="${q.id}" title="Démarre le ${debut.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}">${lbl}</div>`
-    } else if(!t && isExamen && aRattrapage && bonModule) {
-      h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> Rattrapage</button>`
+    } else if(isExamen && aRattrapage && bonModule) {
+      h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> ${t?'Repasser':'Rattrapage'}</button>`
     } else if(!t && isExamen && fin && now > fin && bonModule) {
       h+=`<div style="font-size:.72rem;color:var(--t3);font-weight:600">Clôturé</div>`
     } else if(!t && isExamen && bonModule && (!debut || now >= debut) && (!fin || now <= fin)) {
@@ -2369,9 +2369,9 @@ async function renderEval(modId,quiz,tents) {
       h+=`<button class="btn btn-r btn-sm" onclick="commencer('${q.id}')"><i class="ti ti-pencil"></i> ${t&&!isExamen?'Repasser':'Commencer'}</button>`
     }
     h+=`</div></div>`
-    if(isExamen&&t) h+=`<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide?'Validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR'):(G.admin?'Score définitif : '+t.score+'/20':'Examen passé — non validé')}</div>`
+    if(isExamen&&t&&!(aRattrapage&&!G.admin)) h+=`<div class="quiz-lock"><i class="ti ti-lock"></i> ${t.valide?'Validé le '+new Date(t.completed_at).toLocaleDateString('fr-FR'):(G.admin?'Score définitif : '+t.score+'/20':'Examen passé — non validé')}</div>`
     if(!bonModule&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--r2);background:var(--rl)"><i class="ti ti-lock"></i> ${G.profil.sans_module?'Tu ne valides pas de module cette année':'Réservé aux aspirants inscrits en '+(MODULES.find(m=>m.id===modId)?.nom||'')}</div>`}
-    if(aRattrapage&&!t&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--v);background:var(--vl)"><i class="ti ti-unlock"></i> Rattrapage autorisé — tu peux passer cet examen${(window._mesRattLim&&window._mesRattLim[q.id]&&window._mesRattLim[q.id].date_limite)?' jusqu au '+dateLimiteTexte(window._mesRattLim[q.id]):''}</div>`}
+    if(aRattrapage&&!G.admin){h+=`<div class="quiz-lock" style="color:var(--v);background:var(--vl)"><i class="ti ti-unlock"></i> ${t?'Accès rouvert par ton gâcheur — tu peux repasser cet examen':'Rattrapage autorisé — tu peux passer cet examen'}${(window._mesRattLim&&window._mesRattLim[q.id]&&window._mesRattLim[q.id].date_limite)?' jusqu au '+dateLimiteTexte(window._mesRattLim[q.id]):''}</div>`}
     // Rappel pour le gacheur : il voit l'examen hors de son creneau
     if(G.admin&&isExamen&&((debut&&now<debut)||(fin&&now>fin))){
       h+=`<div class="quiz-lock" style="color:var(--amber);background:var(--amberl)"><i class="ti ti-eye"></i> Accès gâcheur — cet examen est fermé pour les aspirants${debut&&now<debut?' jusqu\'au '+new Date(debut).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}):''}</div>`
@@ -3597,7 +3597,7 @@ async function chargerCorrections(){
   // TOUTES les copies d'examen, pas seulement celles en attente :
   // une copie auto-validee doit rester visible et corrigeable.
   const [rT,rQ,rP,rR]=await Promise.all([
-    db.from('tentatives').select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide').order('completed_at',{ascending:false}).limit(5000),
+    db.from('tentatives').select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide,reponses').order('completed_at',{ascending:false}).limit(5000),
     db.from('quiz').select('id,titre,module_id,mode_examen,date_debut,actif').limit(2000),
     db.from('profils').select('*').limit(5000),
     db.from('rattrapages').select('*')
@@ -3786,7 +3786,15 @@ function afficherCorrections(){
         return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bord)">'
           +'<div class="sidebar-avatar" style="flex-shrink:0">'+([(t._p.prenom||'')[0],(t._p.nom||'')[0]].join('').toUpperCase()||'?')+'</div>'
           +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600">'+nom+'</div>'
-          +'<div style="font-size:.7rem;color:var(--t3)">Rendue le '+d+(att?'':' · '+(t.valide?'validé':'non validé')+' ('+(t.note_admin!=null?t.note_admin:t.score)+'/20)')+'</div></div>'
+          +'<div style="font-size:.7rem;color:var(--t3)">Rendue le '+d+(att?'':' · '+(t.valide?'validé':'non validé')+' ('+(t.note_admin!=null?t.note_admin:t.score)+'/20)')+'</div>'
+          +(function(){
+            const nbRep=t.reponses&&typeof t.reponses==='object'?Object.keys(t.reponses).length:0
+            const rAcc=_corrRatt.find(function(r){return r.quiz_id===t.quiz_id&&r.aspirant_id===t.aspirant_id&&rattrapageActif(r)})
+            return (nbRep?'':'<span class="badge badge-rl" style="margin-top:3px;margin-right:4px">Copie vide</span>')
+              +(rAcc?'<span class="badge badge-v" style="margin-top:3px;cursor:pointer" title="Changer la date limite" onclick="redonnerAcces(\''+t.quiz_id+'\',\''+t.aspirant_id+'\')">Accès rouvert'+(rAcc.date_limite?' → '+new Date(rAcc.date_limite).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):'')+'</span>':'')
+          })()
+          +'</div>'
+          +(g.examen?'<button class="btn btn-ghost btn-sm btn-icon" style="flex-shrink:0" title="Redonner l accès à l examen (bug, copie vide…)" onclick="redonnerAcces(\''+t.quiz_id+'\',\''+t.aspirant_id+'\')"><i class="ti ti-refresh"></i></button>':'')
           +'<button class="btn '+(att?'btn-r':'btn-ghost')+' btn-sm" style="flex-shrink:0" onclick="ouvrirCorrectionAdmin(\''+t.id+'\')">'+(att?'Corriger':'Revoir')+'</button>'
         +'</div>'
       }).join('')
@@ -4177,6 +4185,16 @@ async function insererRattrapage(quizId,aspirantId,limite){
     if(!r.error) r.sansLimite=true
   }
   return r
+}
+// Redonner l acces a un aspirant qui a deja une copie (bug, copie vide...).
+// Sa copie actuelle reste en base jusqu a ce qu il rende la nouvelle,
+// qui la remplace alors (l ancienne est archivee).
+async function redonnerAcces(quizId,aspirantId){
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  const p=(_corrAspirants||[]).find(function(x){return x.id===aspirantId})
+  const nom=p?((p.prenom||'')+' '+(p.nom||'')).trim():'cet aspirant'
+  if(!confirm('Redonner l accès à l examen à '+nom+' ?\n\nSa copie actuelle reste visible jusqu à ce qu il rende la nouvelle. La nouvelle copie la remplacera alors (l ancienne est archivée).')) return
+  return ouvrirRattrapage(quizId,aspirantId)
 }
 async function ouvrirRattrapage(quizId,aspirantId){
   if(!G.admin){toast('Action réservée aux gâcheurs','err');return}
