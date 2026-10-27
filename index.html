@@ -1112,6 +1112,100 @@ window.addEventListener('scroll', ()=>{
 
 // ─── TIMER QUIZ ────────────────────────────────────────────────────────────
 let _timerQuiz=null, _secondesQuiz=0
+// ─── BAREME DES QUESTIONS A CHOIX MULTIPLES ────────────────────────────────
+// Barème partiel : chaque bonne case rapporte, chaque mauvaise retire.
+// Le tout-ou-rien penalisait trop lourdement un oubli sur quatre reponses.
+function pointsMulti(bonnes,cochees,points){
+  const b=(bonnes||[]).map(Number)
+  const r=(cochees||[]).map(Number)
+  if(!b.length) return 0
+  const justes=r.filter(function(x){return b.indexOf(x)>=0}).length
+  const fausses=r.filter(function(x){return b.indexOf(x)<0}).length
+  const ratio=Math.max(0,(justes-fausses)/b.length)
+  return Math.round(ratio*points*100)/100
+}
+
+// ─── REPRISE D'UN QUIZ INTERROMPU ──────────────────────────────────────────
+// Les reponses sont conservees sur l'appareil a chaque validation.
+// Sans cela, ouvrir l'appareil photo ou un PDF fait perdre toute la copie
+// quand le telephone recharge la page.
+const CLE_COPIE='pm_copie_en_cours'
+
+function sauverCopieEnCours(){
+  try{
+    if(!G.quizActif||!G.quizActif.id) return
+    localStorage.setItem(CLE_COPIE,JSON.stringify({
+      quizId:G.quizActif.id,
+      titre:G.quizActif.titre||'',
+      reponses:G.reponses||{},
+      fichiersLibres:G.fichiersLibres||{},
+      etape:G.etape||0,
+      secondes:(typeof _secondesQuiz!=='undefined'?_secondesQuiz:0),
+      quand:Date.now()
+    }))
+  }catch(e){}
+}
+
+function effacerCopieEnCours(){
+  try{localStorage.removeItem(CLE_COPIE)}catch(e){}
+}
+
+function lireCopieEnCours(){
+  try{
+    const b=JSON.parse(localStorage.getItem(CLE_COPIE)||'null')
+    if(!b||!b.quizId) return null
+    // Au-dela de 12 h, la copie est consideree abandonnee
+    if(Date.now()-(b.quand||0)>12*60*60*1000){effacerCopieEnCours();return null}
+    return b
+  }catch(e){return null}
+}
+
+// Conserver la copie des que l'application passe en arriere-plan
+document.addEventListener('visibilitychange',function(){
+  const v=document.getElementById('v-quiz')
+  if(document.hidden&&v&&v.classList.contains('on')) sauverCopieEnCours()
+})
+window.addEventListener('pagehide',function(){
+  const v=document.getElementById('v-quiz')
+  if(v&&v.classList.contains('on')) sauverCopieEnCours()
+})
+
+async function proposerRepriseCopie(){
+  const b=lireCopieEnCours()
+  if(!b) return
+  if(document.getElementById('v-quiz')&&document.getElementById('v-quiz').classList.contains('on')) return
+  const nb=Object.keys(b.reponses||{}).length
+  const modal=document.createElement('div');modal.id='modal-reprise'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9997;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.innerHTML='<div style="background:var(--card);border-radius:24px;width:100%;max-width:400px;padding:1.7rem 1.5rem;text-align:center">'
+    +'<div style="width:52px;height:52px;border-radius:16px;background:var(--amberl);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem"><i class="ti ti-player-play" style="color:var(--amber);font-size:1.4rem"></i></div>'
+    +'<div style="font-family:var(--fg);font-size:1.1rem;font-weight:700">Reprendre ton examen</div>'
+    +'<p style="font-size:.82rem;color:var(--t2);margin-top:8px;line-height:1.5">'+echapAttr(b.titre||'Examen')+'<br>'+nb+' réponse'+(nb>1?'s':'')+' déjà enregistrée'+(nb>1?'s':'')+'. Tu peux continuer où tu t\'étais arrêté.</p>'
+    +'<button class="btn btn-r btn-full" style="margin-top:1.2rem" onclick="reprendreCopie()"><i class="ti ti-player-play"></i> Reprendre</button>'
+    +'<button class="btn btn-ghost btn-full" style="margin-top:.6rem;font-size:.78rem" onclick="if(confirm(\'Abandonner cette copie ? Tes réponses seront perdues.\')){effacerCopieEnCours();document.getElementById(\'modal-reprise\').remove()}">Abandonner</button>'
+  +'</div>'
+  document.body.appendChild(modal)
+}
+
+async function reprendreCopie(){
+  const b=lireCopieEnCours()
+  document.getElementById('modal-reprise')?.remove()
+  if(!b) return
+  const [{data:q},{data:qs}]=await Promise.all([
+    db.from('quiz').select('*').eq('id',b.quizId).single(),
+    db.from('questions').select('*').eq('quiz_id',b.quizId).order('ordre')
+  ])
+  if(!q||!qs||!qs.length){toast('Examen introuvable','err');effacerCopieEnCours();return}
+  G.quizActif=q;G.questions=qs
+  G.reponses=b.reponses||{};G.fichiersLibres=b.fichiersLibres||{}
+  G.etape=Math.min(b.etape||0,qs.length-1)
+  G.choix=null;G.confirme=false
+  if(typeof _multiSelect!=='undefined') _multiSelect=new Set()
+  nav('quiz');showQ();demarrerTimer()
+  if(typeof _secondesQuiz!=='undefined') _secondesQuiz=b.secondes||0
+  toast('Copie reprise','ok')
+}
+
 function demarrerTimer() {
   _secondesQuiz=0;clearInterval(_timerQuiz)
   // Afficher le décompte restant si examen avec date_fin
@@ -1635,6 +1729,15 @@ function brancherChampVille(id){
 window.addEventListener('popstate',function(ev){
   if(!G.profil) return
   const st=ev.state
+  // En plein quiz : on conserve la copie et on demande confirmation
+  const vq=document.getElementById('v-quiz')
+  if(vq&&vq.classList.contains('on')){
+    sauverCopieEnCours()
+    if(!confirm('Quitter le quiz ? Tes réponses sont conservées, tu pourras reprendre.')){
+      try{history.pushState({page:'quiz',app:true},'','#quiz')}catch(e){}
+      return
+    }
+  }
   // Une fenetre ouverte ? Le retour la ferme d'abord
   const modaux=['modal-fiche-compte','modal-menu-admin','modal-recherche','modal-mon-profil','modal-tel-aspirant','modal-admin-profil']
   for(let i=0;i<modaux.length;i++){
@@ -1707,6 +1810,8 @@ async function initApp() {
   initDark()
   demarrerAutoRefresh()
   chargerVilles()
+  // Copie interrompue : proposer de reprendre la ou l'aspirant s'est arrete
+  setTimeout(proposerRepriseCopie,600)
   // Pastille du nombre de copies a corriger
   if(G.admin){
     db.from('tentatives').select('id',{count:'exact',head:true}).not('notes_libres','is',null).is('note_admin',null)
@@ -2337,8 +2442,14 @@ function showQ() {
           b.style.cssText='width:100%;justify-content:flex-start;margin-bottom:6px;gap:8px'
           b.innerHTML='<i class="ti ti-file-type-pdf" style="color:var(--r);font-size:1.1rem"></i> '+(m.n||'Document')+' <span style="margin-left:auto;font-size:.7rem;color:var(--t3)">Ouvrir</span>'
           b.onclick=async function(){
+            sauverCopieEnCours()
             const u=await urlImage(m.p)
-            if(u) ouvrirDocument(u,m.n||'Document'); else toast('Document indisponible','err')
+            if(!u){toast('Document indisponible','err');return}
+            // Pendant un examen, le document s'ouvre dans un onglet separe :
+            // la copie en cours n'est jamais dechargee.
+            if(G.quizActif&&G.quizActif.mode_examen){
+              try{window.open(u,'_blank')}catch(e){ouvrirDocument(u,m.n||'Document')}
+            } else ouvrirDocument(u,m.n||'Document')
           }
           imgWrap.appendChild(b)
         } else {
@@ -2378,7 +2489,7 @@ function showQ() {
       <textarea id="rep-libre" class="ftextarea" rows="4" placeholder="Rédigez votre réponse ici..." style="width:100%;margin-bottom:.8rem"></textarea>
       <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px dashed var(--bord2);border-radius:10px;cursor:pointer;font-size:.78rem;color:var(--t2);background:var(--bg)">
         <i class="ti ti-paperclip" style="font-size:1rem;color:var(--r)"></i> Joindre un fichier (optionnel)
-        <input type="file" id="fichier-libre" accept="image/*,.pdf,.doc,.docx,.sldprt,.dwg" style="display:none" onchange="uploaderFichierLibre(this)"/>
+        <input type="file" id="fichier-libre" accept="image/*,.pdf,.doc,.docx,.sldprt,.dwg" style="display:none" onclick="sauverCopieEnCours()" onchange="uploaderFichierLibre(this)"/>
       </label>
       <div id="fichier-statut" style="font-size:.72rem;color:var(--v);margin-top:4px"></div>`
     $('btn-valider').disabled=false
@@ -2438,6 +2549,7 @@ async function valider() {
       if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Valider'}
     }
     G.reponses[qid]=rep;G.confirme=true;hi('btn-valider')
+    sauverCopieEnCours()
     G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
   }
   if(typeQ==='multi'){
@@ -2451,6 +2563,7 @@ async function valider() {
       att.style.cssText='margin-top:.8rem;padding:10px 14px;background:var(--field);border-radius:10px;font-size:.76rem;color:var(--t2);line-height:1.5;text-align:center'
       att.innerHTML='<i class="ti ti-lock"></i> Réponse enregistrée — la correction sera faite par ton gâcheur'
       $('q-opts').appendChild(att)
+      sauverCopieEnCours()
       hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
     }
     // Afficher la correction multi (exercices d'entrainement uniquement)
@@ -2481,6 +2594,7 @@ async function valider() {
     att.style.cssText='margin-top:.8rem;padding:10px 14px;background:var(--field);border-radius:10px;font-size:.76rem;color:var(--t2);line-height:1.5;text-align:center'
     att.innerHTML='<i class="ti ti-lock"></i> Réponse enregistrée — la correction sera faite par ton gâcheur'
     $('q-opts').appendChild(att)
+    sauverCopieEnCours()
     hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
   }
   const {data:qr}=await db.from('questions').select('bonne_reponse').eq('id',G.questions[G.etape].id).single()
@@ -2489,7 +2603,7 @@ async function valider() {
   hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant')
 }
 
-function suivant(){G.etape++;G.choix=null;G.confirme=false;_multiSelect=new Set();showQ()}
+function suivant(){sauverCopieEnCours();G.etape++;G.choix=null;G.confirme=false;_multiSelect=new Set();showQ()}
 
 async function terminer() {
   const tempsTotal=arreterTimer()
@@ -2503,17 +2617,17 @@ async function terminer() {
   let score=0;const parComp={}
   qr.forEach(q=>{
     if(q.type_question==='libre') return
-    let ok=false
+    const pts=parseFloat(q.points)||2
+    let gagne=0,ok=false
     if(q.type_question==='multi'){
-      // Multi : toutes les bonnes cases cochées et aucune mauvaise
-      const bonnes=new Set((q.bonnes_reponses||[]).map(Number))
-      const rep=new Set((G.reponses[q.id]||[]).map(Number))
-      ok=bonnes.size===rep.size&&[...bonnes].every(b=>rep.has(b))
+      gagne=pointsMulti(q.bonnes_reponses,G.reponses[q.id],pts)
+      ok=gagne>=pts   // juste si toutes les bonnes et aucune mauvaise
     } else {
       ok=G.reponses[q.id]===q.bonne_reponse
+      gagne=ok?pts:0
     }
-    if(ok) score+=parseFloat(q.points)||2
-    if(q.competence){if(!parComp[q.competence])parComp[q.competence]={score:0,total:0};parComp[q.competence].total+=parseFloat(q.points)||2;if(ok)parComp[q.competence].score+=parseFloat(q.points)||2}
+    score+=gagne
+    if(q.competence){if(!parComp[q.competence])parComp[q.competence]={score:0,total:0};parComp[q.competence].total+=pts;parComp[q.competence].score+=gagne}
   })
   const totalPts=qr.reduce((a,q)=>a+(parseFloat(q.points)||2),0)
   const sur20=calculerScore20(score,totalPts),valide=!aDesLibres&&sur20>=SEUIL
@@ -2524,6 +2638,7 @@ async function terminer() {
     fichiers_libres:Object.keys(G.fichiersLibres).length?G.fichiersLibres:null
   }).select().single()
   if(tentErr){toast('Erreur sauvegarde : '+tentErr.message,'err');return}
+  effacerCopieEnCours()
   // Le rattrapage est à usage unique : on le retire une fois l'examen passé
   if(G.quizActif.mode_examen){try{await db.from('rattrapages').delete().eq('quiz_id',G.quizActif.id).eq('aspirant_id',G.profil.id)}catch(e){}}
   G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
@@ -2692,6 +2807,7 @@ async function uploaderFichierLibre(input) {
   const {error}=await db.storage.from('ressources').upload(path,fichier)
   if(error){if(statut){statut.textContent='Erreur : '+error.message;statut.style.color='var(--r)'}return}
   G.fichiersLibres[G.questions[G.etape].id]={nom:fichier.name,path,taille:(fichier.size/1024/1024).toFixed(1)+' Mo'}
+  sauverCopieEnCours()
   if(statut){statut.textContent='✓ Fichier joint : '+fichier.name;statut.style.color='var(--v)'}
 }
 
@@ -3440,15 +3556,11 @@ async function ouvrirCorrectionAdmin(tentId) {
   questions.forEach(function(q){
     const pts=parseFloat(q.points)||2
     if(q.type_question==='libre'){window._notesTemp[q.id]=(tent.notes_libres||{})[q.id]||0;return}
-    let juste=false
     if(q.type_question==='multi'){
-      const bonnes=new Set((q.bonnes_reponses||[]).map(Number))
-      const rep=new Set((reponses[q.id]||[]).map(Number))
-      juste=bonnes.size===rep.size&&[...bonnes].every(function(b){return rep.has(b)})
+      window._notesTemp[q.id]=pointsMulti(q.bonnes_reponses,reponses[q.id],pts)
     } else {
-      juste=reponses[q.id]===q.bonne_reponse
+      window._notesTemp[q.id]=(reponses[q.id]===q.bonne_reponse)?pts:0
     }
-    window._notesTemp[q.id]=juste?pts:0
   })
   const modal=document.createElement('div');modal.id='modal-correction'
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto'
@@ -3495,7 +3607,23 @@ async function validerCorrection(tentId,totalPts) {
   const notes=window._notesTemp||{},obtenu=Object.values(notes).reduce((a,v)=>a+(parseFloat(v)||0),0),sur20=calculerScore20(obtenu,totalPts),valide=sur20>=SEUIL
   const {data:tent2}=await db.from('tentatives').select('aspirant_id,quiz(module_id,mode_examen)').eq('id',tentId).single()
   await db.from('tentatives').update({notes_libres:notes,note_admin:sur20,score:Math.round(sur20),total_points:20,valide}).eq('id',tentId)
-  if(valide&&tent2?.quiz?.mode_examen&&tent2?.quiz?.module_id) await db.from('carnet_bord').upsert({aspirant_id:tent2.aspirant_id,module_id:tent2.quiz.module_id,score_final:sur20,valide_at:new Date().toISOString()},{ignoreDuplicates:false})
+  // Le carnet n'est alimente que lorsque TOUS les examens du module sont
+  // valides : un seul examen reussi ne vaut pas validation de la theorie.
+  if(valide&&tent2&&tent2.quiz&&tent2.quiz.mode_examen&&tent2.quiz.module_id){
+    const modId=tent2.quiz.module_id
+    const [{data:exMod},{data:tAsp}]=await Promise.all([
+      db.from('quiz').select('id').eq('module_id',modId).eq('mode_examen',true).eq('actif',true).or('archive.is.null,archive.eq.false'),
+      db.from('tentatives').select('quiz_id,valide').eq('aspirant_id',tent2.aspirant_id).eq('valide',true)
+    ])
+    const ids=(exMod||[]).map(function(x){return x.id})
+    const nbValides=ids.filter(function(id){return (tAsp||[]).some(function(t){return t.quiz_id===id})}).length
+    if(nbValides>=examensRequis()){
+      await db.from('carnet_bord').upsert(
+        {aspirant_id:tent2.aspirant_id,module_id:modId,ville:null,valide_at:new Date().toISOString()},
+        {onConflict:'aspirant_id,module_id'})
+      toast('Théorie du module validée pour cet aspirant','ok')
+    }
+  }
   toast('Correction validée ! Score : '+sur20+'/20','ok')
   document.getElementById('modal-correction')?.remove();chargerRendusAdmin();if(localStorage.getItem('pm_page')==='corrections')chargerCorrections()
 }
@@ -3892,7 +4020,15 @@ async function chargerCarnet(aspirantId) {
   // Les modules dont les examens sont valides sont inscrits automatiquement
   // au carnet : la ville est deja connue par le profil.
   const tentsValides=(tents||[]).filter(t=>t.valide&&t.quiz?.mode_examen)
-  const modulesAvecExamen=[...new Set(tentsValides.map(t=>t.quiz?.module_id).filter(Boolean))]
+  // Un module n'entre au carnet que si TOUS ses examens sont valides
+  const compte={}
+  tentsValides.forEach(function(t){
+    const mid=t.quiz&&t.quiz.module_id
+    if(mid) compte[mid]=(compte[mid]||0)+1
+  })
+  const modulesAvecExamen=Object.keys(compte)
+    .filter(function(mid){return compte[mid]>=examensRequis()})
+    .map(Number)
   const aInscrire=modulesAvecExamen.filter(mid=>!modulesValides.find(c=>c.module_id===mid))
   if(aInscrire.length&&!aspirantId){
     const villeP=p&&p.ville_sedentaire||null
@@ -4501,8 +4637,15 @@ async function sauvegarderMonProfil() {
   const update={ville_sedentaire:villeFinale,telephone:tel,reference:ref||null,specialites:specs,profil_complet:true}
   if(G.admin&&modAdminEl&&!estAdminSuperviseur()) update.module_gacheur=parseInt(modAdminEl.value)
   await db.from('profils').update(update).eq('id',G.profil.id)
-  await db.from('mini_stages').delete().eq('ancien_id',G.profil.id)
-  if(_stagesForm.length) await db.from('mini_stages').insert(_stagesForm.map(s=>({ancien_id:G.profil.id,module_id:s.module_id,periode:s.periode||null,description:s.description||null,actif:true})))
+  // Inserer avant de supprimer : sinon un echec ferait perdre les mini-stages
+  const {data:ancStages}=await db.from('mini_stages').select('id').eq('ancien_id',G.profil.id)
+  const idsStages=(ancStages||[]).map(function(x){return x.id})
+  let stagesOk=true
+  if(_stagesForm.length){
+    const ins=await db.from('mini_stages').insert(_stagesForm.map(s=>({ancien_id:G.profil.id,module_id:s.module_id,periode:s.periode||null,description:s.description||null,actif:true})))
+    if(ins.error){stagesOk=false;toast('Mini-stages non enregistrés : '+ins.error.message,'err')}
+  }
+  if(stagesOk&&idsStages.length) await db.from('mini_stages').delete().in('id',idsStages)
   G.profil={...G.profil,...update,specialites:specs}
   document.getElementById('modal-mon-profil')?.remove()
   toast('Profil enregistré ! Visible dans l\'annuaire.','ok')
@@ -4755,6 +4898,8 @@ function afficherQuestionnaireAncien() {
   initDark()
   demarrerAutoRefresh()
   chargerVilles()
+  // Copie interrompue : proposer de reprendre la ou l'aspirant s'est arrete
+  setTimeout(proposerRepriseCopie,600)
   // Pastille du nombre de copies a corriger
   if(G.admin){
     db.from('tentatives').select('id',{count:'exact',head:true}).not('notes_libres','is',null).is('note_admin',null)
@@ -5622,17 +5767,29 @@ async function editerQuiz(quizId) {
       } else if(q.image_url) o.image_url=q.image_url
       return o
     })
-    await db.from('questions').delete().eq('quiz_id',qzId)
+    // ── IMPORTANT : on insere AVANT de supprimer ──
+    // Supprimer d'abord ferait perdre toutes les questions si l'insertion
+    // echouait (colonne manquante, coupure reseau, droits insuffisants).
+    const ancienIds=(r2.data||[]).map(function(x){return x.id}).filter(Boolean)
     let res=await db.from('questions').insert(qsToSave)
     // Repli si une colonne optionnelle manque en base
-    if(res.error&&/image_url|bonnes_reponses|column/i.test(res.error.message||'')){
+    if(res.error&&/image_url|bonnes_reponses|medias|competence|column/i.test(res.error.message||'')){
       const secours=qsToSave.map(function(l){
         const x=Object.assign({},l);delete x.image_url;delete x.medias;delete x.bonnes_reponses;return x
       })
       res=await db.from('questions').insert(secours)
-      if(!res.error) toast('Enregistre, mais les images n ont pas pu etre conservees','err')
+      if(!res.error) toast('Enregistré, mais les images n ont pas pu être conservées','err')
     }
-    if(res.error){toast('Erreur : '+res.error.message,'err');btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Enregistrer';return}
+    if(res.error){
+      // Rien n'a ete supprime : le quiz reste intact
+      toast('Rien n a été modifié — '+res.error.message,'err')
+      btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Enregistrer';return
+    }
+    // L'insertion a reussi : on retire maintenant les anciennes questions
+    if(ancienIds.length){
+      const sup=await db.from('questions').delete().in('id',ancienIds)
+      if(sup.error) toast('Attention : anciennes questions non supprimées','err')
+    }
     await db.from('quiz').update({total_points:qsToSave.reduce(function(a,q){return a+q.points},0)}).eq('id',qzId)
     document.getElementById('modal-edit-quiz').remove()
     toast('Quiz mis à jour !','ok');loadQuizAdmin()
