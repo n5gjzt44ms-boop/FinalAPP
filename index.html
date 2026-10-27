@@ -1090,7 +1090,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.27-1735'
+const VERSION_APP = '2026.10.27-1755'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -3801,14 +3801,24 @@ async function creerCopieManquante(quizId,aspirantId){
   const p=_corrAspirants.find(function(x){return x.id===aspirantId})
   const nom=p?((p.prenom||'')+' '+(p.nom||'')).trim():'cet aspirant'
   if(!confirm('Créer une copie vide pour '+nom+' ?\n\nElle apparaîtra dans « À corriger » : tu saisiras ses points question par question, d après sa feuille ou ce qu il te dira.')) return
+  // Une copie existe peut-etre deja (invisible a cause d'un filtre) : on l'ouvre
+  const deja=await db.from('tentatives').select('id').eq('quiz_id',quizId).eq('aspirant_id',aspirantId).limit(1)
+  if(deja.data&&deja.data.length){toast('Une copie existe déjà : ouverture','ok');ouvrirCorrectionAdmin(deja.data[0].id);return}
   const {data,error}=await db.from('tentatives').insert({
     aspirant_id:aspirantId,quiz_id:quizId,
     score:0,total_points:20,valide:false,
-    reponses:{},notes_libres:{}
+    reponses:{},notes_libres:{},completed_at:new Date().toISOString()
   }).select().single()
-  if(error){toast('Erreur : '+error.message,'err');return}
-  toast('Copie créée — elle est dans « À corriger »','ok')
+  if(error){
+    if(/row-level security|policy|42501/i.test((error.message||'')+(error.code||'')))
+      alert("La base refuse de créer une copie au nom d'un aspirant.\n\nExécute le fichier copie_manquante_droits.sql dans Supabase (SQL Editor > Run), puis réessaie.")
+    else if(error.code==='23505'){toast('Une copie existe déjà pour cet aspirant','err')}
+    else alert('Copie non créée : '+error.message)
+    return
+  }
+  toast('Copie créée — saisis ses points','ok')
   chargerCorrections()
+  if(data&&data.id) ouvrirCorrectionAdmin(data.id)
 }
 
 async function rattrapageTous(quizId){
@@ -3848,7 +3858,9 @@ async function ouvrirCorrectionAdmin(tentId) {
   const idsQ={};questions.forEach(function(q){idsQ[q.id]=1})
   const orphelines=Object.keys(reponses).filter(function(k){return !idsQ[k]})
   const nbTrouvees=Object.keys(reponses).length-orphelines.length
-  const noteStockee=(tent.note_admin!=null)?Number(tent.note_admin):(tent.score!=null?Number(tent.score):null)
+  // Copie creee a la main par le gacheur (aucune reponse en ligne) : saisie des points d apres la feuille
+  const copiePapier=!Object.keys(reponses).length
+  const noteStockee=(tent.note_admin!=null)?Number(tent.note_admin):(tent.score!=null&&!copiePapier?Number(tent.score):null)
   window._notesTemp={};window._totalPtsCorr=totalPts
   window._corrOrphelines=orphelines.length>0
   questions.forEach(function(q){
@@ -3889,9 +3901,12 @@ async function ouvrirCorrectionAdmin(tentId) {
           ${coche?`<span style="font-size:.68rem;font-weight:700;color:${col};white-space:nowrap">${bon?'coché ✓':'coché ✗'}</span>`:(bon?'<span style="font-size:.68rem;font-weight:700;color:var(--v);white-space:nowrap">attendu</span>':'')}
         </div>`}).join('')
       const ptsObt=noteExist
-      corps=(sansRep?'<div style="font-size:.78rem;color:var(--r);font-weight:700;margin-bottom:5px"><i class="ti ti-alert-circle"></i> Pas de réponse</div>':'')
+      corps=(sansRep&&!copiePapier?'<div style="font-size:.78rem;color:var(--r);font-weight:700;margin-bottom:5px"><i class="ti ti-alert-circle"></i> Pas de réponse</div>':'')
         +(lignes||'<div style="font-size:.78rem;color:var(--t3)">Propositions introuvables</div>')
-        +`<div style="display:flex;justify-content:flex-end;margin-top:5px;font-size:.8rem;font-weight:700;font-family:var(--fg);color:${ptsObt>0?'var(--v)':'var(--t3)'}">${ptsObt>0?'+':''}${ptsObt} / ${pts} pt</div>`
+        +`<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:6px;font-size:.78rem">
+            <span style="color:var(--t3)">${copiePapier?'Points (copie papier)':'Points'}</span>
+            <input type="number" min="0" max="${pts}" step="0.5" value="${ptsObt}" style="width:64px;padding:5px 6px;border:1.5px solid var(--bord2);border-radius:8px;text-align:center;font-weight:700;font-family:var(--fg)" onchange="majNoteCorr('${q.id}',Math.max(0,Math.min(${pts},parseFloat(String(this.value).replace(',','.'))||0)))"/>
+            <span style="color:var(--t3)">/ ${pts}</span></div>`
     }
     return `<div style="background:var(--bg);border:1px solid var(--bord);border-radius:12px;padding:.9rem;margin-bottom:.8rem">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:.6rem">
@@ -3932,6 +3947,7 @@ async function ouvrirCorrectionAdmin(tentId) {
       ${noteStockee!=null?`<span style="width:100%;font-size:.72rem;color:var(--r2)">Note enregistrée : <b>${noteStockee}/20</b> · ${tent.valide?'Validé':'Non validé'}</span>`:''}
     </div>
     <div style="padding:1.1rem;max-height:65vh;overflow-y:auto">
+      ${copiePapier?'<div style="background:var(--bl);color:var(--b);border-radius:12px;padding:.8rem;margin-bottom:.9rem;font-size:.8rem"><i class="ti ti-file-pencil"></i> <b>Copie sans réponse en ligne.</b> Saisis les points de chaque question, ou directement la note finale en bas.</div>':''}
       ${blocOrphelines}
       ${questions.map(blocQuestion).join('')}
     </div>
