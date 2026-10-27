@@ -628,6 +628,7 @@ button,input,select,textarea{font-family:var(--ff)}
         <div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Copies à corriger</div>
         <p style="font-size:.78rem;color:var(--t3);margin-top:3px">Toutes les copies en attente, tous modules confondus.</p>
       </div>
+      <div style="font-size:.72rem;color:var(--t3);margin-bottom:.7rem" id="corr-compteur"></div>
       <div style="display:flex;gap:6px;margin-bottom:.7rem;flex-wrap:wrap" id="vues-corr">
         <button class="btn btn-dark btn-sm" data-cv="attente" onclick="vueCorrections('attente')"><i class="ti ti-clock"></i> À corriger</button>
         <button class="btn btn-ghost btn-sm" data-cv="toutes" onclick="vueCorrections('toutes')"><i class="ti ti-files"></i> Toutes les copies</button>
@@ -3520,11 +3521,18 @@ async function chargerCorrections(){
   // une copie auto-validee doit rester visible et corrigeable.
   const [rT,rQ,rP,rR]=await Promise.all([
     db.from('tentatives').select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide').order('completed_at',{ascending:false}).limit(5000),
-    db.from('quiz').select('id,titre,module_id,mode_examen,date_debut,actif').eq('mode_examen',true),
+    db.from('quiz').select('id,titre,module_id,mode_examen,date_debut,actif').limit(2000),
     db.from('profils').select('id,prenom,nom,email,telephone,module_inscrit,sans_module,role').in('role',['aspirant','apprenti']),
     db.from('rattrapages').select('quiz_id,aspirant_id')
   ])
   if(rT.error){el.innerHTML='<p style="color:var(--r);font-size:.82rem">Erreur : '+rT.error.message+'</p>';return}
+  // Compteur visible : ce que l'application lit reellement
+  const zoneC=document.getElementById('corr-compteur')
+  if(zoneC){
+    const nExam=_corrAll.filter(function(t){return t._q&&t._q.mode_examen}).length
+    const nAtt=_corrAll.filter(function(t){return t._q&&t._q.mode_examen&&estEnAttente(t)}).length
+    zoneC.textContent=(rT.data||[]).length+' copies lues · '+nExam+' d examen · '+nAtt+' à corriger'
+  }
   // Diagnostic : des copies existent-elles sans etre lisibles ?
   try{
     const {count}=await db.from('tentatives').select('id',{count:'exact',head:true})
@@ -3540,11 +3548,14 @@ async function chargerCorrections(){
   _corrRatt=rR.data||[]
   const mapQ={};_corrExamens.forEach(function(q){mapQ[q.id]=q})
   const mapP={};_corrAspirants.forEach(function(p){mapP[p.id]=p})
-  // Ne garder que les copies d'examen
-  _corrAll=(rT.data||[]).filter(function(t){return mapQ[t.quiz_id]}).map(function(t){
-    t._q=mapQ[t.quiz_id];t._p=mapP[t.aspirant_id]||{};return t
+  // On garde TOUTES les copies : une copie rattachee a un quiz non marque
+  // "examen" doit rester visible, sinon elle semble avoir disparu.
+  _corrAll=(rT.data||[]).map(function(t){
+    t._q=mapQ[t.quiz_id]||null;t._p=mapP[t.aspirant_id]||{};return t
   })
-  majPastilleCorr(_corrAll.filter(estEnAttente).length)
+  _corrExamens=_corrExamens.filter(function(q){return q.mode_examen})
+  // La pastille ne compte que les examens en attente
+  majPastilleCorr(_corrAll.filter(function(t){return t._q&&t._q.mode_examen&&estEnAttente(t)}).length)
   afficherCorrections()
 }
 
@@ -3573,7 +3584,7 @@ function vueCorrections(v){
 
 function afficherCorrections(){
   const el=$('corr-body');if(!el) return
-  let liste=_corrFiltre?_corrAll.filter(function(t){return t._q&&t._q.module_id===_corrFiltre}):_corrAll
+  let liste=_corrFiltre?_corrAll.filter(function(t){return t._q&&t._q.module_id===_corrFiltre}):_corrAll.slice()
 
   // ── Vue ABSENTS ──
   if(_corrVue==='absents'){
@@ -3614,7 +3625,8 @@ function afficherCorrections(){
   }
 
   // ── Vues EN ATTENTE / TOUTES ──
-  if(_corrVue==='attente') liste=liste.filter(estEnAttente)
+  if(_corrVue==='attente') liste=liste.filter(function(t){return t._q&&t._q.mode_examen&&estEnAttente(t)})
+  else liste=liste.slice().sort(function(a,b){return new Date(b.completed_at||0)-new Date(a.completed_at||0)})
   if(!liste.length){
     el.innerHTML='<div class="card"><div style="padding:2rem 1rem;text-align:center">'
       +'<i class="ti ti-circle-check" style="font-size:2rem;color:var(--v)"></i>'
@@ -3626,7 +3638,12 @@ function afficherCorrections(){
   const parQuiz={}
   liste.forEach(function(t){
     const k=t.quiz_id
-    if(!parQuiz[k]) parQuiz[k]={titre:(t._q&&t._q.titre)||'Examen',mod:(t._q&&t._q.module_id)||0,copies:[]}
+    if(!parQuiz[k]) parQuiz[k]={
+      titre:(t._q&&t._q.titre)||'Quiz supprimé ou inaccessible',
+      mod:(t._q&&t._q.module_id)||0,
+      examen:!!(t._q&&t._q.mode_examen),
+      copies:[]
+    }
     parQuiz[k].copies.push(t)
   })
   el.innerHTML=Object.keys(parQuiz).map(function(k){
@@ -3636,7 +3653,7 @@ function afficherCorrections(){
       +'<div class="card-head"><div style="display:flex;align-items:center;gap:8px;min-width:0">'
         +(m?'<div style="width:30px;height:30px;border-radius:10px;background:'+m.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+m.icon+'" style="color:'+m.ic+';font-size:.82rem"></i></div>':'')
         +'<div style="min-width:0"><div class="card-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+g.titre+'</div>'
-        +'<div style="font-size:.68rem;color:var(--t3)">'+(m?m.nom:'')+'</div></div>'
+        +'<div style="font-size:.68rem;color:var(--t3)">'+(m?m.nom:'')+(g.examen?' · Examen':' · Exercice')+'</div></div>'
       +'</div><span class="badge badge-a">'+g.copies.length+'</span></div>'
       +'<div class="card-body">'
       +g.copies.map(function(t){
