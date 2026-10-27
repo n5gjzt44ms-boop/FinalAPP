@@ -1090,7 +1090,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.27-1700'
+const VERSION_APP = '2026.10.27-1715'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -4067,38 +4067,10 @@ async function loadAspirants() {
   ])
   const a=asp||[],t=tents||[],q=allQ||[]
   _rattrapages=ratt||[]
-  // ── Absents aux examens clôturés ──
-  const nowA=new Date()
-  let htmlAbsents=''
-  const examsClos=q.filter(function(x){return x.mode_examen&&x.date_fin&&new Date(x.date_fin)<nowA})
-  const lignesAbs=[]
-  examsClos.forEach(function(ex){
-    const attendus=a.filter(function(p){return !p.module_inscrit||p.module_inscrit===ex.module_id})
-    const absents=attendus.filter(function(p){return !t.some(function(x){return x.quiz_id===ex.id&&x.aspirant_id===p.id})})
-    absents.forEach(function(p){
-      const dejaAutorise=_rattrapages.some(function(r){return r.quiz_id===ex.id&&r.aspirant_id===p.id})
-      lignesAbs.push('<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--bord)">'
-        +'<i class="ti ti-user-x" style="color:var(--amber);flex-shrink:0"></i>'
-        +'<div style="flex:1;min-width:0"><div style="font-size:.82rem;font-weight:600">'+(p.prenom||'')+' '+(p.nom||'')+'</div>'
-        +'<div style="font-size:.7rem;color:var(--t3)">'+ex.titre+'</div></div>'
-        +(dejaAutorise
-          ?'<span class="badge badge-v">Rattrapage ouvert</span>'
-          :'<button class="btn btn-ghost btn-sm" onclick="ouvrirRattrapage(\''+ex.id+'\',\''+p.id+'\')">Ouvrir le rattrapage</button>')
-        +'</div>')
-    })
-  })
-  if(lignesAbs.length){
-    htmlAbsents='<div class="card" style="margin-bottom:1rem"><div class="card-head"><span class="card-title"><i class="ti ti-user-x" style="color:var(--amber)"></i> Absents aux examens clôturés</span><span class="badge badge-a">'+lignesAbs.length+'</span></div><div class="card-body">'+lignesAbs.join('')+'</div></div>'
-  }
-  const enAttenteTout=t.filter(x=>x.notes_libres!==null&&!x.note_admin)
-  let htmlAttente=''
-  if(enAttenteTout.length){
-    const profilsMap=a.reduce((m,p)=>{m[p.id]=p;return m},{}),quizMap=q.reduce((m,qz)=>{m[qz.id]=qz;return m},{})
-    htmlAttente=`<div class="card" style="margin-bottom:1rem;border-color:var(--r)"><div class="card-head" style="background:var(--rl)"><div style="display:flex;align-items:center;gap:8px"><i class="ti ti-clock" style="color:var(--r)"></i><span class="card-title" style="color:var(--r2)">${enAttenteTout.length} copie(s) en attente</span></div></div><div class="card-body">${enAttenteTout.map(tent=>{const p2=profilsMap[tent.aspirant_id]||{},qz=quizMap[tent.quiz_id]||{};return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)"><div class="sidebar-avatar" style="flex-shrink:0;font-size:.7rem">${[(p2.prenom||'')[0],(p2.nom||'')[0]].join('').toUpperCase()||'?'}</div><div style="flex:1"><div style="font-size:.82rem;font-weight:700">Pays ${p2.prenom||''} ${p2.nom||''}</div><div style="font-size:.72rem;color:var(--t3)">${qz.titre||'—'} · ${new Date(tent.completed_at).toLocaleDateString('fr-FR')}</div></div><button class="btn btn-r btn-sm" onclick="ouvrirCorrectionAdmin('${tent.id}')"><i class="ti ti-pencil"></i> Corriger</button></div>`}).join('')}</div></div>`
-  }
-  if(!a.length){$('asp-body').innerHTML=htmlAttente+htmlAbsents+'<p style="font-size:.78rem;color:var(--t3)">Aucun aspirant.</p>';return}
-  // On mémorise pour le filtre et la copie des adresses
-  _aspAll=a;_aspTents=t;_aspQuiz=q;_aspEntetes=htmlAttente+htmlAbsents
+  // Les en-tetes (copies en attente, absents) sont construits a l'affichage,
+  // pour suivre le filtre de module choisi.
+  _aspAll=a;_aspTents=t;_aspQuiz=q;_aspEntetes=''
+  if(!a.length){$('asp-body').innerHTML='<p style="font-size:.78rem;color:var(--t3)">Aucun aspirant.</p>';return}
   afficherAspirants()
 }
 
@@ -4125,7 +4097,7 @@ function filtrerMetier(mt){
 function _aspFiltres(){
   let r=_aspAll
   if(_aspFiltre===9) r=r.filter(function(p){return !p.module_inscrit})
-  else if(_aspFiltre!==0) r=r.filter(function(p){return p.module_inscrit===_aspFiltre})
+  else if(_aspFiltre!==0) r=r.filter(function(p){return Number(p.module_inscrit)===_aspFiltre})
   if(_aspMetier) r=r.filter(function(p){return (p.metier||'mecanicien')===_aspMetier})
   return r
 }
@@ -4153,8 +4125,48 @@ async function copierMailsAspirants(){
   }
 }
 
+// En-tetes de la page, limites au module selectionne
+function entetesAspirants(){
+  const t=_aspTents,q=_aspQuiz,mod=(_aspFiltre&&_aspFiltre!==9)?_aspFiltre:0
+  const qMap={};q.forEach(function(x){qMap[x.id]=x})
+  const pMap={};_aspAll.forEach(function(x){pMap[x.id]=x})
+  let h=''
+  // Copies en attente de correction
+  const att=t.filter(function(x){
+    const qz=qMap[x.quiz_id]; if(!qz) return false
+    if(mod&&qz.module_id!==mod) return false
+    return qz.mode_examen?(x.note_admin===null||x.note_admin===undefined):(x.notes_libres!==null&&x.notes_libres!==undefined&&!x.note_admin)
+  })
+  if(att.length){
+    h+='<div class="card" style="margin-bottom:1rem;border-color:var(--r)"><div class="card-head" style="background:var(--rl)"><span class="card-title" style="color:var(--r2)"><i class="ti ti-clock"></i> '+att.length+' copie'+(att.length>1?'s':'')+' à corriger</span>'
+      +'<button class="btn btn-r btn-sm" onclick="nav(\'corrections\')">Ouvrir</button></div></div>'
+  }
+  // Absents : examens ouverts du module, aspirants reellement attendus
+  const now=new Date()
+  const exs=q.filter(function(x){return x.mode_examen&&x.date_debut&&new Date(x.date_debut)<=now&&(!mod||x.module_id===mod)})
+  let nbAbs=0
+  const lignes=[]
+  exs.forEach(function(ex){
+    _aspAll.forEach(function(p){
+      if(p.sans_module||Number(p.module_inscrit)!==ex.module_id) return
+      if(p.metier&&p.metier!=='mecanicien') return
+      if((p.modules_valides||[]).map(Number).indexOf(ex.module_id)>=0) return
+      if(t.some(function(x){return x.quiz_id===ex.id&&x.aspirant_id===p.id})) return
+      nbAbs++
+      if(mod) lignes.push('<div onclick="voirCarnetDe(\''+p.id+'\')" style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord);cursor:pointer;font-size:.8rem"><span><b>'+((p.prenom||'')+' '+(p.nom||'')).trim()+'</b></span><span style="color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+ex.titre+'</span></div>')
+    })
+  })
+  if(nbAbs){
+    h+='<div class="card" style="margin-bottom:1rem"><div class="card-head"><span class="card-title"><i class="ti ti-user-x" style="color:var(--amber)"></i> '+nbAbs+' absence'+(nbAbs>1?'s':'')+' à un examen'+(mod?'':' (choisis un module pour le détail)')+'</span>'
+      +'<button class="btn btn-ghost btn-sm" onclick="nav(\'corrections\');setTimeout(function(){vueCorrections(\'absents\')},400)">Gérer</button></div>'
+      +(lignes.length?'<div class="card-body">'+lignes.join('')+'</div>':'')+'</div>'
+  }
+  return h
+}
+
 function afficherAspirants(){
   const el=$('asp-body');if(!el) return
+  _aspEntetes=entetesAspirants()
   const a=_aspFiltres(),t=_aspTents,q=_aspQuiz
   const cptEl=$('asp-compteur')
   if(cptEl) cptEl.textContent=a.length+' aspirant'+(a.length>1?'s':'')+(_aspFiltre&&_aspFiltre!==9?' — '+(MODULES.find(function(m){return m.id===_aspFiltre})||{}).nom:'')
@@ -4163,9 +4175,9 @@ function afficherAspirants(){
     const tp=t.filter(function(x){return x.aspirant_id===p.id})
     const ini=[(p.prenom||'')[0],(p.nom||'')[0]].join('').toUpperCase()||'?'
     const ouvert=!!_aspOuverts[p.id]
-    const mod=MODULES.find(function(m){return m.id===p.module_inscrit})
+    const mod=MODULES.find(function(m){return m.id===Number(p.module_inscrit)})
     // Compteur d'examens du module d'inscription
-    const exM=q.filter(function(x){return x.mode_examen&&x.module_id===p.module_inscrit})
+    const exM=q.filter(function(x){return x.mode_examen&&x.module_id===Number(p.module_inscrit)})
     const exVal=exM.filter(function(x){return tp.some(function(tt){return tt.quiz_id===x.id&&tt.valide})}).length
     const aCorriger=tp.some(function(x){return x.notes_libres!==null&&!x.note_admin})
 
@@ -4203,7 +4215,7 @@ function afficherAspirants(){
     }
 
     return '<div style="border-bottom:1px solid var(--bord)">'
-      +'<div onclick="basculerAspirant(\''+p.id+'\')" style="display:flex;align-items:center;gap:10px;padding:12px 0;cursor:pointer">'
+      +'<div onclick="voirCarnetDe(\''+p.id+'\')" title="Voir son carnet de bord" style="display:flex;align-items:center;gap:10px;padding:12px 0;cursor:pointer">'
         +'<div class="sidebar-avatar" style="flex-shrink:0">'+ini+'</div>'
         +'<div style="flex:1;min-width:0">'
           +'<div style="font-size:.875rem;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap">Pays '+(p.prenom||'')+' '+(p.nom||'')
@@ -4211,7 +4223,7 @@ function afficherAspirants(){
           +'<div style="font-size:.7rem;color:var(--t3);margin-top:2px">'+metierNom(p.metier||'mecanicien')+((p.metier&&p.metier!=='mecanicien')?'':' · '+(p.sans_module?'<span style="color:var(--amber);font-weight:600">Année blanche</span>':(mod?mod.nom:'Pas encore inscrit')))+'</div>'
         +'</div>'
         +'<span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:'+(exVal>=examensRequis()?'var(--v)':'var(--t3)')+';flex-shrink:0">'+(p.sans_module?'—':(exVal+'/'+examensRequis()))+'</span>'
-        +'<i class="ti ti-chevron-'+(ouvert?'up':'down')+'" style="color:var(--t3);flex-shrink:0"></i>'
+        +'<i class="ti ti-chevron-right" style="color:var(--t3);flex-shrink:0"></i>'
       +'</div>'
       +detail
     +'</div>'
@@ -4272,7 +4284,8 @@ async function chargerCarnet(aspirantId) {
       +'<i class="ti ti-eye" style="color:#fff;font-size:1.1rem;flex-shrink:0"></i>'
       +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600;color:#fff">Carnet de '+(p.prenom||'')+' '+(p.nom||'')+'</div>'
       +'<div style="font-size:.72rem;color:#888">Consultation par un gâcheur</div></div>'
-      +'<button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.15);color:#fff;flex-shrink:0" onclick="_carnetAspirant=null;chargerCarnet()">Mon carnet</button>'
+      +(G.admin?'<button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.15);color:#fff;flex-shrink:0" onclick="ouvrirFicheCompte(\''+id+'\',\''+(p.role||'aspirant')+'\')"><i class="ti ti-user-cog"></i> Modifier</button>':'')
+      +'<button class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,.15);color:#fff;flex-shrink:0" onclick="_carnetAspirant=null;nav(G.admin?\'aspirants\':\'dashboard\')"><i class="ti ti-arrow-left"></i> Liste</button>'
       +'</div></div>'
   }
   // Validation recalculee a partir des copies reelles (regle unique)
@@ -4319,6 +4332,47 @@ async function chargerCarnet(aspirantId) {
       setTimeout(function(){window._carnetRelance=false;chargerCarnet(aspirantId)},300)
     }
   }
+  html+='</div></div>'
+  // ── Detail des quiz passes, module par module ──
+  // Le gacheur voit les notes et peut ouvrir chaque copie ; l'aspirant voit
+  // seulement le resultat (valide / non valide / en attente), sans note.
+  const voitNotes=!!G.admin
+  const passages=(tents||[]).slice().sort(function(a,b){return new Date(b.completed_at||0)-new Date(a.completed_at||0)})
+  html+='<div class="card" style="margin-top:1rem"><div class="card-head"><span class="card-title">Détail des quiz</span>'
+    +'<span style="font-size:.72rem;color:var(--t3)">'+passages.length+' passage'+(passages.length>1?'s':'')+'</span></div><div class="card-body">'
+  if(!passages.length) html+='<p style="font-size:.8rem;color:var(--t3)">Aucun quiz passé pour l\'instant.</p>'
+  function ligneQuiz(t){
+    const qz=t.quiz||{}
+    const exam=!!qz.mode_examen
+    const att=exam?(t.note_admin===null||t.note_admin===undefined):(t.notes_libres!==null&&t.notes_libres!==undefined&&!t.note_admin)
+    const etat=att?['En attente de correction','var(--amber)','ti-clock']:t.valide?['Validé','var(--v)','ti-circle-check']:['Non validé','var(--r)','ti-circle-x']
+    const note=(voitNotes&&!att)?' · '+(t.note_admin!=null?t.note_admin:t.score)+'/20':''
+    const d=t.completed_at?new Date(t.completed_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):''
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--bord)">'
+      +'<i class="ti '+etat[2]+'" style="color:'+etat[1]+';font-size:1rem;flex-shrink:0"></i>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(exam?'<span class="badge badge-rl" style="font-size:.58rem;margin-right:4px">Examen</span>':'')+(qz.titre||'Quiz')+'</div>'
+        +'<div style="font-size:.7rem;color:var(--t3)"><span style="color:'+etat[1]+';font-weight:600">'+etat[0]+'</span>'+note+(d?' · '+d:'')+'</div>'
+      +'</div>'
+      +(voitNotes?'<button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="ouvrirCorrectionAdmin(\''+t.id+'\')">'+(att?'Corriger':'Voir la copie')+'</button>':'')
+    +'</div>'
+  }
+  MODULES.forEach(function(m){
+    const tm=passages.filter(function(t){return t.quiz&&t.quiz.module_id===m.id})
+    if(!tm.length) return
+    const exs=tm.filter(function(t){return t.quiz.mode_examen})
+    const exos=tm.filter(function(t){return !t.quiz.mode_examen})
+    const exV=examensValidesDistincts(tm,m.id)
+    const exoV=exos.filter(function(t){return t.valide}).length
+    html+='<div style="margin-bottom:1rem">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+        +'<div style="width:28px;height:28px;border-radius:9px;background:'+m.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+m.icon+'" style="color:'+m.ic+';font-size:.8rem"></i></div>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:700">'+m.nom+'</div>'
+        +'<div style="font-size:.7rem;color:var(--t3)">Examens validés : '+exV+'/'+examensRequis()+(exos.length?' · Exercices réussis : '+exoV+'/'+exos.length:'')+'</div></div>'
+      +'</div>'
+      +exs.map(ligneQuiz).join('')+exos.map(ligneQuiz).join('')
+    +'</div>'
+  })
   html+='</div></div>'
   el.innerHTML=html
   if(nb>=3&&!aspirantId) lancerConfettis()
@@ -4522,7 +4576,7 @@ let _inscritsParModule=[]
 
 function voirAspirantsModule(moduleId){
   const m=MODULES.find(function(x){return x.id===moduleId})
-  const liste=_inscritsParModule.filter(function(p){return p.module_inscrit===moduleId})
+  const liste=_inscritsParModule.filter(function(p){return Number(p.module_inscrit)===moduleId})
   if(!liste.length){toast('Aucun aspirant inscrit en '+(m?m.nom:'ce module'),'def');return}
   const modal=document.createElement('div');modal.id='modal-inscrits-module'
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
@@ -4535,7 +4589,7 @@ function voirAspirantsModule(moduleId){
     +'</div>'
     +'<div style="padding:1rem;overflow-y:auto;flex:1">'
     +liste.map(function(p){
-      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord)">'
+      return '<div onclick="voirCarnetDe(\''+p.id+'\')" title="Voir son carnet de bord" style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord);cursor:pointer">'
         +'<div style="flex:1;min-width:0"><div style="font-size:.85rem;font-weight:600">'+(p.prenom||'')+' '+(p.nom||'')+'</div>'
         +'<div style="font-size:.72rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(p.email||'')+(p.ville_sedentaire?' — '+p.ville_sedentaire:'')+'</div></div>'
         +'</div>'
@@ -4549,7 +4603,7 @@ function voirAspirantsModule(moduleId){
 }
 
 async function copierMailsModule(moduleId){
-  const liste=_inscritsParModule.filter(function(p){return p.module_inscrit===moduleId}).map(function(p){return p.email}).filter(Boolean)
+  const liste=_inscritsParModule.filter(function(p){return Number(p.module_inscrit)===moduleId}).map(function(p){return p.email}).filter(Boolean)
   if(!liste.length){toast('Aucune adresse','err');return}
   try{
     await navigator.clipboard.writeText(liste.join('; '))
@@ -4565,14 +4619,14 @@ async function voirInscritsModule(periodeId, moduleId, moduleNom) {
   const profilsMap=(profilsData||[]).reduce((a,p)=>{a[p.id]=p;return a},{})
   const inscrits=inscData.map(x=>({ville:x.ville,profils:profilsMap[x.aspirant_id]||{}}))
   window._inscritsModal=inscrits
-  const modal=document.createElement('div');modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
+  const modal=document.createElement('div');modal.id='modal-inscrits-periode';modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
   modal.innerHTML=`<div style="background:var(--card);border-radius:16px;width:100%;max-width:500px;overflow:hidden">
     <div style="background:var(--r);color:#fff;padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between">
       <div><div style="font-weight:700;font-family:var(--fg)">${moduleNom}</div><div style="font-size:.75rem;opacity:.85">${inscrits.length} inscrit(s)</div></div>
       <button onclick="this.closest('div').parentElement.parentElement.remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.3rem"><i class="ti ti-x"></i></button>
     </div>
     <div style="padding:1rem;max-height:50vh;overflow-y:auto">
-      ${inscrits.length?inscrits.map(x=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord)">
+      ${inscrits.length?inscrits.map(x=>`<div onclick="${x.profils?.id?`voirCarnetDe('${x.profils.id}')`:''}" title="Voir son carnet de bord" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord);cursor:pointer">
         <div class="sidebar-avatar" style="flex-shrink:0;font-size:.7rem">${[(x.profils?.prenom||'')[0],(x.profils?.nom||'')[0]].join('').toUpperCase()||'?'}</div>
         <div style="flex:1"><div style="font-size:.82rem;font-weight:700">Pays ${x.profils?.nom||''} ${x.profils?.prenom||''}</div><div style="font-size:.72rem;color:var(--t3)">${x.profils?.email||'—'} · ${x.ville||'—'}</div></div>
       </div>`).join(''):'<p style="font-size:.82rem;color:var(--t3)">Aucun inscrit.</p>'}
@@ -4712,15 +4766,9 @@ async function rechercheMobile(v){
   dst.innerHTML='<div style="text-align:center;padding:1.5rem 0"><i class="ti ti-loader spin" style="font-size:1.4rem;color:var(--r)"></i></div>'
   const src=document.getElementById('search-input')
   if(src) src.value=v
-  if(typeof rechercheGlobale==='function'){
-    try{ await rechercheGlobale(v) }catch(e){}
-  }
-  const res=document.getElementById('search-results')
-  if(res){
-    dst.innerHTML=res.innerHTML||'<p style="font-size:.8rem;color:var(--t3);text-align:center;padding:1.5rem 0">Aucun résultat</p>'
-    // Le panneau du haut ne doit pas rester visible derriere la fenetre mobile
-    res.classList.add('hidden')
-  }
+  // Les resultats sont construits directement ici : une simple copie du
+  // HTML perdait les actions de clic (rien ne se passait au toucher).
+  try{ await rechercheGlobale(v,dst) }catch(e){dst.innerHTML='<p style="font-size:.8rem;color:var(--r);text-align:center;padding:1.5rem 0">Erreur de recherche</p>'}
 }
 
 function ouvrirMenuAdmin() {
@@ -5479,7 +5527,8 @@ async function ouvrirFicheCompte(id, roleActuel) {
 }
 
 function voirCarnetDe(id){
-  document.getElementById('modal-fiche-compte')?.remove()
+  ;['modal-fiche-compte','modal-inscrits-module','modal-inscrits-periode','modal-recherche','modal-menu-admin'].forEach(function(m){document.getElementById(m)?.remove()})
+  hi('search-results')
   _carnetAspirant=id
   nav('carnet')
 }
@@ -5557,38 +5606,50 @@ async function changerRoleCompte(id) {
 }
 
 // ─── RECHERCHE GLOBALE ──────────────────────────────────────────────────────
-async function rechercheGlobale(q) {
-  const el=$('search-results');if(!el) return
-  if(!q||q.length<2){el.innerHTML='';hi('search-results');return}
-  sh('search-results')
+let _rechTok=0
+async function rechercheGlobale(q,cible) {
+  const el=cible||$('search-results');if(!el) return
+  if(!q||q.length<2){el.innerHTML='';if(!cible)hi('search-results');return}
+  if(!cible) sh('search-results')
+  const tok=++_rechTok
   el.innerHTML='<div style="padding:8px;font-size:.78rem;color:var(--t3)">Recherche...</div>'
   const [{data:profils},{data:ressources},{data:quiz}]=await Promise.all([
-    db.from('profils').select('id,prenom,nom,role,ville_sedentaire').or('prenom.ilike.%'+q+'%,nom.ilike.%'+q+'%').limit(8),
-    db.from('ressources').select('id,titre,type,module_id').ilike('titre','%'+q+'%').limit(6),
-    db.from('quiz').select('id,titre,module_id').ilike('titre','%'+q+'%').eq('actif',true).limit(6)
+    db.from('profils').select('id,prenom,nom,role,ville_sedentaire').or('prenom.ilike.%'+q+'%,nom.ilike.%'+q+'%').limit(10),
+    db.from('ressources').select('id,titre,type,module_id,storage_path,url_externe').ilike('titre','%'+q+'%').limit(6),
+    G.admin?db.from('quiz').select('id,titre,module_id').ilike('titre','%'+q+'%').limit(6)
+           :db.from('quiz').select('id,titre,module_id').ilike('titre','%'+q+'%').eq('actif',true).limit(6)
   ])
-  const asp=(profils||[]).filter(p=>p.role==='aspirant')
+  if(tok!==_rechTok) return   // une frappe plus recente a pris le relais
+  const asp=(profils||[]).filter(p=>p.role==='aspirant'||p.role==='apprenti')
   const anc=(profils||[]).filter(p=>p.role==='ancien'||p.role==='admin'||p.role==='compagnon')
   const res=ressources||[], qz=quiz||[]
   if(!asp.length&&!anc.length&&!res.length&&!qz.length){
     el.innerHTML='<div style="padding:12px;font-size:.82rem;color:var(--t3);text-align:center">Aucun résultat</div>'
     return
   }
+  // Ferme la recherche (ordinateur et telephone) puis execute l'action
+  const fermer=function(){
+    hi('search-results')
+    const si=$('search-input');if(si){si.value='';si.blur()}
+    document.getElementById('modal-recherche')?.remove()
+  }
   const lbl=txt=>'<div style="font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);padding:6px 8px 2px">'+txt+'</div>'
   const item=(ico,bg,ic,titre,sous,fn)=>{
     const d=document.createElement('div')
-    d.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer'
+    d.style.cssText='display:flex;align-items:center;gap:8px;padding:9px 8px;border-radius:8px;cursor:pointer'
     d.onmouseenter=()=>d.style.background='var(--bg)'
     d.onmouseleave=()=>d.style.background=''
-    d.onmousedown=(e)=>{e.preventDefault();fn();hi('search-results');$('search-input').value='';$('search-input').blur()}
-    d.innerHTML='<div style="width:28px;height:28px;border-radius:7px;background:'+bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+ico+'" style="color:'+ic+';font-size:.82rem"></i></div><div style="flex:1;min-width:0"><div style="font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+titre+'</div><div style="font-size:.68rem;color:var(--t3)">'+sous+'</div></div>'
+    // mousedown : garde le focus ; click : fonctionne aussi au doigt
+    d.onmousedown=(e)=>e.preventDefault()
+    d.onclick=()=>{fermer();fn()}
+    d.innerHTML='<div style="width:28px;height:28px;border-radius:7px;background:'+bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+ico+'" style="color:'+ic+';font-size:.82rem"></i></div><div style="flex:1;min-width:0"><div style="font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+titre+'</div><div style="font-size:.68rem;color:var(--t3)">'+sous+'</div></div><i class="ti ti-chevron-right" style="color:var(--t3);font-size:.8rem"></i>'
     return d
   }
   const wrap=document.createElement('div')
+  if(asp.length&&(G.admin||G.ancien)){wrap.insertAdjacentHTML('beforeend',lbl('Aspirants'));asp.forEach(x=>{wrap.appendChild(item('ti-user','var(--bl)','var(--b)','Pays '+(x.nom||'')+' '+(x.prenom||''),G.admin?'Voir son carnet de bord':'Voir son suivi',()=>{if(G.admin)voirCarnetDe(x.id);else ouvrirProfilAspirantAncien(x.id,(x.nom||'')+' '+(x.prenom||''))}))})}
   if(qz.length){wrap.insertAdjacentHTML('beforeend',lbl('Quiz'));qz.forEach(x=>{const m=MODULES.find(m=>m.id===x.module_id);wrap.appendChild(item(m?.icon||'ti-help',m?.bg||'var(--bg)',m?.ic||'var(--t3)',x.titre,m?.nom||'',()=>ouvrirModule(x.module_id)))})}
-  if(res.length){wrap.insertAdjacentHTML('beforeend',lbl('Cours & Ressources'));res.forEach(x=>{const m=MODULES.find(m=>m.id===x.module_id);wrap.appendChild(item('ti-file','var(--rl)','var(--r)',x.titre,(m?.nom||'')+'  '+(x.type||'').toUpperCase(),()=>ouvrirModule(x.module_id)))})}
-  if(asp.length&&(G.admin||G.ancien)){wrap.insertAdjacentHTML('beforeend',lbl('Aspirants'));asp.forEach(x=>{wrap.appendChild(item('ti-user','var(--bl)','var(--b)','Pays '+(x.nom||'')+' '+(x.prenom||''),'Aspirant',()=>{if(G.ancien)ouvrirProfilAspirantAncien(x.id,(x.nom||'')+' '+(x.prenom||''));else nav('aspirants')}))})}
-  if(anc.length){wrap.insertAdjacentHTML('beforeend',lbl('Anciens'));anc.forEach(x=>{wrap.appendChild(item('ti-star','rgba(60,52,137,.10)','#3C3489','Compagnon '+(x.nom||''),(x.ville_sedentaire||'Ancien'),()=>nav('anciens')))})}
+  if(res.length){wrap.insertAdjacentHTML('beforeend',lbl('Cours & Ressources'));res.forEach(x=>{const m=MODULES.find(m=>m.id===x.module_id);wrap.appendChild(item('ti-file','var(--rl)','var(--r)',x.titre,(m?.nom||'')+'  '+(x.type||'').toUpperCase(),()=>ouvrirRes(x.id,x.storage_path||'',x.url_externe||'')))})}
+  if(anc.length){wrap.insertAdjacentHTML('beforeend',lbl('Compagnons'));anc.forEach(x=>{wrap.appendChild(item('ti-star','rgba(60,52,137,.10)','#3C3489','Compagnon '+(x.nom||'')+' '+(x.prenom||''),(x.ville_sedentaire||''),()=>{if(G.admin)voirCarnetDe(x.id);else nav('anciens')}))})}
   el.innerHTML='';el.appendChild(wrap)
 }
 
