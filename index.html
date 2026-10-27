@@ -3519,12 +3519,22 @@ async function chargerCorrections(){
   // TOUTES les copies d'examen, pas seulement celles en attente :
   // une copie auto-validee doit rester visible et corrigeable.
   const [rT,rQ,rP,rR]=await Promise.all([
-    db.from('tentatives').select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide').order('completed_at',{ascending:false}),
+    db.from('tentatives').select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide').order('completed_at',{ascending:false}).limit(5000),
     db.from('quiz').select('id,titre,module_id,mode_examen,date_debut,actif').eq('mode_examen',true),
     db.from('profils').select('id,prenom,nom,email,telephone,module_inscrit,sans_module,role').in('role',['aspirant','apprenti']),
     db.from('rattrapages').select('quiz_id,aspirant_id')
   ])
   if(rT.error){el.innerHTML='<p style="color:var(--r);font-size:.82rem">Erreur : '+rT.error.message+'</p>';return}
+  // Diagnostic : des copies existent-elles sans etre lisibles ?
+  try{
+    const {count}=await db.from('tentatives').select('id',{count:'exact',head:true})
+    const lues=(rT.data||[]).length
+    if((count||0)>lues){
+      el.insertAdjacentHTML('afterbegin','<div class="alert alert-err" style="margin-bottom:1rem">'
+        +'<b>'+((count||0)-lues)+' copies ne sont pas lisibles.</b> Les droits de lecture limitent l accès. '
+        +'Exécute correctif_lecture_copies.sql dans Supabase.</div>')
+    }
+  }catch(e){}
   _corrExamens=rQ.data||[]
   _corrAspirants=rP.data||[]
   _corrRatt=rR.data||[]
