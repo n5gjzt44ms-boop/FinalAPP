@@ -1090,7 +1090,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.27-1715'
+const VERSION_APP = '2026.10.27-1900'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -3821,55 +3821,116 @@ async function rattrapageTous(quizId){
   chargerCorrections()
 }
 
+function _escC(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function _lettre(j){return 'ABCDEFGHIJ'[j]||String(j+1)}
 async function ouvrirCorrectionAdmin(tentId) {
   const {data:tent}=await db.from('tentatives').select('*, quiz(titre,total_points)').eq('id',tentId).single()
-  const {data:questions}=await db.from('questions').select('*').eq('quiz_id',tent.quiz_id).order('ordre')
+  if(!tent){toast('Copie introuvable','err');return}
+  const {data:qsBrut}=await db.from('questions').select('*').eq('quiz_id',tent.quiz_id).order('ordre')
+  const questions=qsBrut||[]
   const {data:profil}=await db.from('profils').select('prenom,nom').eq('id',tent.aspirant_id).single()
   const reponses=tent.reponses||{},totalPts=questions.reduce((a,q)=>a+(parseFloat(q.points)||2),0)
+  // Reponses dont la question n'existe plus (quiz modifie apres la copie)
+  const idsQ={};questions.forEach(function(q){idsQ[q.id]=1})
+  const orphelines=Object.keys(reponses).filter(function(k){return !idsQ[k]})
+  const nbTrouvees=Object.keys(reponses).length-orphelines.length
+  const noteStockee=(tent.note_admin!=null)?Number(tent.note_admin):(tent.score!=null?Number(tent.score):null)
   window._notesTemp={};window._totalPtsCorr=totalPts
-  // Pre-calcul des points : gere aussi les questions a choix multiples
+  window._corrOrphelines=orphelines.length>0
   questions.forEach(function(q){
-    const pts=parseFloat(q.points)||2
+    const pts=parseFloat(q.points)||2,rep=reponses[q.id]
     if(q.type_question==='libre'){window._notesTemp[q.id]=(tent.notes_libres||{})[q.id]||0;return}
-    if(q.type_question==='multi'){
-      window._notesTemp[q.id]=pointsMulti(q.bonnes_reponses,reponses[q.id],pts)
-    } else {
-      window._notesTemp[q.id]=(reponses[q.id]===q.bonne_reponse)?pts:0
-    }
+    if(q.type_question==='multi'){window._notesTemp[q.id]=pointsMulti(q.bonnes_reponses,Array.isArray(rep)?rep:[],pts)}
+    else{window._notesTemp[q.id]=(rep!=null&&rep!==''&&Number(rep)===Number(q.bonne_reponse))?pts:0}
   })
+  const blocQuestion=function(q,i){
+    const rep=reponses[q.id],isLibre=q.type_question==='libre',isMulti=q.type_question==='multi'
+    const pts=parseFloat(q.points)||2,noteExist=window._notesTemp[q.id]??0
+    const opts=Array.isArray(q.options)?q.options:[]
+    const sansRep=(rep==null||rep===''||(Array.isArray(rep)&&!rep.length))
+    let corps=''
+    if(isLibre){
+      const f=tent.fichiers_libres&&tent.fichiers_libres[q.id]
+      corps=`<div style="background:var(--bl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--b);white-space:pre-wrap"><strong>Réponse :</strong><br>${sansRep?'<em>Aucune réponse</em>':_escC(rep)}</div>`
+        +(f?(f.annotation
+            ?`<div style="margin-bottom:.5rem"><div style="font-size:.72rem;color:var(--v);font-weight:600;margin-bottom:4px"><i class="ti ti-pencil"></i> Schéma annoté par l'aspirant</div>${f.image?`<img src="${f.image}" onclick="agrandirImage(this.src)" style="width:100%;border-radius:10px;border:1px solid var(--bord);cursor:zoom-in"/>`:`<img data-img="${f.path||''}" style="width:100%;border-radius:10px;border:1px solid var(--bord)"/>`}</div>`
+            :`<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--vl);border-radius:8px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)"><i class="ti ti-paperclip"></i> ${_escC(f.nom)}<button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${f.path||''}')"><i class="ti ti-download"></i></button></div>`):'')
+        +(q.reponse_type?`<div style="background:var(--vl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--v)"><strong>Attendu :</strong><br>${_escC(q.reponse_type)}</div>`:'')
+        +`<div style="display:flex;align-items:center;gap:8px"><label style="font-size:.78rem;color:var(--t2);white-space:nowrap;font-weight:600">Points :</label>
+          <input type="number" min="0" max="${pts}" step="0.5" value="${noteExist}" style="width:70px;padding:6px 8px;border:1.5px solid var(--bord2);border-radius:8px;font-size:.9rem;text-align:center;font-family:var(--fg);font-weight:700" onchange="majNoteCorr('${q.id}',parseFloat(this.value)||0)"/>
+          <span style="font-size:.78rem;color:var(--t3)">/ ${pts}</span></div>`
+    } else {
+      // QCM et choix multiples : toutes les propositions, avec ce qui a ete coche et ce qui etait attendu
+      const cochees=isMulti?(Array.isArray(rep)?rep.map(Number):[]):(sansRep?[]:[Number(rep)])
+      const attendues=isMulti?(q.bonnes_reponses||[]).map(Number):[Number(q.bonne_reponse)]
+      const lignes=opts.map(function(o,j){
+        const coche=cochees.indexOf(j)>=0,bon=attendues.indexOf(j)>=0
+        const fond=coche&&bon?'var(--vl)':coche?'var(--rl)':'transparent'
+        const ic=coche?(bon?'ti-square-check':'ti-square-x'):(bon?'ti-square':'ti-square')
+        const col=coche?(bon?'var(--v)':'var(--r)'):(bon?'var(--v)':'var(--t3)')
+        return `<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 8px;border-radius:7px;background:${fond};font-size:.8rem;margin-bottom:3px">
+          <i class="ti ${ic}" style="color:${col};margin-top:2px"></i>
+          <span style="font-weight:700;color:var(--t3)">${_lettre(j)}</span>
+          <span style="flex:1">${_escC(o)}</span>
+          ${coche?`<span style="font-size:.68rem;font-weight:700;color:${col};white-space:nowrap">${bon?'coché ✓':'coché ✗'}</span>`:(bon?'<span style="font-size:.68rem;font-weight:700;color:var(--v);white-space:nowrap">attendu</span>':'')}
+        </div>`}).join('')
+      const ptsObt=noteExist
+      corps=(sansRep?'<div style="font-size:.78rem;color:var(--r);font-weight:700;margin-bottom:5px"><i class="ti ti-alert-circle"></i> Pas de réponse</div>':'')
+        +(lignes||'<div style="font-size:.78rem;color:var(--t3)">Propositions introuvables</div>')
+        +`<div style="display:flex;justify-content:flex-end;margin-top:5px;font-size:.8rem;font-weight:700;font-family:var(--fg);color:${ptsObt>0?'var(--v)':'var(--t3)'}">${ptsObt>0?'+':''}${ptsObt} / ${pts} pt</div>`
+    }
+    return `<div style="background:var(--bg);border:1px solid var(--bord);border-radius:12px;padding:.9rem;margin-bottom:.8rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.6rem">
+        <span style="font-size:.68rem;color:var(--r);font-weight:700;text-transform:uppercase">Q${i+1} · ${isMulti?'CHOIX MULTIPLES':(q.type_question||'qcm').toUpperCase()}</span>
+        <span class="badge ${isLibre?'badge-a':'badge-g'}">${isLibre?'À corriger':'Auto'}</span>
+        <span class="badge badge-rl">${pts}pt</span>
+      </div>
+      ${q.image_url?`<img data-img="${q.image_url}" style="width:100%;max-height:120px;object-fit:contain;border-radius:10px;margin-bottom:6px;border:1px solid var(--bord)"/>`:''}
+      <p style="font-size:.82rem;font-weight:600;margin-bottom:.5rem">${q.enonce||''}</p>
+      ${corps}
+    </div>`
+  }
+  const affRepBrute=function(v){
+    if(Array.isArray(v)) return 'Cases cochées : '+(v.length?v.map(function(x){return _lettre(Number(x))}).join(', '):'aucune')
+    if(typeof v==='number') return 'Proposition '+_lettre(v)
+    if(v==null||v==='') return '<em>vide</em>'
+    return _escC(v)
+  }
+  const blocOrphelines=orphelines.length?`<div style="background:var(--amberl);border:1.5px solid var(--amber);border-radius:12px;padding:.9rem;margin-bottom:.9rem;color:#633806;font-size:.8rem;line-height:1.5">
+      <div style="font-weight:700;margin-bottom:4px"><i class="ti ti-alert-triangle"></i> Ce quiz a été modifié après le rendu de cette copie</div>
+      ${orphelines.length} réponse(s) ne sont plus rattachées à une question${nbTrouvees?' ('+nbTrouvees+' le sont encore)':''}. La correction automatique ne peut donc pas les compter : c'est pourquoi le score recalculé est faux.
+      <br><b>Note enregistrée sur la copie : ${noteStockee!=null?noteStockee+'/20':'aucune'}.</b> Elle est conservée tant que tu ne la changes pas ci-dessous.
+      <details style="margin-top:6px"><summary style="cursor:pointer;font-weight:600">Voir les réponses brutes de l'aspirant</summary>
+        ${orphelines.map(function(k,n){return '<div style="background:#fff;border-radius:8px;padding:6px 8px;margin-top:5px;white-space:pre-wrap">'+(n+1)+'. '+affRepBrute(reponses[k])+'</div>'}).join('')}
+      </details>
+    </div>`:''
+  const noteDefaut=orphelines.length&&noteStockee!=null?noteStockee:''
   const modal=document.createElement('div');modal.id='modal-correction'
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:1rem;overflow-y:auto'
   modal.innerHTML=`<div style="background:var(--card);border-radius:16px;width:100%;max-width:620px;margin:auto;overflow:hidden">
     <div style="background:var(--r);color:#fff;padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between">
-      <div><div style="font-weight:700;font-family:var(--fg)">${tent.quiz?.titre||'Correction'}</div><div style="font-size:.75rem;opacity:.85">${profil?.prenom||''} ${profil?.nom||''}</div></div>
+      <div><div style="font-weight:700;font-family:var(--fg)">${_escC(tent.quiz?.titre||'Correction')}</div><div style="font-size:.75rem;opacity:.85">${_escC(profil?.prenom||'')} ${_escC(profil?.nom||'')}</div></div>
       <button onclick="document.getElementById('modal-correction').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.3rem"><i class="ti ti-x"></i></button>
     </div>
-    <div style="background:var(--rl);padding:.8rem 1.2rem;display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:.82rem;color:var(--r2);font-weight:700">Score en cours</span>
+    <div style="background:var(--rl);padding:.8rem 1.2rem;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <span style="font-size:.82rem;color:var(--r2);font-weight:700">Score recalculé</span>
       <span style="font-family:var(--fg);font-size:1.4rem;font-weight:700;color:var(--r)" id="score-live-corr">—/20</span>
+      ${noteStockee!=null?`<span style="width:100%;font-size:.72rem;color:var(--r2)">Note enregistrée : <b>${noteStockee}/20</b> · ${tent.valide?'Validé':'Non validé'}</span>`:''}
     </div>
     <div style="padding:1.1rem;max-height:65vh;overflow-y:auto">
-      ${questions.map((q,i)=>{const rep=reponses[q.id],isLibre=q.type_question==='libre',noteExist=window._notesTemp[q.id]??0;return `<div style="background:var(--bg);border:1px solid var(--bord);border-radius:12px;padding:.9rem;margin-bottom:.8rem">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:.6rem">
-          <span style="font-size:.68rem;color:var(--r);font-weight:700;text-transform:uppercase">Q${i+1} · ${(q.type_question||'qcm').toUpperCase()}</span>
-          <span class="badge ${isLibre?'badge-a':'badge-g'}">${isLibre?'À corriger':'Auto'}</span>
-          <span class="badge badge-rl">${q.points}pt</span>
-        </div>
-        ${q.image_url?`<img data-img="${q.image_url}" style="width:100%;max-height:120px;object-fit:contain;border-radius:10px;margin-bottom:6px;border:1px solid var(--bord)"/>`:''  }
-        <p style="font-size:.82rem;font-weight:600;margin-bottom:.5rem">${q.enonce}</p>
-        ${isLibre?`<div style="background:var(--bl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--b)"><strong>Réponse :</strong><br>${rep||'<em>Aucune réponse</em>'}</div>
-          ${tent.fichiers_libres?.[q.id]?(tent.fichiers_libres[q.id].annotation
-            ? `<div style="margin-bottom:.5rem"><div style="font-size:.72rem;color:var(--v);font-weight:600;margin-bottom:4px"><i class="ti ti-pencil"></i> Schéma annoté par l'aspirant</div>${tent.fichiers_libres[q.id].image?`<img src="${tent.fichiers_libres[q.id].image}" onclick="agrandirImage(this.src)" style="width:100%;border-radius:10px;border:1px solid var(--bord);cursor:zoom-in"/>`:`<img data-img="${tent.fichiers_libres[q.id].path||''}" style="width:100%;border-radius:10px;border:1px solid var(--bord)"/>`}</div>`
-            : `<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--vl);border-radius:8px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)"><i class="ti ti-paperclip"></i> ${tent.fichiers_libres[q.id].nom}<button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${tent.fichiers_libres[q.id].path||''}')"><i class="ti ti-download"></i></button></div>`):''}
-          ${q.reponse_type?`<div style="background:var(--vl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--v)"><strong>Attendu :</strong><br>${q.reponse_type}</div>`:''}
-          <div style="display:flex;align-items:center;gap:8px"><label style="font-size:.78rem;color:var(--t2);white-space:nowrap;font-weight:600">Points :</label>
-          <input type="number" min="0" max="${q.points}" step="0.5" value="${noteExist}" style="width:70px;padding:6px 8px;border:1.5px solid var(--bord2);border-radius:8px;font-size:.9rem;text-align:center;font-family:var(--fg);font-weight:700" onchange="majNoteCorr('${q.id}',parseFloat(this.value)||0)"/>
-          <span style="font-size:.78rem;color:var(--t3)">/ ${q.points}</span></div>`:`<div style="display:flex;align-items:center;gap:8px;font-size:.82rem"><i class="ti ${rep===q.bonne_reponse?'ti-circle-check':'ti-circle-x'}" style="color:${rep===q.bonne_reponse?'var(--v)':'var(--r)'}"></i><span>${q.options?.[rep]??'—'}</span>${rep!==q.bonne_reponse?`<span style="color:var(--v);font-size:.75rem;font-weight:600">→ ${q.options?.[q.bonne_reponse]}</span>`:''}<span style="margin-left:auto;font-weight:700;font-family:var(--fg);color:${rep===q.bonne_reponse?'var(--v)':'var(--t3)'}">${rep===q.bonne_reponse?'+'+q.points:'0'}pt</span></div>`}
-      </div>`}).join('')}
+      ${blocOrphelines}
+      ${questions.map(blocQuestion).join('')}
     </div>
-    <div style="padding:.9rem 1.2rem;border-top:1px solid var(--bord);display:flex;gap:8px;justify-content:flex-end;background:var(--bg)">
-      <button class="btn btn-ghost" onclick="document.getElementById('modal-correction').remove()">Annuler</button>
-      <button class="btn btn-r" onclick="validerCorrection('${tentId}',${totalPts})"><i class="ti ti-check"></i> Valider</button>
+    <div style="padding:.9rem 1.2rem;border-top:1px solid var(--bord);background:var(--bg)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.7rem;font-size:.8rem">
+        <label style="font-weight:600;color:var(--t2)">Note finale imposée /20</label>
+        <input type="number" id="corr-note-finale" min="0" max="20" step="0.5" value="${noteDefaut}" placeholder="auto" style="width:80px;padding:6px 8px;border:1.5px solid var(--bord2);border-radius:8px;text-align:center;font-weight:700"/>
+        <span style="color:var(--t3);font-size:.72rem">${orphelines.length?'pré-remplie avec la note enregistrée':'vide = score recalculé'}</span>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="document.getElementById('modal-correction').remove()">Annuler</button>
+        <button class="btn btn-r" onclick="validerCorrection('${tentId}',${totalPts})"><i class="ti ti-check"></i> Valider</button>
+      </div>
     </div>
   </div>`
   document.body.appendChild(modal);majScoreLive()
@@ -3879,7 +3940,12 @@ function majNoteCorr(qId,val){if(!window._notesTemp)window._notesTemp={};window.
 function majScoreLive(){const notes=window._notesTemp||{},obtenu=Object.values(notes).reduce((a,v)=>a+(parseFloat(v)||0),0),sur20=calculerScore20(obtenu,window._totalPtsCorr||20),el=document.getElementById('score-live-corr');if(el){el.textContent=sur20+'/20';el.style.color=sur20>=14?'var(--v)':'var(--r)'}}
 
 async function validerCorrection(tentId,totalPts) {
-  const notes=window._notesTemp||{},obtenu=Object.values(notes).reduce((a,v)=>a+(parseFloat(v)||0),0),sur20=calculerScore20(obtenu,totalPts),valide=sur20>=SEUIL
+  const notes=window._notesTemp||{},obtenu=Object.values(notes).reduce((a,v)=>a+(parseFloat(v)||0),0)
+  const champ=document.getElementById('corr-note-finale'),imposee=champ&&champ.value!==''?parseFloat(String(champ.value).replace(',','.')):NaN
+  let sur20=calculerScore20(obtenu,totalPts)
+  if(!isNaN(imposee)) sur20=Math.max(0,Math.min(20,imposee))
+  else if(window._corrOrphelines&&!confirm('Des réponses de cette copie ne sont plus rattachées à leurs questions.\nLe score recalculé ('+sur20+'/20) est donc faux.\n\nRemplacer quand même la note enregistrée ?')) return
+  const valide=sur20>=SEUIL
   const {data:tent2}=await db.from('tentatives').select('aspirant_id,quiz(module_id,mode_examen)').eq('id',tentId).single()
   const maj=await db.from('tentatives').update({notes_libres:notes,note_admin:sur20,score:Math.round(sur20),total_points:20,valide}).eq('id',tentId).select('id')
   if(maj.error||!maj.data||!maj.data.length){
@@ -6001,7 +6067,7 @@ async function editerQuiz(quizId) {
         const cb=document.createElement('input'); cb.type='checkbox'; cb.id='eq-cb-'+i+'-'+j; cb.checked=bonnes.includes(j)
         cb.style.cssText='width:16px;height:16px;accent-color:var(--r);flex-shrink:0'
         const inp=document.createElement('input'); inp.id='eq-op-'+i+'-'+j; inp.value=o||''
-        inp.placeholder='Option '+['A','B','C','D'][j]
+        inp.placeholder='Option '+'ABCDEFGHIJ'[j]
         inp.style.cssText='flex:1;padding:6px 10px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.8rem;font-family:var(--ff)'
         row.appendChild(cb); row.appendChild(inp); div.appendChild(row)
       })
@@ -6103,8 +6169,10 @@ async function editerQuiz(quizId) {
       const type=(document.getElementById('eq-tp-'+i)&&document.getElementById('eq-tp-'+i).value)||'multi'
       var opts=q.options||['','','',''],bonnes=[0]
       if(type!=='libre'){
-        opts=[0,1,2,3].map(function(j){return(document.getElementById('eq-op-'+i+'-'+j)&&document.getElementById('eq-op-'+i+'-'+j).value||'').trim()})
-        bonnes=[0,1,2,3].filter(function(j){return document.getElementById('eq-cb-'+i+'-'+j)&&document.getElementById('eq-cb-'+i+'-'+j).checked})
+        // Toutes les propositions affichees (A a E et plus), pas seulement 4
+        const idxs=[];for(let j=0;j<12;j++){if(document.getElementById('eq-op-'+i+'-'+j))idxs.push(j)}
+        opts=idxs.map(function(j){return(document.getElementById('eq-op-'+i+'-'+j).value||'').trim()})
+        bonnes=idxs.filter(function(j){return document.getElementById('eq-cb-'+i+'-'+j)&&document.getElementById('eq-cb-'+i+'-'+j).checked})
         if(!bonnes.length)bonnes=[0]
       }
       const o={quiz_id:qzId,enonce:enonce,type_question:type,options:opts,bonne_reponse:bonnes[0]||0,bonnes_reponses:bonnes,reponse_type:expl||null,points:pts,ordre:i}
@@ -6116,28 +6184,44 @@ async function editerQuiz(quizId) {
       } else if(q.image_url) o.image_url=q.image_url
       return o
     })
-    // ── IMPORTANT : on insere AVANT de supprimer ──
-    // Supprimer d'abord ferait perdre toutes les questions si l'insertion
-    // echouait (colonne manquante, coupure reseau, droits insuffisants).
-    const ancienIds=(r2.data||[]).map(function(x){return x.id}).filter(Boolean)
-    let res=await db.from('questions').insert(qsToSave)
-    // Repli si une colonne optionnelle manque en base
-    if(res.error&&/image_url|bonnes_reponses|medias|competence|column/i.test(res.error.message||'')){
-      const secours=qsToSave.map(function(l){
-        const x=Object.assign({},l);delete x.image_url;delete x.medias;delete x.bonnes_reponses;return x
-      })
-      res=await db.from('questions').insert(secours)
-      if(!res.error) toast('Enregistré, mais les images n ont pas pu être conservées','err')
+    // ── Mise a jour EN PLACE ──
+    // Recreer les questions changeait leur identifiant : les copies deja
+    // rendues ne retrouvaient plus leurs questions (reponses invisibles,
+    // note recalculee a 0/20). Chaque question existante est donc modifiee
+    // sur place ; seules les nouvelles sont creees.
+    try{
+      const nbCop=await db.from('tentatives').select('id',{count:'exact',head:true}).eq('quiz_id',qzId)
+      if((nbCop.count||0)>0&&!confirm(nbCop.count+' copie(s) ont déjà été rendues sur ce quiz.\n\nLes réponses restent rattachées à leurs questions. Mais si tu changes une bonne réponse, la correction automatique de ces copies changera aussi.\n\nEnregistrer quand même ?')){
+        btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Enregistrer';return
+      }
+    }catch(e){}
+    const sansOptionnels=function(l){const x=Object.assign({},l);delete x.image_url;delete x.medias;delete x.bonnes_reponses;return x}
+    const idsConserves=[]
+    let erreur=null,imagesPerdues=false
+    for(let k=0;k<questions.length;k++){
+      const q=questions[k],ligne=qsToSave[k]
+      if(q.id){
+        idsConserves.push(q.id)
+        let r=await db.from('questions').update(ligne).eq('id',q.id)
+        if(r.error&&/image_url|bonnes_reponses|medias|competence|column/i.test(r.error.message||'')){r=await db.from('questions').update(sansOptionnels(ligne)).eq('id',q.id);imagesPerdues=true}
+        if(r.error){erreur=r.error;break}
+      } else {
+        let r=await db.from('questions').insert(ligne).select('id').single()
+        if(r.error&&/image_url|bonnes_reponses|medias|competence|column/i.test(r.error.message||'')){r=await db.from('questions').insert(sansOptionnels(ligne)).select('id').single();imagesPerdues=true}
+        if(r.error){erreur=r.error;break}
+        if(r.data){q.id=r.data.id;idsConserves.push(r.data.id)}
+      }
     }
-    if(res.error){
-      // Rien n'a ete supprime : le quiz reste intact
-      toast('Rien n a été modifié — '+res.error.message,'err')
+    if(erreur){
+      toast('Enregistrement interrompu — '+erreur.message,'err')
       btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Enregistrer';return
     }
-    // L'insertion a reussi : on retire maintenant les anciennes questions
-    if(ancienIds.length){
-      const sup=await db.from('questions').delete().in('id',ancienIds)
-      if(sup.error) toast('Attention : anciennes questions non supprimées','err')
+    if(imagesPerdues) toast('Enregistré, mais les images n ont pas pu être conservées','err')
+    // Questions retirees dans l'editeur
+    const aRetirer=(r2.data||[]).map(function(x){return x.id}).filter(function(id){return id&&idsConserves.indexOf(id)<0})
+    if(aRetirer.length){
+      const sup=await db.from('questions').delete().in('id',aRetirer)
+      if(sup.error) toast('Attention : questions retirées non supprimées','err')
     }
     await db.from('quiz').update({total_points:qsToSave.reduce(function(a,q){return a+q.points},0)}).eq('id',qzId)
     document.getElementById('modal-edit-quiz').remove()
