@@ -1090,7 +1090,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.27-1815'
+const VERSION_APP = '2026.10.28-0450'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -3794,6 +3794,7 @@ function afficherCorrections(){
               +(rAcc?'<span class="badge badge-v" style="margin-top:3px;cursor:pointer" title="Changer la date limite" onclick="redonnerAcces(\''+t.quiz_id+'\',\''+t.aspirant_id+'\')">Accès rouvert'+(rAcc.date_limite?' → '+new Date(rAcc.date_limite).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):'')+'</span>':'')
           })()
           +'</div>'
+          +'<button class="btn btn-ghost btn-sm btn-icon" style="flex-shrink:0" title="Supprimer cette copie" onclick="supprimerCopie(\''+t.id+'\')"><i class="ti ti-trash"></i></button>'
           +(g.examen?'<button class="btn btn-ghost btn-sm btn-icon" style="flex-shrink:0" title="Redonner l accès à l examen (bug, copie vide…)" onclick="redonnerAcces(\''+t.quiz_id+'\',\''+t.aspirant_id+'\')"><i class="ti ti-refresh"></i></button>':'')
           +'<button class="btn '+(att?'btn-r':'btn-ghost')+' btn-sm" style="flex-shrink:0" onclick="ouvrirCorrectionAdmin(\''+t.id+'\')">'+(att?'Corriger':'Revoir')+'</button>'
         +'</div>'
@@ -3966,6 +3967,7 @@ async function ouvrirCorrectionAdmin(tentId) {
         <span style="color:var(--t3);font-size:.72rem">${orphelines.length?'pré-remplie avec la note enregistrée':'vide = score recalculé'}</span>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" style="margin-right:auto;color:var(--r)" onclick="supprimerCopie('${tentId}')" title="Supprimer cette copie"><i class="ti ti-trash"></i> Supprimer</button>
         <button class="btn btn-ghost" onclick="document.getElementById('modal-correction').remove()">Annuler</button>
         <button class="btn btn-r" onclick="validerCorrection('${tentId}',${totalPts})"><i class="ti ti-check"></i> Valider</button>
       </div>
@@ -4162,11 +4164,13 @@ function demanderDateLimite(nb){
   const d=new Date();d.setDate(d.getDate()+7)
   const def=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()
   for(;;){
-    const s=prompt('Rattrapage'+(nb>1?' pour '+nb+' aspirants':'')+' : jusqu à quelle date pourront-ils passer l examen ?\n(format JJ/MM/AAAA — accessible jusqu à 23h59 ce jour-là)',def)
+    const s=prompt('Rattrapage'+(nb>1?' pour '+nb+' aspirants':'')+' : jusqu à quelle date pourront-ils passer l examen ?\n(exemple : 10/11 — accessible jusqu à 23h59 ce jour-là)',def)
     if(s===null) return undefined
-    const m=String(s).trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/)
+    // Accepte 10/11/2026, 10/11/26 ou simplement 10/11 (annee en cours, ou suivante si la date est passee)
+    const m=String(s).trim().match(/^(\d{1,2})\s*[\/.\- ]\s*(\d{1,2})(?:\s*[\/.\- ]\s*(\d{2,4}))?$/)
     if(m){
-      const an=Number(m[3])<100?2000+Number(m[3]):Number(m[3])
+      let an=m[3]?(Number(m[3])<100?2000+Number(m[3]):Number(m[3])):new Date().getFullYear()
+      if(!m[3]&&new Date(an,Number(m[2])-1,Number(m[1]),23,59)<new Date()) an++
       const lim=new Date(an,Number(m[2])-1,Number(m[1]),23,59,0)
       if(!isNaN(lim)&&lim.getDate()===Number(m[1])){
         if(lim<new Date()){alert('Cette date est déjà passée.');continue}
@@ -4185,6 +4189,26 @@ async function insererRattrapage(quizId,aspirantId,limite){
     if(!r.error) r.sansLimite=true
   }
   return r
+}
+// Supprimer une copie (premier essai bugue, copie de test...).
+// La note est archivee dans l historique, puis la copie est retiree :
+// l aspirant n a plus de resultat et peut repasser l examen.
+async function supprimerCopie(tentId){
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  const {data:t}=await db.from('tentatives').select('id,aspirant_id,quiz_id,score,valide,note_admin,completed_at').eq('id',tentId).single()
+  if(!t){toast('Copie introuvable','err');return}
+  const {data:p}=await db.from('profils').select('prenom,nom').eq('id',t.aspirant_id).maybeSingle()
+  const {data:q}=await db.from('quiz').select('titre,mode_examen').eq('id',t.quiz_id).maybeSingle()
+  const nom=p?((p.prenom||'')+' '+(p.nom||'')).trim():'cet aspirant'
+  if(!confirm('Supprimer la copie de '+nom+' ?\n'+((q&&q.titre)||'')+'\n\nSes réponses et sa note disparaissent de l application (la note est gardée dans l historique). Cette action est définitive.')) return
+  try{await db.from('historique_tentatives').insert({aspirant_id:t.aspirant_id,quiz_id:t.quiz_id,score:t.note_admin!=null?t.note_admin:t.score,valide:t.valide,completed_at:t.completed_at})}catch(e){}
+  const del=await db.from('tentatives').delete().eq('id',tentId).select('id')
+  if(del.error||!del.data||!del.data.length){alert('La copie n a PAS été supprimée.\n\n'+((del.error&&del.error.message)||'Droits insuffisants : exécute repasser_examen_droits.sql dans Supabase.'));return}
+  document.getElementById('modal-correction')?.remove()
+  toast('Copie supprimée','ok')
+  if(q&&q.mode_examen&&confirm('Copie supprimée.\n\nRedonner maintenant l accès à l examen à '+nom+' ?\n(Nécessaire si le créneau de l examen est terminé.)')) await ouvrirRattrapage(t.quiz_id,t.aspirant_id)
+  if(localStorage.getItem('pm_page')==='corrections') chargerCorrections()
+  else if(localStorage.getItem('pm_page')==='aspirants') loadAspirants()
 }
 // Redonner l acces a un aspirant qui a deja une copie (bug, copie vide...).
 // Sa copie actuelle reste en base jusqu a ce qu il rende la nouvelle,
