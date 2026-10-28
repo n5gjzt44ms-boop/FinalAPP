@@ -15,7 +15,8 @@ const GUIDES = {
     titre: "Guide aspirant",
     couleur: 'var(--b)', fond: 'var(--bl)',
     etapes: [
-      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Votre accueil. Retrouvez vos modules, vos dernieres activites et les annonces de votre formateur."},
+      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Votre accueil. Le jour d'un examen, il apparait tout en haut avec le compte a rebours, puis le bouton pour commencer. Retrouvez aussi vos modules et les annonces."},
+      {icon:'ti-camera', titre:'Schema fait a la main', texte:"Prenez d'abord la photo avec l'appareil photo du telephone, puis ajoutez-la a la question depuis votre galerie. Vous pouvez en joindre plusieurs."},
       {icon:'ti-books', titre:'Modules', texte:"4 modules : Thermique, Hydraulique, Conception & Construction, Electrique. Chaque module contient des cours et des evaluations."},
       {icon:'ti-file', titre:'Cours & ressources', texte:"Onglet Cours : PDFs, plans CAO et documents mis a disposition. Cliquez pour ouvrir ou telecharger."},
       {icon:'ti-help', titre:'Exercices et examens', texte:"Les exercices sont repassables librement. Les examens dates sont reserves aux aspirants inscrits dans ce module."},
@@ -27,6 +28,7 @@ const GUIDES = {
     titre: "Guide administrateur",
     couleur: 'var(--r)', fond: 'var(--rl)',
     etapes: [
+      {icon:'ti-layout-dashboard', titre:'Accueil', texte:"Ce qui demande votre attention : copies a corriger, examens du jour (publies ou non), absents, rattrapages ouverts. Tout se regle en un clic. En bas : Copies, Aspirants, Modules et Gerer."},
       {icon:'ti-help-circle', titre:'Gerer les quiz', texte:"Creez des exercices (repassables) ou des examens (avec creneau horaire). Questions QCM, Vrai/Faux ou reponse libre."},
       {icon:'ti-upload', titre:'Ressources', texte:"Uploadez des PDFs, Word ou CAO par module. Organisez en dossiers."},
       {icon:'ti-speakerphone', titre:'Annonces', texte:"Publiez des annonces visibles par tous les aspirants. Choisissez duree et niveau."},
@@ -124,7 +126,8 @@ const GUIDES = {
     titre: "Guide aspirant",
     couleur: 'var(--b)', fond: 'var(--bl)',
     etapes: [
-      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Votre accueil. Retrouvez vos modules, vos dernieres activites et les annonces de votre formateur."},
+      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Votre accueil. Le jour d'un examen, il apparait tout en haut avec le compte a rebours, puis le bouton pour commencer. Retrouvez aussi vos modules et les annonces."},
+      {icon:'ti-camera', titre:'Schema fait a la main', texte:"Prenez d'abord la photo avec l'appareil photo du telephone, puis ajoutez-la a la question depuis votre galerie. Vous pouvez en joindre plusieurs."},
       {icon:'ti-books', titre:'Modules', texte:"4 modules : Thermique, Hydraulique, Conception & Construction, Electrique. Chaque module contient des cours et des evaluations."},
       {icon:'ti-file', titre:'Cours & ressources', texte:"Onglet Cours : PDFs, plans CAO et documents mis a disposition. Cliquez pour ouvrir ou telecharger."},
       {icon:'ti-help', titre:'Exercices et examens', texte:"Les exercices sont repassables librement. Les examens dates sont reserves aux aspirants inscrits dans ce module."},
@@ -136,6 +139,7 @@ const GUIDES = {
     titre: "Guide administrateur",
     couleur: 'var(--r)', fond: 'var(--rl)',
     etapes: [
+      {icon:'ti-layout-dashboard', titre:'Accueil', texte:"Ce qui demande votre attention : copies a corriger, examens du jour (publies ou non), absents, rattrapages ouverts. Tout se regle en un clic. En bas : Copies, Aspirants, Modules et Gerer."},
       {icon:'ti-help-circle', titre:'Gerer les quiz', texte:"Creez des exercices (repassables) ou des examens (avec creneau horaire). Questions QCM, Vrai/Faux ou reponse libre."},
       {icon:'ti-upload', titre:'Ressources', texte:"Uploadez des PDFs, Word ou CAO par module. Organisez en dossiers."},
       {icon:'ti-speakerphone', titre:'Annonces', texte:"Publiez des annonces visibles par tous les aspirants. Choisissez duree et niveau."},
@@ -246,6 +250,47 @@ button,input,select,textarea{font-family:var(--ff)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{animation:spin .7s linear infinite;display:inline-block}
 .fadein{animation:fadein .2s ease}
+
+/* ── ACCUEIL GÂCHEUR ── */
+#d-admin,#d-rappel{max-width:880px}
+.adm-h{font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin:1.4rem 0 .6rem;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.adm-h a{font-size:.72rem;letter-spacing:0;text-transform:none;font-weight:600;color:var(--r);cursor:pointer}
+.adm-row{display:flex;align-items:center;gap:12px;padding:13px 15px;background:var(--card);border-radius:18px;margin-bottom:8px;box-shadow:var(--sh-s)}
+.adm-row.clic{cursor:pointer}
+.adm-row.clic:active{transform:scale(.99)}
+.adm-ic{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.15rem}
+.adm-tx{flex:1;min-width:0}
+.adm-t1{font-size:.9rem;font-weight:600;line-height:1.3}
+.adm-t2{font-size:.74rem;color:var(--t3);margin-top:2px;line-height:1.35}
+.adm-nb{font-family:var(--fg);font-size:1.4rem;font-weight:800;letter-spacing:-.02em;flex-shrink:0;font-variant-numeric:tabular-nums}
+.adm-ex{background:var(--card);border-radius:20px;padding:16px;margin-bottom:10px;box-shadow:var(--sh-s)}
+.adm-pill{display:inline-flex;align-items:center;gap:5px;font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:20px;white-space:nowrap}
+.adm-chiffres{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap}
+.adm-chiffres b{display:block;font-family:var(--fg);font-size:1.25rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.adm-chiffres span{font-size:.66rem;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.adm-date{width:44px;height:46px;border-radius:13px;background:var(--field);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;line-height:1}
+.adm-date b{font-size:1.05rem;font-weight:800}
+.adm-date span{font-size:.58rem;text-transform:uppercase;font-weight:700;color:var(--t3);margin-top:2px}
+.adm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.adm-tile{background:var(--card);border-radius:18px;padding:14px 6px 12px;text-align:center;cursor:pointer;box-shadow:var(--sh-s);position:relative}
+.adm-tile i{font-size:1.4rem;color:var(--r)}
+.adm-tile div{font-size:.7rem;font-weight:600;margin-top:6px;line-height:1.25;color:var(--t1)}
+.adm-tile .adm-badge{position:absolute;top:8px;right:8px;min-width:18px;height:18px;border-radius:9px;background:var(--r);color:#fff;font-size:.6rem;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;margin:0}
+@media(min-width:760px){.adm-grid{grid-template-columns:repeat(5,1fr)}}
+
+/* ── EXAMEN DU JOUR (accueil aspirant) ── */
+.ej{border-radius:22px;padding:18px 18px 16px;margin-bottom:1rem;box-shadow:var(--sh-m)}
+.ej-label{font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.ej-titre{font-size:1.12rem;font-weight:700;letter-spacing:-.01em;margin-top:7px;line-height:1.3}
+.ej-meta{font-size:.8rem;margin-top:4px;opacity:.88;line-height:1.45}
+.ej-cd{font-family:var(--fg);font-size:1.7rem;font-weight:800;letter-spacing:-.02em;margin-top:10px;font-variant-numeric:tabular-nums}
+.ej-btn{margin-top:14px;width:100%;padding:16px;font-size:1rem;border-radius:16px}
+.ej-rouge{background:var(--r);color:#fff}
+.ej-rouge .ej-btn{background:#fff;color:var(--r2);box-shadow:0 6px 16px -8px rgba(0,0,0,.35)}
+.ej-sombre{background:var(--dark);color:#fff;border:1px solid var(--bord2)}
+.ej-blanc{background:var(--card);color:var(--t1)}
+.ej-pulse{width:9px;height:9px;border-radius:50%;background:#fff;display:inline-block;animation:ejp 1.4s ease-in-out infinite}
+@keyframes ejp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
 
 /* ── LOGIN ── */
 #vue-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;background:var(--bg)}
@@ -583,12 +628,12 @@ button,input,select,textarea{font-family:var(--ff)}
 
 
     <div class="nav-sep" id="sep-admin" style="display:none"></div>
-    <div class="nav-icon hidden" id="n-ressources" data-tip="Ressources" onclick="nav('ressources')"><i class="ti ti-upload"></i></div>
-    <div class="nav-icon hidden" id="n-quiz-admin" data-tip="Gérer les quiz" onclick="nav('quiz-admin')"><i class="ti ti-help-circle"></i></div>
-    <div class="nav-icon hidden" id="n-annonces-admin" data-tip="Annonces" onclick="nav('annonces-admin')"><i class="ti ti-speakerphone"></i></div>
-    <div class="nav-icon hidden" id="n-inscriptions-admin" data-tip="Inscriptions" onclick="nav('inscriptions-admin')"><i class="ti ti-calendar-event"></i></div>
     <div class="nav-icon hidden" id="n-corrections" data-tip="Copies à corriger" onclick="nav('corrections')"><i class="ti ti-checkbox"></i><span id="pastille-corr" style="position:absolute;top:2px;right:2px;min-width:16px;height:16px;border-radius:9px;background:var(--r);color:#fff;font-size:.58rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 3px"></span></div>
+    <div class="nav-icon hidden" id="n-quiz-admin" data-tip="Quiz et examens" onclick="nav('quiz-admin')"><i class="ti ti-help-circle"></i></div>
     <div class="nav-icon hidden" id="n-aspirants" data-tip="Aspirants" onclick="nav('aspirants')"><i class="ti ti-users"></i></div>
+    <div class="nav-icon hidden" id="n-inscriptions-admin" data-tip="Inscriptions" onclick="nav('inscriptions-admin')"><i class="ti ti-calendar-event"></i></div>
+    <div class="nav-icon hidden" id="n-annonces-admin" data-tip="Annonces" onclick="nav('annonces-admin')"><i class="ti ti-speakerphone"></i></div>
+    <div class="nav-icon hidden" id="n-ressources" data-tip="Ressources" onclick="nav('ressources')"><i class="ti ti-upload"></i></div>
     <div class="nav-icon hidden" id="n-comptes-admin" data-tip="Tous les comptes" onclick="nav('comptes-admin')"><i class="ti ti-list-check"></i></div>
     <div class="nav-icon hidden" id="n-anciens-admin" data-tip="Anciens" onclick="nav('anciens-admin')"><i class="ti ti-star"></i></div>
     <div class="nav-icon hidden" id="n-stats-admin" data-tip="Statistiques" onclick="nav('stats-admin')"><i class="ti ti-chart-bar"></i></div>
@@ -600,6 +645,8 @@ button,input,select,textarea{font-family:var(--ff)}
   <nav class="bottom-nav">
     <div class="bnav-inner">
       <div class="bnav-item on" id="b-dashboard" onclick="nav('dashboard')"><i class="ti ti-layout-dashboard"></i>Accueil</div>
+      <div class="bnav-item hidden" id="b-corrections" onclick="nav('corrections')" style="position:relative"><i class="ti ti-checkbox"></i>Copies<span id="pastille-corr-b" style="position:absolute;top:-3px;left:50%;margin-left:6px;min-width:17px;height:17px;border-radius:9px;background:var(--r);color:#fff;font-size:.6rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px"></span></div>
+      <div class="bnav-item hidden" id="b-aspirants" onclick="nav('aspirants')"><i class="ti ti-users"></i>Aspirants</div>
       <div class="bnav-item" id="b-modules" onclick="nav('modules')"><i class="ti ti-books"></i>Modules</div>
 
       <div class="bnav-item" id="b-anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i>Contacts</div>
@@ -617,9 +664,10 @@ button,input,select,textarea{font-family:var(--ff)}
         <div style="font-family:var(--fg);font-size:1.6rem;font-weight:700;letter-spacing:-.5px">Bonjour, Pays <span id="d-prenom">—</span></div>
         <div style="font-size:.78rem;color:var(--t3);margin-top:2px" id="d-date"></div>
       </div>
+      <div id="d-rappel"></div>
+      <div id="d-admin"></div>
       <div id="annonces-dashboard" style="margin-bottom:1rem"></div>
       <div id="d-email-perso"></div>
-      <div id="d-rappel"></div>
       <div id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
       <div id="d-activite"></div>
 
@@ -1090,7 +1138,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.28-0450'
+const VERSION_APP = '2026.10.28-1000'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1166,15 +1214,23 @@ const CLE_COPIE='pm_copie_en_cours'
 function sauverCopieEnCours(){
   try{
     if(!G.quizActif||!G.quizActif.id) return
-    localStorage.setItem(CLE_COPIE,JSON.stringify({
+    const b={
       quizId:G.quizActif.id,
       titre:G.quizActif.titre||'',
       reponses:G.reponses||{},
       fichiersLibres:G.fichiersLibres||{},
       etape:G.etape||0,
       secondes:(typeof _secondesQuiz!=='undefined'?_secondesQuiz:0),
+      finExamen:G.finExamen?new Date(G.finExamen).getTime():null,
       quand:Date.now()
-    }))
+    }
+    try{localStorage.setItem(CLE_COPIE,JSON.stringify(b))}
+    catch(e){
+      // Memoire du navigateur pleine (photos gardees dans la copie) :
+      // on conserve au moins les reponses et les pieces deja deposees
+      b.fichiersLibres=piecesSansImages(G.fichiersLibres)
+      try{localStorage.setItem(CLE_COPIE,JSON.stringify(b))}catch(e2){}
+    }
   }catch(e){}
 }
 
@@ -1229,8 +1285,9 @@ async function reprendreCopie(){
   ])
   if(!q||!qs||!qs.length){toast('Examen introuvable','err');effacerCopieEnCours();return}
   G.quizActif=q;G.questions=qs
-  G.reponses=b.reponses||{};G.fichiersLibres=b.fichiersLibres||{}
+  G.reponses=b.reponses||{};G.fichiersLibres=nettoyerPieces(b.fichiersLibres||{})
   G.etape=Math.min(b.etape||0,qs.length-1)
+  G.finExamen=b.finExamen?new Date(b.finExamen):calculerFinExamen(q)
   G.choix=null;G.confirme=false
   if(typeof _multiSelect!=='undefined') _multiSelect=new Set()
   nav('quiz');showQ();demarrerTimer()
@@ -1238,10 +1295,21 @@ async function reprendreCopie(){
   toast('Copie reprise','ok')
 }
 
+// Fin de l'examen pour CETTE copie. Pendant le creneau : la fin du creneau.
+// En rattrapage (creneau termine) ou en test gacheur hors creneau : la meme
+// duree que l'examen, a partir du moment ou l'aspirant commence.
+// (Avant : la fin du creneau, deja passee, envoyait la copie vide en 1 s.)
+function calculerFinExamen(q){
+  if(!q||!q.mode_examen) return null
+  const n=new Date(),deb=q.date_debut?new Date(q.date_debut):null,fin=q.date_fin?new Date(q.date_fin):null
+  if(fin&&n<=fin&&(!deb||n>=deb)) return fin
+  const duree=(deb&&fin&&fin>deb)?(fin-deb):null
+  return duree?new Date(n.getTime()+duree):null
+}
 function demarrerTimer() {
   _secondesQuiz=0;clearInterval(_timerQuiz)
-  // Afficher le décompte restant si examen avec date_fin
-  const dateFin=G.quizActif?.date_fin?new Date(G.quizActif.date_fin):null
+  // Afficher le décompte restant si examen avec une fin
+  const dateFin=G.quizActif?.mode_examen?(G.finExamen||null):null
   const isExamen=G.quizActif?.mode_examen
   // Mettre à jour le header timer
   const el=$('q-timer')
@@ -1629,6 +1697,209 @@ async function enregistrerAnnotation(questionId){
   }
 }
 
+// ─── PIÈCES JOINTES DES RÉPONSES LIBRES ────────────────────────────────────
+// Une question libre peut recevoir plusieurs pieces : photos d'un schema fait
+// a la main, fichiers, schema annote. Chaque photo est reduite sur le
+// telephone (envoi rapide meme avec un reseau faible), puis deposee dans le
+// stockage. Si le stockage refuse ou ne repond pas, la photo est gardee DANS
+// la copie : elle n'est jamais perdue.
+let _envoisPJ=[]          // envois en cours
+const _apercusPJ={}       // apercus en memoire (non enregistres)
+const _fichiersPJ={}      // fichiers d'origine, pour reessayer
+function estImageNom(n){return /\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(String(n||''))}
+function estImageFichier(f){return !!f&&((f.type&&f.type.indexOf('image/')===0)||estImageNom(f.name))}
+function piecesJointes(v){
+  if(!v) return []
+  if(Array.isArray(v)) return v.filter(Boolean)
+  // Ancien format : un seul objet par question
+  if(v.annotation) return [{id:'pj-ancien',type:'annotation',nom:v.nom||'Schéma annoté',image:v.image||null,path:v.path||null,etat:'ok'}]
+  return [{id:'pj-ancien',type:estImageNom(v.nom||v.path||'')?'photo':'fichier',nom:v.nom||'Fichier',path:v.path||null,image:v.image||null,taille:v.taille,etat:'ok'}]
+}
+// Retire les pieces sans contenu (envoi interrompu par un rechargement)
+function nettoyerPieces(fl){
+  const out={}
+  Object.keys(fl||{}).forEach(function(qid){
+    const l=piecesJointes(fl[qid]).filter(function(p){return p.path||p.image})
+    l.forEach(function(p){p.etat='ok'})
+    if(l.length) out[qid]=l
+  })
+  return out
+}
+function piecesSansImages(fl){
+  const out={}
+  Object.keys(fl||{}).forEach(function(qid){
+    const l=piecesJointes(fl[qid]).filter(function(p){return p.path}).map(function(p){const o=Object.assign({},p);delete o.image;return o})
+    if(l.length) out[qid]=l
+  })
+  return out
+}
+// Version envoyee avec la copie (sans les champs de travail)
+function piecesPourEnvoi(avecImages){
+  const out={}
+  Object.keys(G.fichiersLibres||{}).forEach(function(qid){
+    const l=piecesJointes(G.fichiersLibres[qid]).map(function(p){
+      const o={type:p.type||'fichier',nom:p.nom||'Pièce jointe'}
+      if(p.path) o.path=p.path
+      else if(p.image&&avecImages) o.image=p.image
+      if(p.taille) o.taille=p.taille
+      return o
+    }).filter(function(o){return o.path||o.image})
+    if(l.length) out[qid]=l
+  })
+  return Object.keys(out).length?out:null
+}
+function aDesImagesIntegrees(){
+  return Object.keys(G.fichiersLibres||{}).some(function(qid){return piecesJointes(G.fichiersLibres[qid]).some(function(p){return p.image&&!p.path})})
+}
+function dataUrlVersBlob(d){
+  try{const x=String(d).split(','),m=(x[0].match(/:(.*?);/)||[])[1]||'image/jpeg',b=atob(x[1]),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new Blob([u],{type:m})}catch(e){return null}
+}
+function blobVersDataUrl(b){
+  return new Promise(function(res){try{const r=new FileReader();r.onload=function(){res(r.result)};r.onerror=function(){res(null)};r.readAsDataURL(b)}catch(e){res(null)}})
+}
+// Reduit une photo (12 Mpx → 1600 px) : quelques centaines de Ko au lieu de plusieurs Mo
+function reduireImage(fichier,maxCote,qualite){
+  return new Promise(function(resolve){
+    let url=null
+    try{url=URL.createObjectURL(fichier)}catch(e){resolve(null);return}
+    const img=new Image()
+    let fait=false
+    const fin=function(r){if(fait)return;fait=true;try{URL.revokeObjectURL(url)}catch(e){};resolve(r)}
+    const minuteur=setTimeout(function(){fin(null)},20000)
+    img.onload=function(){
+      clearTimeout(minuteur)
+      try{
+        const w=img.naturalWidth,h=img.naturalHeight
+        if(!w||!h){fin(null);return}
+        const ech=Math.min(1,maxCote/Math.max(w,h))
+        const cv=document.createElement('canvas')
+        cv.width=Math.round(w*ech);cv.height=Math.round(h*ech)
+        const cx=cv.getContext('2d')
+        cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height)
+        cx.drawImage(img,0,0,cv.width,cv.height)
+        const dataUrl=cv.toDataURL('image/jpeg',qualite)
+        if(cv.toBlob) cv.toBlob(function(b){fin({blob:b||dataUrlVersBlob(dataUrl),dataUrl:dataUrl})},'image/jpeg',qualite)
+        else fin({blob:dataUrlVersBlob(dataUrl),dataUrl:dataUrl})
+      }catch(e){fin(null)}
+    }
+    img.onerror=function(){clearTimeout(minuteur);fin(null)}
+    img.src=url
+  })
+}
+// Depot dans le stockage, avec un delai maximum (reseau faible en salle d'examen)
+async function envoyerAuStockage(blob,nom,contentType){
+  if(!blob||!G.profil) return {erreur:'aucun fichier'}
+  const propre=String(nom||'piece').replace(/[^a-zA-Z0-9._-]/g,'-').slice(-60)
+  const path='reponses-libres/'+G.profil.id+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+propre
+  try{
+    const envoi=db.storage.from('ressources').upload(path,blob,{contentType:contentType||blob.type||'application/octet-stream',upsert:false})
+    const delai=new Promise(function(res){setTimeout(function(){res({error:{message:'le réseau ne répond pas'}})},45000)})
+    const r=await Promise.race([envoi,delai])
+    if(r&&!r.error) return {path:path}
+    return {erreur:(r&&r.error&&r.error.message)||'refus'}
+  }catch(e){return {erreur:(e&&e.message)||'erreur'}}
+}
+function suivreEnvoi(promesse){
+  const p=Promise.resolve(promesse).catch(function(){})
+  _envoisPJ.push(p)
+  p.then(function(){_envoisPJ=_envoisPJ.filter(function(x){return x!==p})})
+  return p
+}
+async function ajouterPieceJointe(qid,fichier){
+  const piece={id:'pj'+Date.now()+Math.random().toString(36).slice(2,6),nom:fichier.name||'photo.jpg',type:estImageFichier(fichier)?'photo':'fichier',etat:'envoi'}
+  _fichiersPJ[piece.id]=fichier
+  const liste=piecesJointes(G.fichiersLibres[qid]);liste.push(piece);G.fichiersLibres[qid]=liste
+  try{if(piece.type==='photo')_apercusPJ[piece.id]=URL.createObjectURL(fichier)}catch(e){}
+  afficherPiecesJointes(qid)
+  await traiterPiece(qid,piece,fichier)
+}
+async function traiterPiece(qid,piece,fichier){
+  try{await traiterPieceInterne(qid,piece,fichier)}
+  catch(e){piece.etat='erreur';piece.erreur=(e&&e.message)||'erreur';afficherPiecesJointes(qid)}
+}
+async function traiterPieceInterne(qid,piece,fichier){
+  piece.etat='envoi';piece.erreur=null;afficherPiecesJointes(qid)
+  let blob=fichier,ct=fichier.type,dataUrl=null
+  if(piece.type==='photo'){
+    const red=await reduireImage(fichier,1600,0.72)
+    if(red&&red.blob){blob=red.blob;ct='image/jpeg';dataUrl=red.dataUrl;if(!/\.jpe?g$/i.test(piece.nom))piece.nom=String(piece.nom).replace(/\.[^.]+$/,'')+'.jpg'}
+  }
+  piece.taille=(((blob&&blob.size)||fichier.size||0)/1024/1024).toFixed(1)+' Mo'
+  const r=await envoyerAuStockage(blob,piece.nom,ct)
+  if(r.path){piece.path=r.path;piece.etat='ok';delete piece.image}
+  else{
+    // Stockage refuse ou injoignable : la piece est gardee DANS la copie
+    let d=dataUrl
+    if(piece.type==='photo'&&d&&d.length>900000){const r2=await reduireImage(fichier,1200,0.6);if(r2&&r2.dataUrl)d=r2.dataUrl}
+    if(!d&&blob&&blob.size<=2.5*1024*1024) d=await blobVersDataUrl(blob)
+    if(d){piece.image=d;piece.etat='ok';piece.integre=true}
+    else{piece.etat='erreur';piece.erreur=piece.type==='photo'?'photo illisible':'fichier trop lourd — prends plutôt une photo'}
+  }
+  sauverCopieEnCours();afficherPiecesJointes(qid)
+}
+function reessayerPiece(qid,id){
+  const p=piecesJointes(G.fichiersLibres[qid]).find(function(x){return x.id===id})
+  const f=_fichiersPJ[id]
+  if(!p||!f){toast('Ajoute à nouveau la photo','err');return}
+  suivreEnvoi(traiterPiece(qid,p,f))
+}
+function retirerPieceJointe(qid,id){
+  if(!confirm('Retirer cette pièce jointe ?')) return
+  G.fichiersLibres[qid]=piecesJointes(G.fichiersLibres[qid]).filter(function(p){return p.id!==id})
+  if(!G.fichiersLibres[qid].length) delete G.fichiersLibres[qid]
+  sauverCopieEnCours();afficherPiecesJointes(qid)
+}
+function afficherPiecesJointes(qid){
+  const el=document.getElementById('pj-liste')
+  if(!el||!G.questions[G.etape]||G.questions[G.etape].id!==qid) return
+  const liste=piecesJointes(G.fichiersLibres[qid])
+  el.innerHTML=liste.map(function(p){
+    const vue=_apercusPJ[p.id]||p.image||null
+    const estImg=p.type==='photo'||p.type==='annotation'
+    const vignette=estImg
+      ?(vue?'<img src="'+vue+'" style="width:54px;height:54px;object-fit:cover;border-radius:10px;flex-shrink:0;background:#fff"/>'
+          :(p.path?'<img data-img="'+echapAttr(p.path)+'" style="width:54px;height:54px;object-fit:cover;border-radius:10px;flex-shrink:0;background:#fff"/>':'<div style="width:54px;height:54px;border-radius:10px;background:var(--field);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-photo" style="color:var(--t3)"></i></div>'))
+      :'<div style="width:54px;height:54px;border-radius:10px;background:var(--field);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-file" style="color:var(--t2);font-size:1.3rem"></i></div>'
+    const etat=p.etat==='envoi'?'<span style="color:var(--amber)"><i class="ti ti-loader spin"></i> Envoi en cours…</span>'
+      :p.etat==='erreur'?'<span style="color:var(--r)"><i class="ti ti-alert-circle"></i> Échec : '+echapAttr(p.erreur||'')+'</span>'
+      :'<span style="color:var(--v)"><i class="ti ti-circle-check"></i> '+(p.type==='annotation'?'Schéma joint':'Jointe à ta copie')+'</span>'
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:12px;background:var(--card2);border:1px solid var(--bord);margin-bottom:6px">'
+      +vignette
+      +'<div style="flex:1;min-width:0;font-size:.76rem"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+echapAttr(p.type==='annotation'?'Schéma annoté':p.nom)+'</div><div style="margin-top:2px">'+etat+'</div></div>'
+      +(p.etat==='erreur'&&_fichiersPJ[p.id]?'<button type="button" class="btn btn-ghost btn-sm" style="flex-shrink:0;padding:6px 10px" onclick="reessayerPiece(\''+qid+'\',\''+p.id+'\')">Réessayer</button>':'')
+      +(p.type!=='annotation'?'<button type="button" class="btn btn-ghost btn-sm btn-icon" style="flex-shrink:0" title="Retirer" onclick="retirerPieceJointe(\''+qid+'\',\''+p.id+'\')"><i class="ti ti-x"></i></button>':'')
+    +'</div>'
+  }).join('')
+}
+// Texte deja tape : garde meme avant d'appuyer sur Valider (appareil photo,
+// PDF ouvert, telephone qui recharge la page...)
+function brouillonLibre(){
+  const ta=document.getElementById('rep-libre')
+  const q=G.questions&&G.questions[G.etape]
+  if(!ta||!q||(q.type_question||'qcm')!=='libre') return
+  G.reponses[q.id]=ta.value
+}
+let _brouillonTimer=null
+function brouillonLibreSaisie(){clearTimeout(_brouillonTimer);_brouillonTimer=setTimeout(function(){brouillonLibre();sauverCopieEnCours()},700)}
+function avantChoixFichier(){brouillonLibre();sauverCopieEnCours()}
+// Avant l'envoi de la copie : les pieces gardees dans la copie (reseau ou
+// droits indisponibles pendant l'examen) partent si possible dans le stockage
+async function allegerPiecesJointes(){
+  const travaux=[]
+  Object.keys(G.fichiersLibres||{}).forEach(function(qid){
+    piecesJointes(G.fichiersLibres[qid]).forEach(function(p){
+      if(p.image&&!p.path){
+        travaux.push((async function(){
+          const b=dataUrlVersBlob(p.image);if(!b) return
+          const r=await envoyerAuStockage(b,p.type==='annotation'?'schema-annote.jpg':(p.nom||'photo.jpg'),b.type)
+          if(r.path){p.path=r.path;delete p.image}
+        })())
+      }
+    })
+  })
+  if(travaux.length) await Promise.all(travaux)
+}
+
 // Agrandir une image en plein ecran (lecture de details fins)
 // Ouvre un PDF en plein ecran, avec repli vers un nouvel onglet
 function ouvrirDocument(url,nom){
@@ -1831,10 +2102,14 @@ async function initApp() {
     if(sep) sep.style.display=''
     MENUS_ADMIN.forEach(id=>sh('n-'+id))
     sh('b-gerer')
+    // Barre du bas du gacheur : ce qu'il utilise tous les jours
+    ;['b-corrections','b-aspirants'].forEach(id=>sh(id))
+    ;['b-anciens','b-carnet'].forEach(id=>hi(id))
   } else {
     if(sep) sep.style.display='none'
     MENUS_ADMIN.forEach(id=>hi('n-'+id))
     hi('b-gerer')
+    ;['b-corrections','b-aspirants'].forEach(id=>hi(id))
   }
   // Enregistrer la dernière connexion (fire and forget)
   db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
@@ -1894,7 +2169,9 @@ async function initApp() {
     const okA=['dashboard-ancien','modules','module','anciens']
     nav(savedA&&okA.includes(savedA)?savedA:'dashboard-ancien')
   } else if(G.admin) {
-    const savedD=localStorage.getItem('pm_page')
+    let dejaOuvert=false
+    try{dejaOuvert=!!sessionStorage.getItem('pm_session');sessionStorage.setItem('pm_session','1')}catch(e){}
+    const savedD=dejaOuvert?localStorage.getItem('pm_page'):'dashboard'
     const okD=['dashboard','quiz-admin','ressources','aspirants','anciens-admin','comptes-admin','stats-admin','inscriptions-admin','annonces-admin','modules','module','carnet','corrections']
     if(savedD&&okD.includes(savedD)){
       if(savedD==='module'){
@@ -1912,6 +2189,8 @@ async function initApp() {
     const okP=['dashboard','modules','module','suivi','carnet','anciens']
     chargerAnnonces()
     verifierInscription()
+    // Jour d'examen ou rattrapage ouvert : l'examen est sur l'accueil
+    if(await examenAujourdhuiPourMoi()){nav('dashboard');return}
     if(savedP&&okP.includes(savedP)){
       if(savedP==='module'){
         const savedMod=parseInt(localStorage.getItem('pm_module')||'0')
@@ -1959,6 +2238,7 @@ function nav(page,sansHistorique) {
   if(page==='dashboard'){loadDashboard();chargerAnnonces()}
   if(page==='dashboard-ancien'){loadDashboardAncien();chargerAnnonces()}
   if(page!=='modules'&&_cdTimer){clearInterval(_cdTimer);_cdTimer=null}
+  if(page!=='dashboard'&&_accTimer){clearInterval(_accTimer);_accTimer=null}
   if(page==='modules') loadModules()
   if(page==='suivi') loadSuivi()
   if(page==='ressources') loadResAdmin()
@@ -1975,8 +2255,163 @@ function nav(page,sansHistorique) {
   if(page==='stats-admin') chargerStatsAdmin()
 }
 
+// ─── ACCUEIL GÂCHEUR ───────────────────────────────────────────────────────
+// Tout ce qui demande une action, en premier : copies a corriger, examens du
+// jour (publies ou non), absents, rattrapages. Puis les raccourcis.
+function allerCorrections(vue,mod){
+  _corrVue=vue||'attente';_corrFiltre=mod||0
+  nav('corrections')
+  document.querySelectorAll('#vues-corr button').forEach(function(b){b.className=b.dataset.cv===_corrVue?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'})
+  document.querySelectorAll('#filtres-corr button').forEach(function(b){b.className=parseInt(b.dataset.cm)===_corrFiltre?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'})
+}
+let _admExams={}
+async function publierDepuisAccueil(id){
+  if(!G.admin) return
+  const titre=(_admExams[id]&&_admExams[id].titre)||''
+  if(!confirm('Publier « '+(titre||'cet examen')+' » ?\n\nIl devient visible pour les aspirants inscrits au module.')) return
+  const {error}=await db.from('quiz').update({actif:true}).eq('id',id)
+  if(error){toast('Erreur : '+error.message,'err');return}
+  toast('Examen publié','ok');loadDashboard()
+}
+async function loadDashboardAdmin(){
+  const zone=$('d-admin');if(!zone) return
+  ;['d-rappel','d-email-perso','d-modules','d-activite'].forEach(function(id){const e=$(id);if(e)e.innerHTML=''})
+  const titreEl=$('d-prenom')&&$('d-prenom').parentElement
+  if(titreEl) titreEl.innerHTML='Bonjour <span id="d-prenom">'+echapAttr(G.profil.prenom||G.profil.nom||'')+'</span>'
+  if(!zone.innerHTML) zone.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
+  const [rQ,rT,rP,rR]=await Promise.all([
+    db.from('quiz').select('id,titre,module_id,date_debut,date_fin,actif,archive,mode_examen').eq('mode_examen',true),
+    db.from('tentatives').select('id,aspirant_id,quiz_id,note_admin,completed_at').limit(5000),
+    db.from('profils').select('id,prenom,nom,role,module_inscrit,metier,sans_module,modules_valides').in('role',['aspirant','apprenti']),
+    db.from('rattrapages').select('*')
+  ])
+  const n=new Date()
+  const exams=(rQ.data||[]).filter(function(q){return !q.archive})
+  const mapQ={};exams.forEach(function(q){mapQ[q.id]=q})
+  _admExams=mapQ
+  const copies=(rT.data||[]).filter(function(t){return mapQ[t.quiz_id]})
+  const asp=rP.data||[]
+  const ratts=(rR.data||[]).filter(rattrapageActif)
+  const nomMod=function(id){const m=MODULES.find(function(x){return x.id===Number(id)});return m?m.nom:''}
+  const attendusDe=function(q){return asp.filter(function(p){
+    if(p.sans_module) return false
+    if(Number(p.module_inscrit)!==Number(q.module_id)) return false
+    if(p.metier&&p.metier!=='mecanicien') return false
+    if((p.modules_valides||[]).map(Number).indexOf(Number(q.module_id))>=0) return false
+    return true
+  })}
+  const aCorriger=copies.filter(estEnAttente)
+  majPastilleCorr(aCorriger.length)
+  // Absents des examens termines (60 derniers jours), sans rattrapage ouvert
+  let absents=0
+  exams.forEach(function(q){
+    if(!q.actif||!q.date_fin) return
+    const f=new Date(q.date_fin)
+    if(f>n||n-f>60*86400000) return
+    attendusDe(q).forEach(function(p){
+      const aRendu=copies.some(function(t){return t.quiz_id===q.id&&t.aspirant_id===p.id})
+      const ouvert=ratts.some(function(r){return r.quiz_id===q.id&&r.aspirant_id===p.id})
+      if(!aRendu&&!ouvert) absents++
+    })
+  })
+  const sansModule=asp.filter(function(p){return !p.module_inscrit&&!p.sans_module&&(!p.metier||p.metier==='mecanicien')}).length
+  // ── À faire ──
+  const ligne=function(o){
+    return '<div class="adm-row clic" onclick="'+o.clic+'">'
+      +'<div class="adm-ic" style="background:'+o.fond+';color:'+o.coul+'"><i class="ti '+o.ic+'"></i></div>'
+      +'<div class="adm-tx"><div class="adm-t1">'+o.t1+'</div><div class="adm-t2">'+o.t2+'</div></div>'
+      +'<div class="adm-nb" style="color:'+o.coul+'">'+o.nb+'</div><i class="ti ti-chevron-right" style="color:var(--t3)"></i></div>'
+  }
+  let h=''
+  const aFaire=[]
+  if(aCorriger.length) aFaire.push(ligne({clic:"allerCorrections('attente',0)",ic:'ti-checkbox',fond:'var(--rl)',coul:'var(--r)',t1:'Copies à corriger',t2:'Examens rendus en attente de ta note',nb:aCorriger.length}))
+  if(absents) aFaire.push(ligne({clic:"allerCorrections('absents',0)",ic:'ti-user-x',fond:'var(--amberl)',coul:'var(--amber)',t1:'Absents sans rattrapage',t2:'Examens terminés : rouvre l’accès ou crée la copie',nb:absents}))
+  if(sansModule) aFaire.push(ligne({clic:"nav('aspirants')",ic:'ti-user-question',fond:'var(--bl)',coul:'var(--b)',t1:'Aspirants sans module',t2:'Ils ne peuvent passer aucun examen',nb:sansModule}))
+  h+='<div class="adm-h">À faire</div>'
+  h+=aFaire.length?aFaire.join(''):'<div class="adm-row"><div class="adm-ic" style="background:var(--vl);color:var(--v)"><i class="ti ti-circle-check"></i></div><div class="adm-tx"><div class="adm-t1">Rien d’urgent</div><div class="adm-t2">Toutes les copies sont corrigées.</div></div></div>'
+  // ── Examens du jour ──
+  const memeJour=function(d){return d&&new Date(d).toDateString()===n.toDateString()}
+  const duJour=exams.filter(function(q){
+    const d=q.date_debut?new Date(q.date_debut):null,f=q.date_fin?new Date(q.date_fin):null
+    return memeJour(d)||(d&&f&&n>=d&&n<=f)
+  }).sort(function(a,b){return new Date(a.date_debut)-new Date(b.date_debut)})
+  if(duJour.length){
+    h+='<div class="adm-h">Examens aujourd’hui</div>'
+    h+=duJour.map(function(q){
+      const d=new Date(q.date_debut),f=q.date_fin?new Date(q.date_fin):null
+      const enCours=n>=d&&(!f||n<=f),fini=f&&n>f
+      const att=attendusDe(q),rendus={}
+      copies.forEach(function(t){if(t.quiz_id===q.id)rendus[t.aspirant_id]=1})
+      const nbRendus=Object.keys(rendus).length
+      const nbCorr=copies.filter(function(t){return t.quiz_id===q.id&&estEnAttente(t)}).length
+      const etat=enCours?'<span class="adm-pill" style="background:var(--rl);color:var(--r)"><span class="ej-pulse" style="background:var(--r);width:7px;height:7px"></span> En cours</span>'
+        :fini?'<span class="adm-pill" style="background:var(--field);color:var(--t2)">Terminé</span>'
+        :'<span class="adm-pill" style="background:var(--bl);color:var(--b)">À '+heureFr(d)+'</span>'
+      return '<div class="adm-ex">'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+etat+(q.actif?'<span class="adm-pill" style="background:var(--vl);color:var(--v)">Publié</span>':'<span class="adm-pill" style="background:var(--amberl);color:var(--amber)">Privé</span>')+'</div>'
+        +'<div style="font-size:1rem;font-weight:700;margin-top:9px;line-height:1.3">'+echapAttr(q.titre)+'</div>'
+        +'<div style="font-size:.76rem;color:var(--t3);margin-top:2px">'+nomMod(q.module_id)+' · '+heureFr(d)+(f?' – '+heureFr(f):'')+'</div>'
+        +'<div class="adm-chiffres"><div><b>'+nbRendus+'</b><span>rendues</span></div><div><b>'+att.length+'</b><span>attendus</span></div><div><b style="color:'+(nbCorr?'var(--r)':'inherit')+'">'+nbCorr+'</b><span>à corriger</span></div></div>'
+        +(q.actif?'':'<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--amberl);color:var(--amber);font-size:.78rem;line-height:1.45"><b>Les aspirants ne le voient pas.</b> Publie-le avant l’heure du début.</div>')
+        +'<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
+          +(q.actif?'':'<button class="btn btn-r btn-sm" onclick="publierDepuisAccueil(\''+q.id+'\')"><i class="ti ti-world"></i> Publier</button>')
+          +'<button class="btn btn-dark btn-sm" onclick="allerCorrections(\'toutes\','+Number(q.module_id)+')"><i class="ti ti-files"></i> Voir les copies</button>'
+          +'<button class="btn btn-ghost btn-sm" onclick="previsualiserQuiz(\''+q.id+'\')"><i class="ti ti-eye"></i> Relire</button>'
+        +'</div></div>'
+    }).join('')
+  }
+  // ── Prochains examens (3 semaines) ──
+  const prochains=exams.filter(function(q){
+    const d=q.date_debut?new Date(q.date_debut):null
+    return d&&d>n&&!memeJour(d)&&d-n<21*86400000
+  }).sort(function(a,b){return new Date(a.date_debut)-new Date(b.date_debut)}).slice(0,6)
+  if(prochains.length){
+    h+='<div class="adm-h">Prochains examens <a onclick="nav(\'quiz-admin\')">Tous les quiz</a></div>'
+    h+=prochains.map(function(q){
+      const d=new Date(q.date_debut)
+      return '<div class="adm-row">'
+        +'<div class="adm-date"><b>'+d.getDate()+'</b><span>'+d.toLocaleDateString('fr-FR',{month:'short'}).replace('.','')+'</span></div>'
+        +'<div class="adm-tx"><div class="adm-t1">'+echapAttr(q.titre)+'</div><div class="adm-t2">'+nomMod(q.module_id)+' · '+d.toLocaleDateString('fr-FR',{weekday:'long'})+' '+heureFr(d)+' · '+attendusDe(q).length+' attendus</div></div>'
+        +(q.actif?'<span class="adm-pill" style="background:var(--vl);color:var(--v)">Publié</span>'
+          :'<button class="btn btn-r btn-sm" style="flex-shrink:0" onclick="publierDepuisAccueil(\''+q.id+'\')">Publier</button>')
+      +'</div>'
+    }).join('')
+  }
+  // ── Rattrapages ouverts ──
+  if(ratts.length){
+    const mapP={};asp.forEach(function(p){mapP[p.id]=p})
+    const tri=ratts.slice().sort(function(a,b){return new Date(a.date_limite||'2999-01-01')-new Date(b.date_limite||'2999-01-01')})
+    h+='<div class="adm-h">Rattrapages ouverts · '+ratts.length+'</div>'
+    h+='<div class="adm-ex" style="padding:6px 14px">'+tri.slice(0,8).map(function(r){
+      const p=mapP[r.aspirant_id],q=mapQ[r.quiz_id]
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bord)">'
+        +'<div style="flex:1;min-width:0"><div style="font-size:.84rem;font-weight:600">'+echapAttr(p?((p.prenom||'')+' '+(p.nom||'')).trim():'Aspirant')+'</div>'
+        +'<div style="font-size:.72rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+echapAttr(q?q.titre:'Examen')+'</div></div>'
+        +'<span style="font-size:.72rem;color:var(--t2);flex-shrink:0">'+(r.date_limite?'→ '+new Date(r.date_limite).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):'sans limite')+'</span></div>'
+    }).join('')+(ratts.length>8?'<div style="font-size:.74rem;color:var(--t3);padding:9px 0">… et '+(ratts.length-8)+' autres</div>':'')+'</div>'
+  }
+  // ── Raccourcis ──
+  const tuiles=[
+    {p:"allerCorrections('attente',0)",i:'ti-checkbox',t:'Copies',b:aCorriger.length},
+    {p:"nav('quiz-admin')",i:'ti-help-circle',t:'Quiz et examens'},
+    {p:"nav('aspirants')",i:'ti-users',t:'Aspirants'},
+    {p:"nav('inscriptions-admin')",i:'ti-calendar-event',t:'Inscriptions'},
+    {p:"nav('annonces-admin')",i:'ti-speakerphone',t:'Annonces'},
+    {p:"nav('ressources')",i:'ti-upload',t:'Ressources'},
+    {p:"nav('comptes-admin')",i:'ti-list-check',t:'Comptes'},
+    {p:"nav('anciens-admin')",i:'ti-star',t:'Anciens'},
+    {p:"nav('stats-admin')",i:'ti-chart-bar',t:'Statistiques'}
+  ]
+  h+='<div class="adm-h">Raccourcis</div><div class="adm-grid">'+tuiles.map(function(x){
+    return '<div class="adm-tile" onclick="'+x.p+'">'+(x.b?'<span class="adm-badge">'+(x.b>99?'99+':x.b)+'</span>':'')+'<i class="ti '+x.i+'"></i><div>'+x.t+'</div></div>'
+  }).join('')+'</div>'
+  zone.innerHTML=h
+}
+
 // ─── DASHBOARD ASPIRANT ────────────────────────────────────────────────────
 async function loadDashboard() {
+  if(G.admin){const z=$('d-admin');if(z)z.style.display='';return loadDashboardAdmin()}
+  else{const z=$('d-admin');if(z){z.innerHTML='';z.style.display='none'}}
   const {data:t}=await db.from('tentatives').select('*, quiz(module_id,titre)').eq('aspirant_id',G.profil.id).order('completed_at',{ascending:false})
   const tents=t||[]
   const {data:pd}=await db.from('profils').select('points_total,streak_semaines,streak_pause').eq('id',G.profil.id).single()
@@ -1999,30 +2434,8 @@ async function loadDashboard() {
     } else mailEl.innerHTML=''
   }
 
-  // Rappel du prochain examen (module d'inscription, non encore passé)
-  const rapEl=$('d-rappel')
-  if(rapEl){
-    const maintenant=new Date()
-    const prochains=G.profil.sans_module?[]:allExD.filter(function(q){
-      if(G.profil.module_inscrit&&q.module_id!==G.profil.module_inscrit) return false
-      if(!q.date_debut) return false
-      if(tents.some(function(t){return t.quiz_id===q.id})) return false
-      return new Date(q.date_debut)>maintenant
-    }).sort(function(a,b){return new Date(a.date_debut)-new Date(b.date_debut)})
-    if(prochains.length){
-      const p0=prochains[0],d=new Date(p0.date_debut)
-      const jours=Math.ceil((d-maintenant)/86400000)
-      const quand=jours<=0?"aujourd'hui":jours===1?'demain':'dans '+jours+' jours'
-      const urgent=jours<=2
-      rapEl.innerHTML='<div class="card" style="margin-bottom:1rem;border-left:3px solid '+(urgent?'var(--r)':'var(--amber)')+'">'
-        +'<div style="display:flex;align-items:center;gap:12px;padding:14px 16px">'
-        +'<i class="ti ti-calendar-event" style="color:'+(urgent?'var(--r)':'var(--amber)')+';font-size:1.3rem;flex-shrink:0"></i>'
-        +'<div style="flex:1;min-width:0">'
-        +'<div style="font-size:.9rem;font-weight:600">Examen '+quand+'</div>'
-        +'<div style="font-size:.76rem;color:var(--t2);margin-top:2px">'+p0.titre+' — '+d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+'</div>'
-        +'</div></div></div>'
-    } else rapEl.innerHTML=''
-  }
+  // Examen du jour : en haut de l'accueil, accessible en un geste
+  await afficherExamensAccueil(allExD,tents)
   const monMod=G.profil.module_inscrit
   const sansModule=!!G.profil.sans_module
   $('d-modules').innerHTML=MODULES.map(m=>{
@@ -2059,6 +2472,127 @@ async function loadDashboard() {
       <span style="flex:1;font-size:.85rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.quiz?.titre||'—'}</span>
       <span style="font-size:.72rem;color:var(--t3);flex-shrink:0">${new Date(x.completed_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span>
     </div>`).join('')}</div>`:''
+}
+
+// ─── EXAMEN DU JOUR SUR L'ACCUEIL ──────────────────────────────────────────
+// Le jour de l'examen, l'aspirant inscrit au module le voit en premier, avec
+// le compte a rebours puis le bouton pour commencer. Meme chose pour un
+// rattrapage ouvert ou une copie interrompue a reprendre.
+let _accTimer=null
+function heureFr(d){return new Date(d).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}).replace(':','h')}
+function dureeFr(ms){
+  const s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60
+  if(h>=24){const j=Math.floor(h/24);return j+' jour'+(j>1?'s':'')+' '+(h%24)+' h'}
+  if(h>=1) return h+' h '+String(m).padStart(2,'0')+' min'
+  if(m>=1) return m+' min '+String(ss).padStart(2,'0')+' s'
+  return ss+' s'
+}
+async function afficherExamensAccueil(exams,tents){
+  const el=$('d-rappel');if(!el) return
+  if(_accTimer){clearInterval(_accTimer);_accTimer=null}
+  if(G.admin||!G.profil){el.innerHTML='';return}
+  let ratts=[]
+  try{const {data}=await db.from('rattrapages').select('*').eq('aspirant_id',G.profil.id);ratts=(data||[]).filter(rattrapageActif)}catch(e){}
+  const n=new Date()
+  const monMod=Number(G.profil.module_inscrit)||0
+  const passeLesExamens=suitLesModules()&&!G.profil.sans_module&&monMod>0
+  const local=lireCopieEnCours()
+  const jourDe=function(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()}
+  const cartes=[]
+  ;(exams||[]).forEach(function(q){
+    const r=ratts.find(function(x){return x.quiz_id===q.id})
+    const duModule=passeLesExamens&&Number(q.module_id)===monMod
+    if(!duModule&&!r) return
+    const deb=q.date_debut?new Date(q.date_debut):null,fin=q.date_fin?new Date(q.date_fin):null
+    const aCopie=(tents||[]).some(function(t){return t.quiz_id===q.id})
+    const enCours=!!deb&&n>=deb&&(!fin||n<=fin)
+    const avant=!!deb&&n<deb
+    const jours=deb?Math.round((jourDe(deb)-jourDe(n))/86400000):null
+    const reprise=!!local&&local.quizId===q.id
+    let etat=null
+    if(reprise&&(enCours||r)) etat='reprendre'
+    else if(r) etat='rattrapage'
+    else if(enCours&&!aCopie) etat='en_cours'
+    else if(enCours&&aCopie) etat='rendu'
+    else if(avant&&jours===0) etat='aujourdhui'
+    else if(avant&&jours!=null&&jours<=7) etat='bientot'
+    if(etat) cartes.push({q:q,etat:etat,deb:deb,fin:fin,r:r,aCopie:aCopie,jours:jours,local:reprise?local:null})
+  })
+  const ordre={reprendre:0,en_cours:1,rattrapage:2,aujourdhui:3,rendu:4,bientot:5}
+  cartes.sort(function(a,b){return (ordre[a.etat]-ordre[b.etat])||((a.deb?a.deb.getTime():0)-(b.deb?b.deb.getTime():0))})
+  let unBientot=false
+  const aAfficher=cartes.filter(function(x){if(x.etat!=='bientot')return true;if(unBientot)return false;unBientot=true;return true})
+  el.innerHTML=aAfficher.map(carteExamenAccueil).join('')
+  if(el.querySelector('.acc-cd')) _accTimer=setInterval(majComptesAccueil,1000)
+}
+function carteExamenAccueil(x){
+  const q=x.q,titre=echapAttr(q.titre||'Examen')
+  const m=MODULES.find(function(mm){return mm.id===Number(q.module_id)})
+  const mod=m?m.nom:''
+  if(x.etat==='reprendre'){
+    const nb=Object.keys((x.local&&x.local.reponses)||{}).length
+    return '<div class="ej ej-rouge"><div class="ej-label"><span class="ej-pulse"></span> Ton examen est en cours</div>'
+      +'<div class="ej-titre">'+titre+'</div>'
+      +'<div class="ej-meta">'+nb+' réponse'+(nb>1?'s':'')+' gardée'+(nb>1?'s':'')+' sur ce téléphone. Reprends exactement où tu t\'étais arrêté.</div>'
+      +'<button class="btn ej-btn" onclick="reprendreCopie()"><i class="ti ti-player-play"></i> Reprendre mon examen</button></div>'
+  }
+  if(x.etat==='en_cours'){
+    return '<div class="ej ej-rouge"><div class="ej-label"><span class="ej-pulse"></span> Examen en cours</div>'
+      +'<div class="ej-titre">'+titre+'</div>'
+      +'<div class="ej-meta">'+mod+(x.fin?' · se termine à '+heureFr(x.fin):'')+'</div>'
+      +(x.fin?'<div class="ej-cd">Reste <span class="acc-cd" data-cible="'+x.fin.toISOString()+'">'+dureeFr(x.fin-new Date())+'</span></div>':'')
+      +'<button class="btn ej-btn" onclick="commencer(\''+q.id+'\')"><i class="ti ti-pencil"></i> Commencer l\'examen</button></div>'
+  }
+  if(x.etat==='rattrapage'){
+    return '<div class="ej ej-sombre"><div class="ej-label" style="color:#7FD15A"><i class="ti ti-unlock"></i> Rattrapage ouvert</div>'
+      +'<div class="ej-titre">'+titre+'</div>'
+      +'<div class="ej-meta">'+mod+(x.r&&x.r.date_limite?' · à passer avant le '+dateLimiteTexte(x.r):'')+'</div>'
+      +(x.deb&&x.fin&&x.fin>x.deb?'<div class="ej-meta">Tu auras '+dureeFr(x.fin-x.deb).replace(' 00 min','')+' à partir du moment où tu commences.</div>':'')
+      +'<button class="btn btn-r ej-btn" onclick="commencer(\''+q.id+'\')"><i class="ti ti-pencil"></i> '+(x.aCopie?'Repasser l\'examen':'Passer l\'examen')+'</button></div>'
+  }
+  if(x.etat==='aujourdhui'){
+    return '<div class="ej ej-sombre"><div class="ej-label" style="color:var(--r)"><i class="ti ti-calendar-event"></i> Examen aujourd\'hui</div>'
+      +'<div class="ej-titre">'+titre+'</div>'
+      +'<div class="ej-meta">'+mod+' · de '+heureFr(x.deb)+(x.fin?' à '+heureFr(x.fin):'')+'</div>'
+      +'<div class="ej-cd">Dans <span class="acc-cd" data-cible="'+x.deb.toISOString()+'">'+dureeFr(x.deb-new Date())+'</span></div>'
+      +'<div class="ej-meta" style="margin-top:8px">Le bouton pour commencer apparaîtra ici à '+heureFr(x.deb)+'. Reste sur cette page.</div></div>'
+  }
+  if(x.etat==='rendu'){
+    return '<div class="ej ej-blanc" style="border-left:4px solid var(--v)"><div class="ej-label" style="color:var(--v)"><i class="ti ti-circle-check"></i> Copie rendue</div>'
+      +'<div class="ej-titre">'+titre+'</div>'
+      +'<div class="ej-meta" style="color:var(--t2)">Ta copie est bien enregistrée. Le résultat s\'affichera après la correction.</div></div>'
+  }
+  // bientot
+  const quand=x.jours===1?'demain':'dans '+x.jours+' jours'
+  return '<div class="ej ej-blanc" style="border-left:4px solid '+(x.jours<=2?'var(--r)':'var(--amber)')+';padding:14px 16px">'
+    +'<div class="ej-label" style="color:'+(x.jours<=2?'var(--r)':'var(--amber)')+'"><i class="ti ti-calendar-event"></i> Examen '+quand+'</div>'
+    +'<div class="ej-titre" style="font-size:.98rem">'+titre+'</div>'
+    +'<div class="ej-meta" style="color:var(--t2)">'+x.deb.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' · de '+heureFr(x.deb)+(x.fin?' à '+heureFr(x.fin):'')+'</div></div>'
+}
+function majComptesAccueil(){
+  const els=document.querySelectorAll('#d-rappel .acc-cd')
+  if(!els.length){clearInterval(_accTimer);_accTimer=null;return}
+  const n=Date.now();let recharger=false
+  els.forEach(function(e){const d=new Date(e.dataset.cible).getTime()-n;if(d<=0)recharger=true;else e.textContent=dureeFr(d)})
+  // Heure de debut atteinte : le bouton Commencer apparait sans recharger
+  if(recharger){clearInterval(_accTimer);_accTimer=null;loadDashboard()}
+}
+// A la connexion : un examen aujourd'hui (ou un rattrapage) ouvre l'accueil
+async function examenAujourdhuiPourMoi(){
+  try{
+    if(G.admin||!G.profil) return false
+    const {data:rt}=await db.from('rattrapages').select('*').eq('aspirant_id',G.profil.id)
+    if((rt||[]).some(rattrapageActif)) return true
+    const monMod=Number(G.profil.module_inscrit)||0
+    if(!monMod||G.profil.sans_module||!suitLesModules()) return false
+    const {data:ex}=await db.from('quiz').select('id,module_id,date_debut,date_fin').eq('actif',true).eq('mode_examen',true)
+    const n=new Date()
+    return (ex||[]).some(function(q){
+      if(Number(q.module_id)!==monMod||!q.date_debut) return false
+      const d=new Date(q.date_debut),f=q.date_fin?new Date(q.date_fin):null
+      return d.toDateString()===n.toDateString()||(n>=d&&(!f||n<=f))
+    })
+  }catch(e){return false}
 }
 
 // ─── DASHBOARD ANCIEN ──────────────────────────────────────────────────────
@@ -2481,6 +3015,7 @@ async function commencer(qid) {
   }
   const [{data:q},{data:qs}]=await Promise.all([db.from('quiz').select('*').eq('id',qid).single(),db.from('questions').select('*').eq('quiz_id',qid).order('ordre')])
   G.quizActif=q;G.questions=qs||[];G.reponses={};G.fichiersLibres={};G.etape=0;G.choix=null;G.confirme=false
+  G.finExamen=calculerFinExamen(q)
   nav('quiz');showQ();demarrerTimer()
 }
 
@@ -2552,12 +3087,15 @@ function showQ() {
   const typeQ=q.type_question||'qcm'
   if(typeQ==='libre'){
     $('q-opts').innerHTML=`<div id="zone-annot" style="display:none;margin-bottom:.9rem"></div>
-      <textarea id="rep-libre" class="ftextarea" rows="4" placeholder="Rédigez votre réponse ici..." style="width:100%;margin-bottom:.8rem"></textarea>
-      <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px dashed var(--bord2);border-radius:10px;cursor:pointer;font-size:.78rem;color:var(--t2);background:var(--bg)">
-        <i class="ti ti-paperclip" style="font-size:1rem;color:var(--r)"></i> Joindre un fichier (optionnel)
-        <input type="file" id="fichier-libre" accept="image/*,.pdf,.doc,.docx,.sldprt,.dwg" style="display:none" onclick="sauverCopieEnCours()" onchange="uploaderFichierLibre(this)"/>
+      <textarea id="rep-libre" class="ftextarea" rows="4" placeholder="Rédige ta réponse ici..." style="width:100%;margin-bottom:.8rem" oninput="brouillonLibreSaisie()">${echapAttr(G.reponses[q.id]||'')}</textarea>
+      <div id="pj-liste"></div>
+      <label style="position:relative;display:flex;align-items:center;gap:10px;padding:13px 14px;border:1.5px dashed var(--bord2);border-radius:12px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--t1);background:var(--bg)">
+        <i class="ti ti-camera" style="font-size:1.2rem;color:var(--r)"></i> Ajouter une photo de ton schéma ou un fichier
+        <input type="file" id="fichier-libre" multiple accept="image/*,.pdf,.doc,.docx,.sldprt,.dwg" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0" onclick="avantChoixFichier()" onchange="uploaderFichierLibre(this)"/>
       </label>
+      <div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.45"><i class="ti ti-bulb"></i> Conseil : prends d'abord la photo avec l'appareil photo de ton téléphone, puis choisis-la ici dans ta galerie. Tu peux en ajouter plusieurs.</div>
       <div id="fichier-statut" style="font-size:.72rem;color:var(--v);margin-top:4px"></div>`
+    afficherPiecesJointes(q.id)
     $('btn-valider').disabled=false
   } else if(typeQ==='multi'){
     $('q-opts').innerHTML=`<div style="font-size:.72rem;color:var(--r);margin-bottom:.8rem;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;gap:6px"><i class="ti ti-checkbox"></i> Sélectionnez une ou plusieurs réponses</div>`+
@@ -2610,7 +3148,13 @@ async function valider() {
       const btn=document.getElementById('btn-valider')
       if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement du schéma...'}
       const img=await enregistrerAnnotation(qid)
-      if(img) G.fichiersLibres[qid]={nom:'Schéma annoté',image:img,annotation:true}
+      if(img){
+        const liste=piecesJointes(G.fichiersLibres[qid]).filter(function(p){return p.type!=='annotation'})
+        const piece={id:'pj'+Date.now(),type:'annotation',nom:'Schéma annoté',etat:'ok',image:img}
+        liste.push(piece);G.fichiersLibres[qid]=liste
+        // Depot en arriere-plan : la copie reste legere
+        suivreEnvoi((async function(){const b=dataUrlVersBlob(img);if(!b)return;const r=await envoyerAuStockage(b,'schema-annote.jpg','image/jpeg');if(r.path){piece.path=r.path;delete piece.image;sauverCopieEnCours()}})())
+      }
       else toast('Le schéma n a pas pu être joint','err')
       if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Valider'}
     }
@@ -2673,8 +3217,15 @@ function suivant(){sauverCopieEnCours();G.etape++;G.choix=null;G.confirme=false;
 
 async function terminer() {
   const tempsTotal=arreterTimer()
+  brouillonLibre()
   nav('resultats')
   $('r-detail').innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
+  // Photos encore en cours d'envoi : on les attend avant d'envoyer la copie
+  if(_envoisPJ.length){
+    $('r-detail').innerHTML='<div class="loader" style="flex-direction:column;gap:10px;text-align:center"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i><div style="font-size:.82rem;color:var(--t2)">Envoi de tes photos… ne ferme pas l application</div></div>'
+    try{await Promise.all(_envoisPJ.slice())}catch(e){}
+  }
+  try{await allegerPiecesJointes()}catch(e){}
   const {data:qr}=await db.from('questions').select('*').eq('quiz_id',G.quizActif.id)
   if(!qr?.length){toast('Erreur chargement questions','err');return}
   // Tout EXAMEN est soumis a la validation d'un gacheur, meme en QCM pur :
@@ -2710,7 +3261,7 @@ async function terminer() {
     aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:Math.round(sur20),total_points:20,valide,
     reponses:G.reponses,resultats_par_competence:parComp,
     notes_libres:aDesLibres?{}:null,
-    fichiers_libres:Object.keys(G.fichiersLibres).length?G.fichiersLibres:null
+    fichiers_libres:piecesPourEnvoi(true)
   }
   let {data:tent,error:tentErr}=await db.from('tentatives').insert(ligneCopie).select().single()
   // Contrainte d'unicite (une copie par examen) : on retire l'ancienne puis on renvoie
@@ -2731,7 +3282,7 @@ async function terminer() {
       aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:Math.round(sur20),total_points:20,valide,
       reponses:G.reponses,resultats_par_competence:parComp,
       notes_libres:aDesLibres?{}:null,
-      fichiers_libres:null
+      fichiers_libres:piecesPourEnvoi(false)
     }).select().single()
     if(r2.error){
       // Dernier recours : enregistrer au moins les reponses brutes
@@ -2743,11 +3294,12 @@ async function terminer() {
         alert("Ta copie n'a pas pu être envoyée.\n\nNe ferme pas l'application : elle est conservée sur ton téléphone. Préviens ton gâcheur et reconnecte-toi plus tard pour la renvoyer.\n\nDétail : "+(r2.error.message||''))
         return
       }
-      toast('Copie envoyée, mais les schémas joints n ont pas pu être transmis','err')
+      if(piecesPourEnvoi(true)) alert('Ta copie est envoyée, mais tes photos et schémas n ont pas pu être transmis.\n\nEnvoie-les directement à ton gâcheur.')
       G.tentResult={tent:r3.data,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
       effacerCopieEnCours();afficheRes();return
     }
-    toast('Copie envoyée, mais les schémas joints n ont pas pu être transmis','err')
+    if(aDesImagesIntegrees()) alert('Ta copie est envoyée, mais certaines photos n ont pas pu être transmises.\n\nEnvoie-les directement à ton gâcheur.')
+    else toast('Copie envoyée','ok')
     G.tentResult={tent:r2.data,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
     effacerCopieEnCours();afficheRes();return
   }
@@ -2921,15 +3473,14 @@ async function voirHistorique() {
 }
 
 async function uploaderFichierLibre(input) {
-  const fichier=input.files[0];if(!fichier) return
-  const statut=document.getElementById('fichier-statut');if(statut)statut.textContent='Upload en cours...'
-  const nomPropre=fichier.name.replace(/[^a-zA-Z0-9._-]/g,'-')
-  const path='reponses-libres/'+G.profil.id+'/'+Date.now()+'_'+nomPropre
-  const {error}=await db.storage.from('ressources').upload(path,fichier)
-  if(error){if(statut){statut.textContent='Erreur : '+error.message;statut.style.color='var(--r)'}return}
-  G.fichiersLibres[G.questions[G.etape].id]={nom:fichier.name,path,taille:(fichier.size/1024/1024).toFixed(1)+' Mo'}
-  sauverCopieEnCours()
-  if(statut){statut.textContent='✓ Fichier joint : '+fichier.name;statut.style.color='var(--v)'}
+  const fichiers=Array.from(input.files||[])
+  try{input.value=''}catch(e){}
+  if(!fichiers.length||!G.questions[G.etape]) return
+  // La question est fixee AVANT l'envoi : si l'aspirant passe a la suite
+  // pendant l'envoi, la photo reste rattachee a la bonne question
+  const qid=G.questions[G.etape].id
+  brouillonLibre()
+  fichiers.forEach(function(f){suivreEnvoi(ajouterPieceJointe(qid,f))})
 }
 
 // ─── SUIVI ─────────────────────────────────────────────────────────────────
@@ -3660,8 +4211,10 @@ async function chargerCorrections(){
 function estEnAttente(t){ return t.note_admin===null||t.note_admin===undefined }
 
 function majPastilleCorr(n){
-  const p=document.getElementById('pastille-corr')
-  if(p){p.textContent=n>99?'99+':n;p.style.display=n?'flex':'none'}
+  ;['pastille-corr','pastille-corr-b'].forEach(function(id){
+    const p=document.getElementById(id)
+    if(p){p.textContent=n>99?'99+':n;p.style.display=n?'flex':'none'}
+  })
 }
 
 function filtrerCorrections(m){
@@ -3885,11 +4438,17 @@ async function ouvrirCorrectionAdmin(tentId) {
     const sansRep=(rep==null||rep===''||(Array.isArray(rep)&&!rep.length))
     let corps=''
     if(isLibre){
-      const f=tent.fichiers_libres&&tent.fichiers_libres[q.id]
-      corps=`<div style="background:var(--bl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--b);white-space:pre-wrap"><strong>Réponse :</strong><br>${sansRep?'<em>Aucune réponse</em>':_escC(rep)}</div>`
-        +(f?(f.annotation
-            ?`<div style="margin-bottom:.5rem"><div style="font-size:.72rem;color:var(--v);font-weight:600;margin-bottom:4px"><i class="ti ti-pencil"></i> Schéma annoté par l'aspirant</div>${f.image?`<img src="${f.image}" onclick="agrandirImage(this.src)" style="width:100%;border-radius:10px;border:1px solid var(--bord);cursor:zoom-in"/>`:`<img data-img="${f.path||''}" style="width:100%;border-radius:10px;border:1px solid var(--bord)"/>`}</div>`
-            :`<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--vl);border-radius:8px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)"><i class="ti ti-paperclip"></i> ${_escC(f.nom)}<button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${f.path||''}')"><i class="ti ti-download"></i></button></div>`):'')
+      const pjs=piecesJointes(tent.fichiers_libres&&tent.fichiers_libres[q.id])
+      corps=`<div style="background:var(--bl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--b);white-space:pre-wrap"><strong>Réponse :</strong><br>${sansRep?(pjs.length?'<em>Pas de texte — voir la pièce jointe ci-dessous</em>':'<em>Aucune réponse</em>'):_escC(rep)}</div>`
+        +pjs.map(function(p){
+          const estImg=p.type==='photo'||p.type==='annotation'||estImageNom(p.nom||p.path)
+          const titre=p.type==='annotation'?'Schéma annoté par l\'aspirant':(estImg?'Photo jointe par l\'aspirant':'Fichier joint')
+          if(estImg){
+            const src=p.image?`src="${p.image}" onclick="agrandirImage(this.src)"`:`data-img="${_escC(p.path||'')}"`
+            return `<div style="margin-bottom:.6rem"><div style="font-size:.72rem;color:var(--v);font-weight:600;margin-bottom:4px"><i class="ti ${p.type==='annotation'?'ti-pencil':'ti-photo'}"></i> ${titre}</div><img ${src} style="width:100%;border-radius:10px;border:1px solid var(--bord);cursor:zoom-in;background:#fff"/>${p.path?`<button class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="telechargerSujet('${_escC(p.path)}')"><i class="ti ti-download"></i> Télécharger</button>`:''}</div>`
+          }
+          return `<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--vl);border-radius:8px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)"><i class="ti ti-paperclip"></i> ${_escC(p.nom||'Fichier')}${p.path?`<button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${_escC(p.path)}')"><i class="ti ti-download"></i></button>`:(p.image?`<a class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" href="${p.image}" download="${_escC(p.nom||'piece')}"><i class="ti ti-download"></i></a>`:'')}</div>`
+        }).join('')
         +(q.reponse_type?`<div style="background:var(--vl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--v)"><strong>Attendu :</strong><br>${_escC(q.reponse_type)}</div>`:'')
         +`<div style="display:flex;align-items:center;gap:8px"><label style="font-size:.78rem;color:var(--t2);white-space:nowrap;font-weight:600">Points :</label>
           <input type="number" min="0" max="${pts}" step="0.5" value="${noteExist}" style="width:70px;padding:6px 8px;border:1.5px solid var(--bord2);border-radius:8px;font-size:.9rem;text-align:center;font-family:var(--fg);font-weight:700" onchange="majNoteCorr('${q.id}',parseFloat(this.value)||0)"/>
@@ -4947,14 +5506,17 @@ async function rechercheMobile(v){
 function ouvrirMenuAdmin() {
   if(!G.admin){toast('Réservé aux gâcheurs','err');return}
   const items=[
-    {p:'quiz-admin',i:'ti-help-circle',t:'Gérer les quiz',d:'Créer, modifier, publier'},
-    {p:'ressources',i:'ti-upload',t:'Ressources et devoirs',d:'Cours, documents, travaux'},
-    {p:'corrections',i:'ti-checkbox',t:'Copies à corriger',d:'Toutes les copies en attente'},
-    {p:'aspirants',i:'ti-users',t:'Aspirants',d:'Suivi, rattrapages, validations'},
-    {p:'annonces-admin',i:'ti-speakerphone',t:'Annonces',d:'Informer tout le monde'},
-    {p:'inscriptions-admin',i:'ti-calendar',t:'Inscriptions',d:'Ouvrir les périodes'},
+    {s:'Examens et copies'},
+    {p:'corrections',i:'ti-checkbox',t:'Copies',d:'À corriger, toutes les copies, absents'},
+    {p:'quiz-admin',i:'ti-help-circle',t:'Quiz et examens',d:'Créer, modifier, publier, dates'},
+    {p:'inscriptions-admin',i:'ti-calendar',t:'Inscriptions',d:'Ouvrir les périodes d’inscription'},
+    {s:'Personnes'},
+    {p:'aspirants',i:'ti-users',t:'Aspirants',d:'Suivi, carnets, rattrapages'},
     {p:'comptes-admin',i:'ti-list-check',t:'Tous les comptes',d:'Rôles et coordonnées'},
     {p:'anciens-admin',i:'ti-star',t:'Anciens',d:'Annuaire des sédentaires'},
+    {s:'Contenus et infos'},
+    {p:'ressources',i:'ti-upload',t:'Ressources et devoirs',d:'Cours, documents, travaux'},
+    {p:'annonces-admin',i:'ti-speakerphone',t:'Annonces',d:'Informer tout le monde'},
     {p:'stats-admin',i:'ti-chart-bar',t:'Statistiques',d:'Vue d ensemble'}
   ]
   const modal=document.createElement('div');modal.id='modal-menu-admin'
@@ -4967,6 +5529,7 @@ function ouvrirMenuAdmin() {
     +'</div>'
     +'<div style="padding:0 1rem 1rem">'
     +items.map(function(it){
+      if(it.s) return '<div style="font-size:.64rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding:14px 12px 4px">'+it.s+'</div>'
       return '<div onclick="document.getElementById(\'modal-menu-admin\').remove();nav(\''+it.p+'\')" style="display:flex;align-items:center;gap:13px;padding:14px 12px;border-radius:16px;cursor:pointer" onmousedown="this.style.background=\'var(--field)\'" onmouseup="this.style.background=\'\'">'
         +'<div style="width:40px;height:40px;border-radius:13px;background:var(--field);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+it.i+'" style="color:var(--r);font-size:1.15rem"></i></div>'
         +'<div style="flex:1;min-width:0"><div style="font-size:.92rem;font-weight:600">'+it.t+'</div><div style="font-size:.74rem;color:var(--t3);margin-top:1px">'+it.d+'</div></div>'
@@ -5995,7 +6558,8 @@ const GUIDES = {
     titre: "Guide aspirant",
     couleur: 'var(--b)', fond: 'var(--bl)',
     etapes: [
-      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Votre accueil. Retrouvez vos modules, vos dernieres activites et les annonces de votre formateur."},
+      {icon:'ti-layout-dashboard', titre:'Tableau de bord', texte:"Votre accueil. Le jour d'un examen, il apparait tout en haut avec le compte a rebours, puis le bouton pour commencer. Retrouvez aussi vos modules et les annonces."},
+      {icon:'ti-camera', titre:'Schema fait a la main', texte:"Prenez d'abord la photo avec l'appareil photo du telephone, puis ajoutez-la a la question depuis votre galerie. Vous pouvez en joindre plusieurs."},
       {icon:'ti-books', titre:'Modules', texte:"4 modules : Thermique, Hydraulique, Conception & Construction, Electrique. Chaque module contient des cours et des evaluations."},
       {icon:'ti-file', titre:'Cours & ressources', texte:"Onglet Cours : PDFs, plans CAO et documents mis a disposition. Cliquez pour ouvrir ou telecharger."},
       {icon:'ti-help', titre:'Exercices et examens', texte:"Les exercices sont repassables librement. Les examens dates sont reserves aux aspirants inscrits dans ce module."},
@@ -6007,6 +6571,7 @@ const GUIDES = {
     titre: "Guide administrateur",
     couleur: 'var(--r)', fond: 'var(--rl)',
     etapes: [
+      {icon:'ti-layout-dashboard', titre:'Accueil', texte:"Ce qui demande votre attention : copies a corriger, examens du jour (publies ou non), absents, rattrapages ouverts. Tout se regle en un clic. En bas : Copies, Aspirants, Modules et Gerer."},
       {icon:'ti-help-circle', titre:'Gerer les quiz', texte:"Creez des exercices (repassables) ou des examens (avec creneau horaire). Questions QCM, Vrai/Faux ou reponse libre."},
       {icon:'ti-upload', titre:'Ressources', texte:"Uploadez des PDFs, Word ou CAO par module. Organisez en dossiers."},
       {icon:'ti-speakerphone', titre:'Annonces', texte:"Publiez des annonces visibles par tous les aspirants. Choisissez duree et niveau."},
