@@ -1138,7 +1138,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.28-1000'
+const VERSION_APP = '2026.10.29-1045'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1222,6 +1222,7 @@ function sauverCopieEnCours(){
       etape:G.etape||0,
       secondes:(typeof _secondesQuiz!=='undefined'?_secondesQuiz:0),
       finExamen:G.finExamen?new Date(G.finExamen).getTime():null,
+      debut:G.debutCopie||null,
       quand:Date.now()
     }
     try{localStorage.setItem(CLE_COPIE,JSON.stringify(b))}
@@ -1279,6 +1280,7 @@ async function reprendreCopie(){
   const b=lireCopieEnCours()
   document.getElementById('modal-reprise')?.remove()
   if(!b) return
+  if(await miseAJourAvantExamen(b.quizId,true)) return
   const [{data:q},{data:qs}]=await Promise.all([
     db.from('quiz').select('*').eq('id',b.quizId).single(),
     db.from('questions').select('*').eq('quiz_id',b.quizId).order('ordre')
@@ -1288,6 +1290,7 @@ async function reprendreCopie(){
   G.reponses=b.reponses||{};G.fichiersLibres=nettoyerPieces(b.fichiersLibres||{})
   G.etape=Math.min(b.etape||0,qs.length-1)
   G.finExamen=b.finExamen?new Date(b.finExamen):calculerFinExamen(q)
+  G.debutCopie=b.debut||Date.now()
   G.choix=null;G.confirme=false
   if(typeof _multiSelect!=='undefined') _multiSelect=new Set()
   nav('quiz');showQ();demarrerTimer()
@@ -1696,6 +1699,60 @@ async function enregistrerAnnotation(questionId){
     return null
   }
 }
+
+// ─── MISE À JOUR AUTOMATIQUE ───────────────────────────────────────────────
+// Un telephone peut garder une ancienne version en memoire pendant des jours
+// (application laissee en arriere-plan). Avant chaque examen, au retour dans
+// l'application et toutes les 10 minutes, on compare avec la version en ligne.
+async function versionEnLigne(){
+  try{
+    if(location.protocol==='file:') return null
+    const r=await fetch(location.pathname+'?verif='+Date.now(),{cache:'no-store',headers:{Range:'bytes=0-200000'}})
+    if(!r.ok&&r.status!==206) return null
+    const t=await r.text()
+    const m=t.match(/const VERSION_APP = '(\d{4}\.\d{2}\.\d{2}-\d{4})'/)
+    return m?m[1]:null
+  }catch(e){return null}
+}
+function rechargerVersion(v){
+  try{location.replace(location.pathname+'?maj='+encodeURIComponent(v||Date.now()))}catch(e){location.reload()}
+}
+// Avant un examen : si une version plus recente existe, on recharge d'abord,
+// puis l'examen s'ouvre tout seul.
+async function miseAJourAvantExamen(qid,reprise){
+  const v=await versionEnLigne()
+  if(!v||v<=VERSION_APP) return false
+  try{sessionStorage.setItem('pm_apres_maj',JSON.stringify({qid:qid||null,reprise:!!reprise,quand:Date.now()}))}catch(e){}
+  toast('Mise à jour de l application avant l examen…','ok')
+  setTimeout(function(){rechargerVersion(v)},500)
+  return true
+}
+function lancerApresMiseAJour(){
+  let x=null
+  try{x=JSON.parse(sessionStorage.getItem('pm_apres_maj')||'null');sessionStorage.removeItem('pm_apres_maj')}catch(e){}
+  if(!x||Date.now()-(x.quand||0)>120000) return
+  if(x.reprise) reprendreCopie()
+  else if(x.qid) commencer(x.qid)
+}
+function enQuizOuFenetre(){
+  const vq=document.getElementById('v-quiz')
+  if(vq&&vq.classList.contains('on')) return true
+  return !!document.querySelector('[id^="modal-"]')
+}
+async function verifierMiseAJour(){
+  const v=await versionEnLigne()
+  if(!v||v<=VERSION_APP) return
+  const page=localStorage.getItem('pm_page')||'dashboard'
+  const pageSure=['dashboard','dashboard-ancien','modules','module','suivi','carnet','anciens','resultats'].indexOf(page)>=0
+  if(pageSure&&!enQuizOuFenetre()){rechargerVersion(v);return}
+  if(document.getElementById('bandeau-maj')) return
+  const d=document.createElement('div');d.id='bandeau-maj'
+  d.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:9500;background:var(--dark);color:#fff;border-radius:16px;padding:11px 12px 11px 15px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-m);font-size:.82rem;max-width:480px;margin:0 auto'
+  d.innerHTML='<i class="ti ti-refresh" style="font-size:1.1rem"></i><span style="flex:1">Nouvelle version disponible</span><button class="btn btn-r btn-sm" onclick="rechargerVersion(\''+v+'\')">Mettre à jour</button>'
+  document.body.appendChild(d)
+}
+setInterval(function(){if(!document.hidden)verifierMiseAJour()},10*60*1000)
+document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(verifierMiseAJour,1500)})
 
 // ─── PIÈCES JOINTES DES RÉPONSES LIBRES ────────────────────────────────────
 // Une question libre peut recevoir plusieurs pieces : photos d'un schema fait
@@ -2131,6 +2188,8 @@ async function initApp() {
   }catch(e){}
   // Copie interrompue : proposer de reprendre la ou l'aspirant s'est arrete
   setTimeout(proposerRepriseCopie,600)
+  setTimeout(lancerApresMiseAJour,1300)
+  setTimeout(verifierMiseAJour,4000)
   // Pastille du nombre de copies a corriger
   if(G.admin){
     db.from('tentatives').select('id',{count:'exact',head:true}).not('notes_libres','is',null).is('note_admin',null)
@@ -2972,6 +3031,8 @@ function compteARebours(dateDebut,dateFin) {
 async function commencer(qid) {
   const {data:qinfo}=await db.from('quiz').select('mode_examen,date_debut,date_fin').eq('id',qid).single()
   const isExamen=qinfo?.mode_examen
+  // Un examen ne demarre jamais sur une ancienne version de l'application
+  if(isExamen&&await miseAJourAvantExamen(qid,false)) return
   // Hors creneau : il faut un rattrapage encore valable (date limite non depassee)
   if(isExamen&&!G.admin){
     const n=new Date(),deb=qinfo.date_debut?new Date(qinfo.date_debut):null,fin=qinfo.date_fin?new Date(qinfo.date_fin):null
@@ -3016,6 +3077,7 @@ async function commencer(qid) {
   const [{data:q},{data:qs}]=await Promise.all([db.from('quiz').select('*').eq('id',qid).single(),db.from('questions').select('*').eq('quiz_id',qid).order('ordre')])
   G.quizActif=q;G.questions=qs||[];G.reponses={};G.fichiersLibres={};G.etape=0;G.choix=null;G.confirme=false
   G.finExamen=calculerFinExamen(q)
+  G.debutCopie=Date.now()
   nav('quiz');showQ();demarrerTimer()
 }
 
@@ -3261,9 +3323,23 @@ async function terminer() {
     aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:Math.round(sur20),total_points:20,valide,
     reponses:G.reponses,resultats_par_competence:parComp,
     notes_libres:aDesLibres?{}:null,
-    fichiers_libres:piecesPourEnvoi(true)
+    fichiers_libres:piecesPourEnvoi(true),
+    // Suivi : quelle version a envoye la copie, et quand l'aspirant a commence
+    version_app:VERSION_APP,
+    commence_le:G.debutCopie?new Date(G.debutCopie).toISOString():null
   }
   let {data:tent,error:tentErr}=await db.from('tentatives').insert(ligneCopie).select().single()
+  // Base pas encore mise a jour (colonnes de suivi absentes) : envoi sans elles
+  if(tentErr&&/version_app|commence_le/i.test(tentErr.message||'')){
+    delete ligneCopie.version_app;delete ligneCopie.commence_le
+    const rv=await db.from('tentatives').insert(ligneCopie).select().single()
+    tent=rv.data;tentErr=rv.error
+  }
+  // Copie vide refusee par la base pendant un rattrapage
+  if(tentErr&&/copie vide/i.test(tentErr.message||'')){
+    alert("Tu n'as répondu à aucune question : ta copie n'est pas envoyée.\n\nTon rattrapage reste ouvert, tu peux recommencer quand tu veux.")
+    effacerCopieEnCours();nav('dashboard');return
+  }
   // Contrainte d'unicite (une copie par examen) : on retire l'ancienne puis on renvoie
   if(tentErr&&(tentErr.code==='23505'||/duplicate|unique/i.test(tentErr.message||''))&&ancienneCopie&&ancienneCopie.length){
     for(const a of ancienneCopie){
@@ -3274,9 +3350,10 @@ async function terminer() {
     tent=rr.data;tentErr=rr.error
     ancienneCopie=null
   }
+  let avertPhotos=false
   if(tentErr){
     // La copie ne doit JAMAIS etre perdue : on reessaie sans les pieces
-    // jointes (souvent la cause : donnees trop volumineuses).
+    // jointes integrees (souvent la cause : donnees trop volumineuses).
     sauverCopieEnCours()
     const r2=await db.from('tentatives').insert({
       aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:Math.round(sur20),total_points:20,valide,
@@ -3284,7 +3361,8 @@ async function terminer() {
       notes_libres:aDesLibres?{}:null,
       fichiers_libres:piecesPourEnvoi(false)
     }).select().single()
-    if(r2.error){
+    if(!r2.error){tent=r2.data;avertPhotos=aDesImagesIntegrees()}
+    else{
       // Dernier recours : enregistrer au moins les reponses brutes
       const r3=await db.from('tentatives').insert({
         aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:0,total_points:20,valide:false,
@@ -3294,14 +3372,8 @@ async function terminer() {
         alert("Ta copie n'a pas pu être envoyée.\n\nNe ferme pas l'application : elle est conservée sur ton téléphone. Préviens ton gâcheur et reconnecte-toi plus tard pour la renvoyer.\n\nDétail : "+(r2.error.message||''))
         return
       }
-      if(piecesPourEnvoi(true)) alert('Ta copie est envoyée, mais tes photos et schémas n ont pas pu être transmis.\n\nEnvoie-les directement à ton gâcheur.')
-      G.tentResult={tent:r3.data,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
-      effacerCopieEnCours();afficheRes();return
+      tent=r3.data;avertPhotos=!!piecesPourEnvoi(true)
     }
-    if(aDesImagesIntegrees()) alert('Ta copie est envoyée, mais certaines photos n ont pas pu être transmises.\n\nEnvoie-les directement à ton gâcheur.')
-    else toast('Copie envoyée','ok')
-    G.tentResult={tent:r2.data,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
-    effacerCopieEnCours();afficheRes();return
   }
   effacerCopieEnCours()
   // Nouvelle copie bien enregistree : l'ancienne (rattrapage) est archivee puis retiree
@@ -3314,6 +3386,7 @@ async function terminer() {
   }
   // Le rattrapage est à usage unique : on le retire une fois l'examen passé
   if(G.quizActif.mode_examen){try{await db.from('rattrapages').delete().eq('quiz_id',G.quizActif.id).eq('aspirant_id',G.profil.id)}catch(e){}}
+  if(avertPhotos) alert('Ta copie est envoyée, mais certaines photos n ont pas pu être transmises.\n\nEnvoie-les directement à ton gâcheur.')
   G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
   if(!aDesLibres){await calculerEtAttribuerPoints(Math.round(sur20),20,G.quizActif.id);await mettreAJourStreak()}
   afficheRes()
@@ -4148,7 +4221,12 @@ async function chargerCorrections(){
   // TOUTES les copies d'examen, pas seulement celles en attente :
   // une copie auto-validee doit rester visible et corrigeable.
   const [rT,rQ,rP,rR]=await Promise.all([
-    db.from('tentatives').select('id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide,reponses').order('completed_at',{ascending:false}).limit(5000),
+    (async function(){
+      const cols='id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide,reponses'
+      const r=await db.from('tentatives').select(cols+',commence_le,version_app').order('completed_at',{ascending:false}).limit(5000)
+      if(!r.error) return r
+      return db.from('tentatives').select(cols).order('completed_at',{ascending:false}).limit(5000)
+    })(),
     db.from('quiz').select('id,titre,module_id,mode_examen,date_debut,actif').limit(2000),
     db.from('profils').select('*').limit(5000),
     db.from('rattrapages').select('*')
@@ -4343,7 +4421,9 @@ function afficherCorrections(){
           +(function(){
             const nbRep=t.reponses&&typeof t.reponses==='object'?Object.keys(t.reponses).length:0
             const rAcc=_corrRatt.find(function(r){return r.quiz_id===t.quiz_id&&r.aspirant_id===t.aspirant_id&&rattrapageActif(r)})
+            const sec=(t.commence_le&&t.completed_at)?Math.round((new Date(t.completed_at)-new Date(t.commence_le))/1000):null
             return (nbRep?'':'<span class="badge badge-rl" style="margin-top:3px;margin-right:4px">Copie vide</span>')
+              +(sec!=null&&sec<90?'<span class="badge badge-rl" style="margin-top:3px;margin-right:4px" title="Version '+(t.version_app||'?')+'">Envoyée '+Math.max(0,sec)+' s après le début</span>':'')
               +(rAcc?'<span class="badge badge-v" style="margin-top:3px;cursor:pointer" title="Changer la date limite" onclick="redonnerAcces(\''+t.quiz_id+'\',\''+t.aspirant_id+'\')">Accès rouvert'+(rAcc.date_limite?' → '+new Date(rAcc.date_limite).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):'')+'</span>':'')
           })()
           +'</div>'
@@ -4513,6 +4593,13 @@ async function ouvrirCorrectionAdmin(tentId) {
       <span style="font-size:.82rem;color:var(--r2);font-weight:700">Score recalculé</span>
       <span style="font-family:var(--fg);font-size:1.4rem;font-weight:700;color:var(--r)" id="score-live-corr">—/20</span>
       ${noteStockee!=null?`<span style="width:100%;font-size:.72rem;color:var(--r2)">Note enregistrée : <b>${noteStockee}/20</b> · ${tent.valide?'Validé':'Non validé'}</span>`:''}
+      ${(function(){
+        if(!tent.completed_at) return ''
+        const fin=new Date(tent.completed_at),deb=tent.commence_le?new Date(tent.commence_le):null
+        const sec=deb?Math.round((fin-deb)/1000):null
+        const d=sec==null?'':(sec<90?Math.max(0,sec)+' s':dureeFr(sec*1000).replace(/ 00 s$/,''))
+        return `<span style="width:100%;font-size:.72rem;color:${sec!=null&&sec<90?'var(--r)':'var(--r2)'}">${deb?'Commencée à '+heureFr(deb)+' · ':''}rendue le ${fin.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})} à ${heureFr(fin)}${d?' · durée '+d:''}${tent.version_app?' · v'+_escC(tent.version_app):''}${sec!=null&&sec<90?' — envoyée automatiquement, sans laisser le temps de répondre':''}</span>`
+      })()}
     </div>
     <div style="padding:1.1rem;max-height:65vh;overflow-y:auto">
       ${copiePapier?'<div style="background:var(--bl);color:var(--b);border-radius:12px;padding:.8rem;margin-bottom:.9rem;font-size:.8rem"><i class="ti ti-file-pencil"></i> <b>Copie sans réponse en ligne.</b> Saisis les points de chaque question, ou directement la note finale en bas.</div>':''}
@@ -5952,37 +6039,9 @@ async function contacterAncien(ancienId,nom) {
 
 // ─── QUESTIONNAIRE ANCIEN ──────────────────────────────────────────────────
 function afficherQuestionnaireAncien() {
-  // Enregistrer la dernière connexion (fire and forget)
-  db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
-  hi('vue-login');$('vue-app').classList.add('on')
-  initDark()
-  demarrerAutoRefresh()
-  chargerVilles()
-  // Version affichee dans la barre du haut : permet de verifier d'un
-  // coup d'oeil que le telephone a bien la derniere mise en ligne.
-  try{
-    const lg=document.querySelector('.topbar-logo')
-    if(lg&&!document.getElementById('badge-version')){
-      const b=document.createElement('span')
-      b.id='badge-version'
-      b.style.cssText='font-size:.58rem;font-weight:600;color:var(--t3);margin-left:5px;font-family:var(--ff)'
-      b.textContent='v'+VERSION_APP
-      lg.appendChild(b)
-    }
-  }catch(e){}
-  // Copie interrompue : proposer de reprendre la ou l'aspirant s'est arrete
-  setTimeout(proposerRepriseCopie,600)
-  // Pastille du nombre de copies a corriger
-  if(G.admin){
-    db.from('tentatives').select('id',{count:'exact',head:true}).not('notes_libres','is',null).is('note_admin',null)
-      .then(function(r){majPastilleCorr(r.count||0)}).catch(function(){})
-  }
-  // Vérifier messages non lus
-  setTimeout(async()=>{
-    const {data}=await db.from('messages').select('id').eq('to_id',user.id).eq('lu',false)
-    const badge=$('notif-badge');const total=data?.length||0
-    if(badge){badge.style.display=total?'flex':'none';badge.textContent=total}
-  },1000)
+  // (Le debut de l'application est deja fait par initApp. Un bloc copie ici
+  // par erreur utilisait une variable inexistante et bloquait l'ecran.)
+  const p=G.profil||{}
   // Masquer toute la nav, afficher seulement le questionnaire
   const modal=document.createElement('div');modal.id='modal-questionnaire-ancien';modal.style.cssText='position:fixed;inset:0;background:var(--dark);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto'
   modal.innerHTML=`<div style="background:var(--card);border-radius:20px;width:100%;max-width:520px;overflow:hidden">
