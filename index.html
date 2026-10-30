@@ -1138,7 +1138,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.29-1045'
+const VERSION_APP = '2026.10.30-1226'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1216,6 +1216,8 @@ function sauverCopieEnCours(){
     if(!G.quizActif||!G.quizActif.id) return
     const b={
       quizId:G.quizActif.id,
+      uid:(G.profil&&G.profil.id)||null,
+      aEnvoyer:!!G.aEnvoyer,
       titre:G.quizActif.titre||'',
       reponses:G.reponses||{},
       fichiersLibres:G.fichiersLibres||{},
@@ -1244,7 +1246,8 @@ function lireCopieEnCours(){
     const b=JSON.parse(localStorage.getItem(CLE_COPIE)||'null')
     if(!b||!b.quizId) return null
     // Au-dela de 12 h, la copie est consideree abandonnee
-    if(Date.now()-(b.quand||0)>12*60*60*1000){effacerCopieEnCours();return null}
+    // (sauf une copie terminee qui attend le reseau : elle n'expire jamais)
+    if(!b.aEnvoyer&&Date.now()-(b.quand||0)>12*60*60*1000){effacerCopieEnCours();return null}
     return b
   }catch(e){return null}
 }
@@ -1263,6 +1266,10 @@ async function proposerRepriseCopie(){
   const b=lireCopieEnCours()
   if(!b) return
   if(document.getElementById('v-quiz')&&document.getElementById('v-quiz').classList.contains('on')) return
+  // Copie d'un autre compte sur ce telephone : on n'y touche pas
+  if(b.uid&&G.profil&&b.uid!==G.profil.id) return
+  // Copie terminee mais pas encore partie : on la renvoie sans rien demander
+  if(b.aEnvoyer){reprendreCopie();return}
   const nb=Object.keys(b.reponses||{}).length
   const modal=document.createElement('div');modal.id='modal-reprise'
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9997;display:flex;align-items:center;justify-content:center;padding:1rem'
@@ -1281,18 +1288,22 @@ async function reprendreCopie(){
   document.getElementById('modal-reprise')?.remove()
   if(!b) return
   if(await miseAJourAvantExamen(b.quizId,true)) return
-  const [{data:q},{data:qs}]=await Promise.all([
-    db.from('quiz').select('*').eq('id',b.quizId).single(),
-    db.from('questions').select('*').eq('quiz_id',b.quizId).order('ordre')
+  const [rq,rqs]=await Promise.all([
+    avecReprises(function(){return db.from('quiz').select('*').eq('id',b.quizId).single()}),
+    avecReprises(function(){return db.from('questions').select('*').eq('quiz_id',b.quizId).order('ordre')})
   ])
+  // Panne reseau : la copie reste sur le telephone, on ne l'efface surtout pas
+  if((rq.error&&rq.error.code!=='PGRST116')||rqs.error){toast('Pas de réseau : ta copie reste gardée sur ce téléphone','err');return}
+  const q=rq.data,qs=rqs.data
   if(!q||!qs||!qs.length){toast('Examen introuvable','err');effacerCopieEnCours();return}
-  G.quizActif=q;G.questions=qs
+  G.quizActif=q;G.questions=qs;_copiePartie=false
   G.reponses=b.reponses||{};G.fichiersLibres=nettoyerPieces(b.fichiersLibres||{})
   G.etape=Math.min(b.etape||0,qs.length-1)
   G.finExamen=b.finExamen?new Date(b.finExamen):calculerFinExamen(q)
   G.debutCopie=b.debut||Date.now()
   G.choix=null;G.confirme=false
   if(typeof _multiSelect!=='undefined') _multiSelect=new Set()
+  if(b.aEnvoyer){G.aEnvoyer=true;terminer();return}
   nav('quiz');showQ();demarrerTimer()
   if(typeof _secondesQuiz!=='undefined') _secondesQuiz=b.secondes||0
   toast('Copie reprise','ok')
@@ -1945,6 +1956,8 @@ async function allegerPiecesJointes(){
   const travaux=[]
   Object.keys(G.fichiersLibres||{}).forEach(function(qid){
     piecesJointes(G.fichiersLibres[qid]).forEach(function(p){
+      // Piece en echec : dernier essai automatique avant l'envoi de la copie
+      if(p.etat==='erreur'&&_fichiersPJ[p.id]){travaux.push(traiterPiece(qid,p,_fichiersPJ[p.id]));return}
       if(p.image&&!p.path){
         travaux.push((async function(){
           const b=dataUrlVersBlob(p.image);if(!b) return
@@ -3029,6 +3042,9 @@ function compteARebours(dateDebut,dateFin) {
 
 // ─── QUIZ PASSATION ────────────────────────────────────────────────────────
 async function commencer(qid) {
+  // Une copie attend encore le reseau : elle ne doit pas etre ecrasee par une nouvelle
+  if(G.aEnvoyer){toast('Ta copie précédente n est pas encore partie','err');nav('resultats');return}
+  _copiePartie=false
   const {data:qinfo}=await db.from('quiz').select('mode_examen,date_debut,date_fin').eq('id',qid).single()
   const isExamen=qinfo?.mode_examen
   // Un examen ne demarre jamais sur une ancienne version de l'application
@@ -3277,9 +3293,53 @@ async function valider() {
 
 function suivant(){sauverCopieEnCours();G.etape++;G.choix=null;G.confirme=false;_multiSelect=new Set();showQ()}
 
+// Reseau faible : on reessaie seul, avec un delai maximum par essai.
+// Seules les pannes reseau sont rejouees (un refus de la base ne changerait pas).
+function erreurReseau(err){return !!err&&/failed to fetch|fetch failed|load failed|networkerror|network request|réseau ne répond pas|timeout/i.test(err.message||String(err))}
+async function avecReprises(action,essais,delai){
+  let r=null
+  for(let i=0;i<(essais||3);i++){
+    if(i) await new Promise(function(ok){setTimeout(ok,1500*i)})
+    try{
+      r=await Promise.race([action(),new Promise(function(ok){setTimeout(function(){ok({error:{message:'le réseau ne répond pas'}})},delai||30000)})])
+    }catch(e){r={error:{message:(e&&e.message)||'erreur réseau'}}}
+    if(!r||!r.error||!erreurReseau(r.error)) return r||{}
+  }
+  return r
+}
+// Archive la note d'une ancienne copie PUIS la retire. Si l'archivage echoue,
+// la copie reste en place : une note ne disparait jamais sans trace.
+async function archiverEtRetirerCopie(a){
+  const h=await avecReprises(function(){return db.from('historique_tentatives').insert({aspirant_id:a.aspirant_id||G.profil.id,quiz_id:a.quiz_id||G.quizActif.id,score:a.note_admin!=null?a.note_admin:a.score,valide:a.valide,completed_at:a.completed_at})})
+  if(h&&h.error) return false
+  const del=await avecReprises(function(){return db.from('tentatives').delete().eq('id',a.id).select('id')})
+  return !!(del&&!del.error&&del.data&&del.data.length)
+}
+// Copie impossible a envoyer : elle reste sur le telephone et repart toute seule
+let _envoiCopie=false,_copiePartie=false,_minuteurRenvoi=null
+function renvoyerCopie(){if(G.aEnvoyer&&!_envoiCopie) terminer()}
+function afficherEchecEnvoi(err){
+  G.aEnvoyer=true;sauverCopieEnCours()
+  $('r-detail').innerHTML='<div style="text-align:center;padding:1.5rem 1rem"><i class="ti ti-wifi-off" style="font-size:2rem;color:var(--amber)"></i>'
+    +'<div style="font-family:var(--fg);font-size:1.05rem;font-weight:700;margin-top:.7rem">Ta copie n\'est pas encore partie</div>'
+    +'<p style="font-size:.82rem;color:var(--t2);line-height:1.5;margin-top:8px">Elle est gardée sur ce téléphone et repartira toute seule dès que possible, même si tu fermes l\'application. Rouvre-la quand tu auras du réseau.</p>'
+    +'<button class="btn btn-r btn-full" style="margin-top:1rem" onclick="renvoyerCopie()"><i class="ti ti-refresh"></i> Réessayer maintenant</button>'
+    +'<p style="font-size:.68rem;color:var(--t3);margin-top:.8rem">Détail : '+echapAttr((err&&err.message)||'erreur inconnue')+'</p></div>'
+  clearTimeout(_minuteurRenvoi);_minuteurRenvoi=setTimeout(renvoyerCopie,30000)
+}
+window.addEventListener('online',renvoyerCopie)
 async function terminer() {
+  // Un seul envoi a la fois. Fin du minuteur apres un envoi deja termine : ignoree.
+  if(_envoiCopie||_copiePartie) return
+  _envoiCopie=true;clearTimeout(_minuteurRenvoi)
+  try{await envoyerCopie()}
+  catch(e){if(_copiePartie)toast('Copie envoyée','ok');else afficherEchecEnvoi(e)}
+  finally{_envoiCopie=false}
+}
+async function envoyerCopie() {
   const tempsTotal=arreterTimer()
   brouillonLibre()
+  sauverCopieEnCours()
   nav('resultats')
   $('r-detail').innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
   // Photos encore en cours d'envoi : on les attend avant d'envoyer la copie
@@ -3288,8 +3348,9 @@ async function terminer() {
     try{await Promise.all(_envoisPJ.slice())}catch(e){}
   }
   try{await allegerPiecesJointes()}catch(e){}
-  const {data:qr}=await db.from('questions').select('*').eq('quiz_id',G.quizActif.id)
-  if(!qr?.length){toast('Erreur chargement questions','err');return}
+  const rqr=await avecReprises(function(){return db.from('questions').select('*').eq('quiz_id',G.quizActif.id)})
+  const qr=rqr.data
+  if(!qr?.length){afficherEchecEnvoi(rqr.error||{message:'questions introuvables'});return}
   // Tout EXAMEN est soumis a la validation d'un gacheur, meme en QCM pur :
   // l'aspirant ne voit aucun resultat tant que la copie n'est pas corrigee.
   const aDesLibres=qr.some(q=>q.type_question==='libre')||!!(G.quizActif&&G.quizActif.mode_examen)
@@ -3312,12 +3373,17 @@ async function terminer() {
   const sur20=calculerScore20(score,totalPts),valide=!aDesLibres&&sur20>=SEUIL
   // Copie deja presente (rattrapage) : on la garde jusqu'a l'envoi reussi
   // de la nouvelle, puis on archive et on retire l'ancienne.
-  let ancienneCopie=null
+  let ancienneCopie=null,dejaArrivee=null
   if(G.quizActif.mode_examen){
-    try{
-      const {data:ex}=await db.from('tentatives').select('id,score,valide,completed_at').eq('aspirant_id',G.profil.id).eq('quiz_id',G.quizActif.id)
-      ancienneCopie=(ex||[])
-    }catch(e){ancienneCopie=null}
+    const rex=await avecReprises(function(){return db.from('tentatives').select('*').eq('aspirant_id',G.profil.id).eq('quiz_id',G.quizActif.id)})
+    if(rex.error){afficherEchecEnvoi(rex.error);return}
+    ancienneCopie=(rex.data||[])
+    // Essai precedent arrive en base sans que le telephone ait eu la reponse :
+    // meme heure de debut = meme copie. On ne l'envoie pas une seconde fois.
+    if(G.debutCopie&&ancienneCopie.some(function(a){return a.commence_le&&new Date(a.commence_le).getTime()===new Date(G.debutCopie).getTime()})){
+      dejaArrivee=ancienneCopie.find(function(a){return a.commence_le&&new Date(a.commence_le).getTime()===new Date(G.debutCopie).getTime()})
+      ancienneCopie=ancienneCopie.filter(function(a){return a.id!==dejaArrivee.id})
+    }
   }
   const ligneCopie={
     aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:Math.round(sur20),total_points:20,valide,
@@ -3328,7 +3394,7 @@ async function terminer() {
     version_app:VERSION_APP,
     commence_le:G.debutCopie?new Date(G.debutCopie).toISOString():null
   }
-  let {data:tent,error:tentErr}=await db.from('tentatives').insert(ligneCopie).select().single()
+  let {data:tent,error:tentErr}=dejaArrivee?{data:dejaArrivee,error:null}:await avecReprises(function(){return db.from('tentatives').insert(ligneCopie).select().single()},3,60000)
   // Base pas encore mise a jour (colonnes de suivi absentes) : envoi sans elles
   if(tentErr&&/version_app|commence_le/i.test(tentErr.message||'')){
     delete ligneCopie.version_app;delete ligneCopie.commence_le
@@ -3338,18 +3404,20 @@ async function terminer() {
   // Copie vide refusee par la base pendant un rattrapage
   if(tentErr&&/copie vide/i.test(tentErr.message||'')){
     alert("Tu n'as répondu à aucune question : ta copie n'est pas envoyée.\n\nTon rattrapage reste ouvert, tu peux recommencer quand tu veux.")
-    effacerCopieEnCours();nav('dashboard');return
+    G.aEnvoyer=false;effacerCopieEnCours();nav('dashboard');return
   }
   // Contrainte d'unicite (une copie par examen) : on retire l'ancienne puis on renvoie
   if(tentErr&&(tentErr.code==='23505'||/duplicate|unique/i.test(tentErr.message||''))&&ancienneCopie&&ancienneCopie.length){
-    for(const a of ancienneCopie){
-      try{await db.from('historique_tentatives').insert({aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:a.score,valide:a.valide,completed_at:a.completed_at})}catch(e){}
-      await db.from('tentatives').delete().eq('id',a.id)
-    }
-    const rr=await db.from('tentatives').insert(ligneCopie).select().single()
+    let retirees=true
+    for(const a of ancienneCopie){if(!await archiverEtRetirerCopie(a)) retirees=false}
+    if(!retirees){afficherEchecEnvoi({message:"l'ancienne copie n'a pas pu être archivée"});return}
+    const rr=await avecReprises(function(){return db.from('tentatives').insert(ligneCopie).select().single()},3,60000)
     tent=rr.data;tentErr=rr.error
     ancienneCopie=null
   }
+  // Panne reseau : les replis ci-dessous ne serviraient a rien (et une copie
+  // sans ses photos partirait des le retour du reseau). On attend le reseau.
+  if(tentErr&&erreurReseau(tentErr)){afficherEchecEnvoi(tentErr);return}
   let avertPhotos=false
   if(tentErr){
     // La copie ne doit JAMAIS etre perdue : on reessaie sans les pieces
@@ -3368,24 +3436,23 @@ async function terminer() {
         aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:0,total_points:20,valide:false,
         reponses:G.reponses||{},notes_libres:{}
       }).select().single()
-      if(r3.error){
-        alert("Ta copie n'a pas pu être envoyée.\n\nNe ferme pas l'application : elle est conservée sur ton téléphone. Préviens ton gâcheur et reconnecte-toi plus tard pour la renvoyer.\n\nDétail : "+(r2.error.message||''))
-        return
-      }
+      if(r3.error){afficherEchecEnvoi(r2.error);return}
       tent=r3.data;avertPhotos=!!piecesPourEnvoi(true)
     }
   }
+  // Piece jointe restee en echec : la copie part, mais l'aspirant est prevenu
+  if(Object.keys(G.fichiersLibres||{}).some(function(qid){return piecesJointes(G.fichiersLibres[qid]).some(function(p){return !p.path&&!p.image})})) avertPhotos=true
+  _copiePartie=true;G.aEnvoyer=false
   effacerCopieEnCours()
   // Nouvelle copie bien enregistree : l'ancienne (rattrapage) est archivee puis retiree
   if(ancienneCopie&&ancienneCopie.length){
     for(const a of ancienneCopie){
       if(tent&&a.id===tent.id) continue
-      try{await db.from('historique_tentatives').insert({aspirant_id:G.profil.id,quiz_id:G.quizActif.id,score:a.score,valide:a.valide,completed_at:a.completed_at})}catch(e){}
-      try{await db.from('tentatives').delete().eq('id',a.id)}catch(e){}
+      if(!await archiverEtRetirerCopie(a)) console.warn('Ancienne copie conservee',a.id)
     }
   }
   // Le rattrapage est à usage unique : on le retire une fois l'examen passé
-  if(G.quizActif.mode_examen){try{await db.from('rattrapages').delete().eq('quiz_id',G.quizActif.id).eq('aspirant_id',G.profil.id)}catch(e){}}
+  if(G.quizActif.mode_examen){await avecReprises(function(){return db.from('rattrapages').delete().eq('quiz_id',G.quizActif.id).eq('aspirant_id',G.profil.id)})}
   if(avertPhotos) alert('Ta copie est envoyée, mais certaines photos n ont pas pu être transmises.\n\nEnvoie-les directement à ton gâcheur.')
   G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
   if(!aDesLibres){await calculerEtAttribuerPoints(Math.round(sur20),20,G.quizActif.id);await mettreAJourStreak()}
@@ -3589,6 +3656,12 @@ async function uploadRes() {
   if(errRes&&/column|competence/i.test(errRes.message||'')){
     const r2=await db.from('ressources').insert({module_id:parseInt(modId),titre,type,taille:(fichier.size/1024/1024).toFixed(1)+' Mo',storage_path:path,created_by:user.id,dossier_id:dossierId})
     errRes=r2.error
+  }
+  if(errRes){
+    // Fiche refusee : on retire le fichier pour ne pas laisser d'orphelin
+    try{await db.storage.from('ressources').remove([path])}catch(e){}
+    toast('Ressource NON publiée : '+errRes.message,'err')
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-upload"></i> Publier';return
   }
   toast('Ressource publiée !','ok');$('up-titre').value='';$('up-fichier').value=''
   btn.disabled=false;btn.innerHTML='<i class="ti ti-upload"></i> Publier';loadResAdmin()
@@ -4198,7 +4271,13 @@ function synchroniserModuleRes(val,depuisBas){
 async function togglePubQuiz(id,actuel){
   if(!G.admin){toast('Action réservée aux gâcheurs','err');return}const {error}=await db.from('quiz').update({actif:!actuel}).eq('id',id);if(error){toast('Erreur : '+error.message,'err');return};toast(!actuel?'Quiz publié pour tout le monde !':'Quiz repassé en privé (admins seulement)','ok');loadQuizAdmin()}
 async function delQuiz(id){
-  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}if(!confirm('Supprimer ce quiz et ses questions ?'))return;await db.from('tentatives').delete().eq('quiz_id',id);await db.from('questions').delete().eq('quiz_id',id);const {error}=await db.from('quiz').delete().eq('id',id);if(error)await db.from('quiz').update({actif:false}).eq('id',id);toast('Quiz supprimé !','ok');loadQuizAdmin()}
+  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}const lu=await db.from('tentatives').select('id').eq('quiz_id',id);if(lu.error){toast('Erreur : '+lu.error.message,'err');return}
+  // Des copies existent : on archive le quiz au lieu d'effacer les notes des aspirants
+  if(lu.data&&lu.data.length){if(!confirm('Ce quiz a '+lu.data.length+' copie(s). Il sera retiré de la liste et archivé : les copies et les notes sont conservées.'))return;const a=await db.from('quiz').update({actif:false,archive:true}).eq('id',id).select('id');if(a.error||!a.data||!a.data.length){toast('Quiz NON archivé : '+((a.error&&a.error.message)||'droits insuffisants'),'err');return};toast('Quiz archivé, copies conservées','ok');loadQuizAdmin();return}
+  if(!confirm('Supprimer ce quiz et ses questions ?'))return
+  const dq=await db.from('questions').delete().eq('quiz_id',id);if(dq.error){toast('Quiz NON supprimé : '+dq.error.message,'err');return}
+  const {error}=await db.from('quiz').delete().eq('id',id);if(error){toast('Quiz NON supprimé : '+error.message,'err');return}
+  toast('Quiz supprimé !','ok');loadQuizAdmin()}
 
 async function dupliquerQuiz(id) {
   const [{data:orig},{data:qs}]=await Promise.all([db.from('quiz').select('*').eq('id',id).single(),db.from('questions').select('*').eq('quiz_id',id).order('ordre')])
@@ -4765,19 +4844,27 @@ async function deposerRendu(devoirId,input) {
   const fichiers=Array.from(input.files);if(!fichiers.length) return
   const el=document.getElementById('rendu-status-'+devoirId);if(el)el.textContent='Upload en cours...'
   const {data:{user}}=await db.auth.getUser();const urls=[]
-  for(const f of fichiers){const nomPropre=f.name.replace(/[^a-zA-Z0-9._-]/g,'-');const path='rendus/'+devoirId+'/'+user.id+'/'+Date.now()+'_'+nomPropre;const {error}=await db.storage.from('ressources').upload(path,f,{upsert:true});if(!error)urls.push({nom:f.name,path,taille:(f.size/1024/1024).toFixed(1)+' Mo'})}
-  const {data:exist}=await db.from('rendus').select('id,fichiers').eq('devoir_id',devoirId).eq('aspirant_id',user.id).maybeSingle()
-  if(exist)await db.from('rendus').update({fichiers:[...(exist.fichiers||[]),...urls],rendu_at:new Date().toISOString()}).eq('id',exist.id)
-  else await db.from('rendus').insert({devoir_id:devoirId,aspirant_id:user.id,fichiers:urls})
-  toast(fichiers.length+' fichier(s) déposé(s) !','ok');if(el)el.textContent='✓ '+fichiers.length+' fichier(s) déposé(s)'
+  const echecs=[]
+  for(const f of fichiers){const nomPropre=f.name.replace(/[^a-zA-Z0-9._-]/g,'-');const path='rendus/'+devoirId+'/'+user.id+'/'+Date.now()+'_'+nomPropre;const {error}=await avecReprises(function(){return db.storage.from('ressources').upload(path,f,{upsert:true})},3,120000);if(!error)urls.push({nom:f.name,path,taille:(f.size/1024/1024).toFixed(1)+' Mo'});else echecs.push(f.name)}
+  if(!urls.length){toast('Aucun fichier déposé : réessaie','err');if(el)el.textContent='✗ Échec du dépôt : '+echecs.join(', ');return}
+  const lu=await avecReprises(function(){return db.from('rendus').select('id,fichiers').eq('devoir_id',devoirId).eq('aspirant_id',user.id).maybeSingle()})
+  if(lu.error){toast('Dépôt non enregistré : '+lu.error.message,'err');if(el)el.textContent='✗ Dépôt non enregistré, réessaie';return}
+  const exist=lu.data
+  const ec=exist
+    ?await avecReprises(function(){return db.from('rendus').update({fichiers:[...(exist.fichiers||[]),...urls],rendu_at:new Date().toISOString()}).eq('id',exist.id).select('id')})
+    :await avecReprises(function(){return db.from('rendus').insert({devoir_id:devoirId,aspirant_id:user.id,fichiers:urls}).select('id')})
+  if(ec.error||!ec.data||!ec.data.length){toast('Dépôt non enregistré : '+((ec.error&&ec.error.message)||'droits insuffisants'),'err');if(el)el.textContent='✗ Dépôt non enregistré, réessaie';return}
+  if(echecs.length){toast(echecs.length+' fichier(s) non déposé(s)','err');if(el)el.textContent='⚠ '+urls.length+' déposé(s). Échec : '+echecs.join(', ');return}
+  toast(urls.length+' fichier(s) déposé(s) !','ok');if(el)el.textContent='✓ '+urls.length+' fichier(s) déposé(s)'
 }
 
 async function creerDevoir() {
   const titre=$('dv-titre').value.trim(),modId=$('dv-mod').value,consigne=$('dv-consigne').value.trim(),limite=$('dv-limite').value,sujet=$('dv-sujet').files[0]
   if(!titre){toast('Titre requis','err');return}
   const {data:{user}}=await db.auth.getUser();let sujet_path=null
-  if(sujet){const path='sujets/'+Date.now()+'_'+sujet.name.replace(/[^a-zA-Z0-9._-]/g,'-');await db.storage.from('ressources').upload(path,sujet);sujet_path=path}
-  await db.from('devoirs').insert({module_id:parseInt(modId),titre,consigne,date_limite:limite?new Date(limite).toISOString():null,sujet_path,actif:true,created_by:user.id})
+  if(sujet){const path='sujets/'+Date.now()+'_'+sujet.name.replace(/[^a-zA-Z0-9._-]/g,'-');const up=await db.storage.from('ressources').upload(path,sujet);if(up.error){toast('Sujet non envoyé : '+up.error.message,'err');return};sujet_path=path}
+  const {error:errDv}=await db.from('devoirs').insert({module_id:parseInt(modId),titre,consigne,date_limite:limite?new Date(limite).toISOString():null,sujet_path,actif:true,created_by:user.id})
+  if(errDv){toast('Devoir NON créé : '+errDv.message,'err');return}
   toast('Devoir créé !','ok');$('dv-titre').value='';$('dv-consigne').value='';chargerRendusAdmin()
 }
 
@@ -4847,7 +4934,9 @@ async function supprimerCopie(tentId){
   const {data:q}=await db.from('quiz').select('titre,mode_examen').eq('id',t.quiz_id).maybeSingle()
   const nom=p?((p.prenom||'')+' '+(p.nom||'')).trim():'cet aspirant'
   if(!confirm('Supprimer la copie de '+nom+' ?\n'+((q&&q.titre)||'')+'\n\nSes réponses et sa note disparaissent de l application (la note est gardée dans l historique). Cette action est définitive.')) return
-  try{await db.from('historique_tentatives').insert({aspirant_id:t.aspirant_id,quiz_id:t.quiz_id,score:t.note_admin!=null?t.note_admin:t.score,valide:t.valide,completed_at:t.completed_at})}catch(e){}
+  const arch=await db.from('historique_tentatives').insert({aspirant_id:t.aspirant_id,quiz_id:t.quiz_id,score:t.note_admin!=null?t.note_admin:t.score,valide:t.valide,completed_at:t.completed_at})
+  // Archivage refuse (historique_admin.sql pas execute ?) : on demande avant de perdre la note
+  if(arch&&arch.error&&!confirm('La note n a PAS pu être gardée dans l historique.\n\n'+(arch.error.message||'')+'\n\nSupprimer quand même la copie ? La note sera perdue.')) return
   const del=await db.from('tentatives').delete().eq('id',tentId).select('id')
   if(del.error||!del.data||!del.data.length){alert('La copie n a PAS été supprimée.\n\n'+((del.error&&del.error.message)||'Droits insuffisants : exécute repasser_examen_droits.sql dans Supabase.'));return}
   document.getElementById('modal-correction')?.remove()
@@ -5049,7 +5138,7 @@ function afficherAspirants(){
   }).join('')
 }
 
-async function debloquer(tentId,nom){if(!confirm('Débloquer une 2e tentative pour '+nom+' ?'))return;const {data:t}=await db.from('tentatives').select('aspirant_id,quiz_id').eq('id',tentId).single();if(!t)return;await db.from('tentatives').delete().eq('aspirant_id',t.aspirant_id).eq('quiz_id',t.quiz_id);toast('Tentative débloquée','ok');loadAspirants()}
+async function debloquer(tentId,nom){if(!confirm('Débloquer une 2e tentative pour '+nom+' ?'))return;const {data:t}=await db.from('tentatives').select('*').eq('id',tentId).single();if(!t)return;const ok=await archiverEtRetirerCopie(t);if(!ok){toast('Tentative NON débloquée : note non archivée ou droits insuffisants','err');return};toast('Tentative débloquée','ok');loadAspirants()}
 
 async function genLienAdmin(){const {data:{user}}=await db.auth.getUser();const token=crypto.randomUUID();await db.from('admin_tokens').insert({token,created_by:user.id,expires_at:new Date(Date.now()+7*24*60*60*1000).toISOString()});const lienAdmin=location.origin+location.pathname+'?admin='+token
   window._dernierLien=lienAdmin
@@ -6774,6 +6863,7 @@ async function editerQuiz(quizId) {
       inp.onchange=async function(){
         const fs=Array.from(inp.files||[]);if(!fs.length) return
         lab.innerHTML='<i class="ti ti-loader spin"></i> Envoi en cours...'
+        let nbOk=0
         for(const f of fs){
           if(f.size>15*1024*1024){toast(f.name+' : trop lourd (15 Mo max)','err');continue}
           const nom=f.name.replace(/[^a-zA-Z0-9._-]/g,'-')
@@ -6781,9 +6871,11 @@ async function editerQuiz(quizId) {
           const up=await db.storage.from('ressources').upload(chemin,f)
           if(up.error){toast(f.name+' : '+up.error.message,'err');continue}
           questions[i].medias.push({t:(f.type==='application/pdf'||/\.pdf$/i.test(f.name))?'pdf':'img',p:chemin,n:f.name})
+          nbOk++
         }
         rendreImage()
-        toast('Pièce(s) jointe(s) ajoutée(s)','ok')
+        if(nbOk===fs.length) toast('Pièce(s) jointe(s) ajoutée(s)','ok')
+        else toast((fs.length-nbOk)+' pièce(s) non ajoutée(s)','err')
       }
       lab.appendChild(inp)
       zoneImg.appendChild(lab)
