@@ -32,7 +32,8 @@ En fin de session, le mettre à jour avec la commande `/fin-de-session`.
 ## Plan du code (`index.html`)
 - Démarrage et navigation : `initApp()`, `nav(page)`, `rafraichirPage()` (toutes les 90 s), `PAGES_ADMIN`.
 - Mise à jour automatique : `versionEnLigne()`, `miseAJourAvantExamen()` (avant tout examen ; l'examen se rouvre seul après), `verifierMiseAJour()` (au retour dans l'appli et toutes les 10 min).
-- Accueil aspirant : `loadDashboard()` puis `afficherExamensAccueil()`. Carte en haut de l'accueil : examen du jour avec compte à rebours, examen en cours, rattrapage ouvert, copie à reprendre.
+- Accueil aspirant : `loadDashboard()` puis `afficherExamensAccueil()`. Carte en haut de l'accueil : examen du jour avec compte à rebours, examen en cours, rattrapage ouvert, copie à reprendre. Ensuite `afficherEtapeAccueil()` (premier exercice pas fait du module), `afficherProchainExamen()`, 4 tuiles de modules. Onglets : Accueil, Chercher, Mon parcours (`suivi`, avec les liens vers Modules, Carnet et Contacts).
+- Page Chercher : `afficherChercher()`, `lancerChercher()` (sans accents, exercices et cours, jamais les examens).
 - Accueil gâcheur : `loadDashboardAdmin()`. À faire (copies, absents, aspirants sans module), examens du jour avec bouton « Publier », prochains examens, rattrapages, raccourcis.
 - Examen d'essai : `commencerEssai()`, `finEssai()`, `carteEssaiAccueil()`. Questions dans le code (`questionsEssai()`), `quiz.essai=true`, aucune écriture en base. Fait ou masqué : `localStorage` (`pm_essai_fait`, `pm_essai_masque`).
 - Passage d'un quiz : `ouvrirModule()` et `renderEval()`, puis `commencer(qid)`, `showQ()`, `valider()`, `suivant()`, `terminer()`. `terminer()` envoie la copie avec deux replis, puis archive l'ancienne copie et retire le rattrapage.
@@ -99,7 +100,7 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - Chaque scénario affiche ce qu'il voit et finit par « ERREURS JS : aucune ». Lire la sortie, pas seulement « OK ».
 
 ## État actuel (30/10/2026)
-- En ligne : v2026.10.30-1610.
+- En ligne : v2026.10.30-1645.
 - `copies_brouillon` (`sql/brouillon_en_ligne.sql`, exécuté le 30/10) : une ligne par personne. `etat` = copie en cours sans images, `diag` = relevé du démarrage (dates, version, appareil), jamais de réponse ni de note. Pour diagnostiquer un téléphone : lire `diag` et `maj_le`.
 - `sql/anti_doublons.sql` (index `uniq_tentative_envoi`) : exécuté le 30/10.
 - `sql/essai_photos.sql` : exécuté le 30/10. Les photos d'essai déposées avant cette date restent dans le stockage (`essai_*`). Retrait réel à vérifier au prochain essai avec photo.
@@ -108,7 +109,7 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - Quelques copies de rattrapage parties vides (ancien bug, ou téléphone resté sur une ancienne version). Leur accès est encore ouvert : les aspirants doivent repasser l'examen avec la version à jour.
 - Copies aux réponses orphelines (quiz modifiés après l'examen : soudage, Partie 1 électrique, Moteur) : seule la note enregistrée compte.
 - Examens électriques Parties 2, 3 et 4 (30/11, 04/01, 25/01) : encore privés au 27/10. Les publier avant leur date ; l'accueil gâcheur le signale.
-- Direction artistique à revoir. Demander à Benoît ce qui le gêne (couleurs, lisibilité, allure générale), puis proposer 2 ou 3 pistes sur une page avant de toucher au site.
+- Direction artistique : piste A « L'Essentiel » choisie par Benoît le 30/10 (mêmes couleurs, une action à la fois). Faits : accueil, recherche et barre du bas des aspirants et apprentis. Reste à décliner : écrans de module, d'examen et des gâcheurs, en reprenant les classes `acc-*` et `ch-*`.
 
 ## Journal
 - 27/10 : toutes les copies sont de nouveau visibles. Plus de faux « validé » après un seul examen. La correction affiche les réponses multiples, les réponses orphelines et une note finale imposée. L'éditeur garde les identifiants des questions. Rattrapages avec date limite. Nouveaux boutons « Redonner l'accès », suppression de copie et copie papier.
@@ -121,4 +122,4 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - 30/10 (v2026.10.30-1453) : quitter un examen puis revenir ne repart plus de zéro (boutons Commencer et essai). Réponse sélectionnée gardée avant validation. Un exercice ne peut plus écraser un examen en cours. Bouton « Prendre une photo » séparé de « Galerie ou fichier », photo lue en mémoire tout de suite, avec reprise et message si le téléphone recharge la page. Scénario `e2e_reprise.js`. Photo en direct confirmée par Benoît.
 - 30/10 (v2026.10.30-1518) : copie enregistrée dès l'ouverture de l'examen et à la bonne question après Suivant. Une reprise attend la fin du démarrage (`finDemarrage()`) pour que l'accueil ne la referme pas. Fermer puis reprendre vérifié sur le vrai site avec le compte aspirant de test (ordinateur). 
 - 30/10 (v2026.10.30-1534) : retour à zéro après fermeture complète de l'appli. Cause : `localStorage` n'est écrit sur le disque qu'après plusieurs secondes. La copie est aussi écrite en IndexedDB (`ecrireCopieDurable()`, `restaurerCopieDurable()` au démarrage). Scénario `e2e_fermeture.js`, qui tue vraiment le navigateur. Benoît : toujours à zéro sur téléphone.
-- 30/10 (v2026.10.30-1610) : copie en cours aussi gardée en ligne (`copies_brouillon`, `restaurerCopieEnLigne()`), plus un relevé au démarrage (`noterDiag()`) pour comprendre ce que voit le téléphone. Confirmé par Benoît sur iPhone (iOS 18.5, Safari) : à la réouverture, `localStorage` et IndexedDB étaient vides, la copie est revenue depuis la ligne. Mémoire locale vide : le test était fait en navigation privée, qui efface tout à la fermeture de l'onglet. Safari normal pas encore testé. Sans réseau, seule la mémoire locale protège la copie.
+- 30/10 (v2026.10.30-1610) : copie en cours aussi gardée en ligne (`copies_brouillon`, `restaurerCopieEnLigne()`), plus un relevé au démarrage (`noterDiag()`) pour comprendre ce que voit le téléphone. (v2026.10.30-1645 : accueil et recherche de la piste A, scénario `e2e_essentiel.js`.) Confirmé par Benoît sur iPhone (iOS 18.5, Safari) : à la réouverture, `localStorage` et IndexedDB étaient vides, la copie est revenue depuis la ligne. Mémoire locale vide : le test était fait en navigation privée, qui efface tout à la fermeture de l'onglet. Safari normal pas encore testé. Sans réseau, seule la mémoire locale protège la copie.

@@ -279,6 +279,38 @@ button,input,select,textarea{font-family:var(--ff)}
 @media(min-width:760px){.adm-grid{grid-template-columns:repeat(5,1fr)}}
 
 /* ── EXAMEN DU JOUR (accueil aspirant) ── */
+/* Accueil et recherche des aspirants : l'essentiel, une action a la fois */
+.acc-rech{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:0 16px;margin-bottom:1rem;border:none;border-radius:16px;background:var(--card);box-sizing:border-box;font:500 1rem var(--ff);color:var(--t2);text-align:left;cursor:pointer;box-shadow:var(--sh-m)}
+.acc-rech i{font-size:1.35rem;color:var(--t1)}
+.acc-etape{background:#141414;color:#fff;border:1px solid var(--bord);border-radius:24px;padding:22px;margin-bottom:1rem}
+.acc-etape-label{font-size:.82rem;font-weight:600;color:#F2B5B4}
+.acc-etape-titre{font-size:1.35rem;line-height:1.28;font-weight:700;letter-spacing:-.01em;margin:6px 0}
+.acc-etape-info{font-size:.88rem;color:#D6D6D2}
+.acc-btn{display:block;width:100%;min-height:52px;margin-top:14px;border:none;border-radius:14px;background:var(--r2);color:#fff;font:700 1rem var(--ff);cursor:pointer}
+.acc-ligne{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);border-radius:16px;padding:14px 16px;margin-bottom:1rem;font-size:.88rem;font-weight:600}
+.acc-ligne span:last-child{font-weight:400;color:var(--t2)}
+.acc-grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.acc-tuile{display:flex;flex-direction:column;justify-content:space-between;gap:10px;min-height:104px;padding:14px;border:2px solid transparent;border-radius:18px;background:var(--card);color:var(--t1);font-family:var(--ff);text-align:left;cursor:pointer}
+.acc-tuile.mien{border-color:var(--r2)}
+.acc-tuile b{font-size:.95rem;line-height:1.25;font-weight:700}
+.acc-tuile span{font-size:.82rem;color:var(--t2)}
+.acc-tuile.mien span{font-weight:600;color:var(--r2)}
+.ch-champ{cursor:text}
+.ch-champ input{flex:1;min-width:0;border:none;outline:none;background:none;font:600 1.05rem var(--ff);color:var(--t1)}
+.ch-filtres{display:flex;gap:8px;margin-bottom:1rem}
+.ch-puce{min-height:44px;padding:0 16px;border:none;border-radius:22px;background:var(--card);color:var(--t1);font:600 .88rem var(--ff);cursor:pointer}
+.ch-puce.on{background:#141414;color:#fff}
+.ch-mot{min-height:44px;padding:0 14px;border:1px solid var(--bord2);border-radius:22px;background:none;color:var(--t1);font:500 .88rem var(--ff);cursor:pointer}
+.ch-mots{display:flex;flex-wrap:wrap;gap:8px}
+.ch-titre{font-size:.82rem;font-weight:600;color:var(--t2);margin:0 0 8px}
+.ch-carte{background:var(--card);border-radius:20px;padding:20px;margin-bottom:1rem}
+.ch-carte .ch-label{font-size:.82rem;font-weight:600;color:var(--r2)}
+.ch-carte h2{font-size:1.25rem;line-height:1.3;font-weight:700;letter-spacing:-.01em;margin:8px 0 6px}
+.ch-liste{background:var(--card);border-radius:20px;padding:4px 16px;margin-bottom:1rem}
+.ch-ligne{display:block;width:100%;padding:13px 0;border:none;border-bottom:1px solid var(--bord);background:none;color:var(--t1);font-family:var(--ff);text-align:left;cursor:pointer}
+.ch-ligne:last-child{border-bottom:none}
+.ch-ligne b{display:block;font-size:.94rem;font-weight:600}
+.ch-sous{display:block;font-size:.82rem;color:var(--t2);margin-top:3px}
 .ej{border-radius:22px;padding:18px 18px 16px;margin-bottom:1rem;box-shadow:var(--sh-m)}
 .ej-label{font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
 .ej-titre{font-size:1.12rem;font-weight:700;letter-spacing:-.01em;margin-top:7px;line-height:1.3}
@@ -374,7 +406,7 @@ button,input,select,textarea{font-family:var(--ff)}
 /* Bottom nav mobile */
 .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:color-mix(in srgb,var(--card2) 86%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:none;box-shadow:0 -1px 0 var(--bord);z-index:500;padding:10px 0 max(8px,env(safe-area-inset-bottom))}
 .bnav-inner{display:flex;justify-content:space-around}
-.bnav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.66rem;font-weight:500;color:var(--t3);cursor:pointer;min-width:56px;text-align:center;letter-spacing:0;text-transform:none}
+.bnav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.66rem;font-weight:500;color:var(--t2);cursor:pointer;min-width:56px;text-align:center;letter-spacing:0;text-transform:none}
 .bnav-item i{font-size:1.42rem}
 .bnav-item.on{color:var(--r);font-weight:600}
 
@@ -621,6 +653,8 @@ button,input,select,textarea{font-family:var(--ff)}
 
   <nav class="sidebar">
     <div class="nav-icon on" id="n-dashboard" data-tip="Tableau de bord" onclick="nav('dashboard')"><i class="ti ti-layout-dashboard"></i></div>
+    <div class="nav-icon hidden" id="n-chercher" data-tip="Chercher" onclick="nav('chercher')"><i class="ti ti-search"></i></div>
+    <div class="nav-icon hidden" id="n-suivi" data-tip="Mon parcours" onclick="nav('suivi')"><i class="ti ti-route"></i></div>
     <div class="nav-icon" id="n-modules" data-tip="Modules" onclick="nav('modules')"><i class="ti ti-books"></i></div>
 
     <div class="nav-icon" id="n-carnet" data-tip="Carnet de bord" onclick="nav('carnet')"><i class="ti ti-notebook"></i></div>
@@ -647,6 +681,8 @@ button,input,select,textarea{font-family:var(--ff)}
       <div class="bnav-item on" id="b-dashboard" onclick="nav('dashboard')"><i class="ti ti-layout-dashboard"></i>Accueil</div>
       <div class="bnav-item hidden" id="b-corrections" onclick="nav('corrections')" style="position:relative"><i class="ti ti-checkbox"></i>Copies<span id="pastille-corr-b" style="position:absolute;top:-3px;left:50%;margin-left:6px;min-width:17px;height:17px;border-radius:9px;background:var(--r);color:#fff;font-size:.6rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px"></span></div>
       <div class="bnav-item hidden" id="b-aspirants" onclick="nav('aspirants')"><i class="ti ti-users"></i>Aspirants</div>
+      <div class="bnav-item hidden" id="b-chercher" onclick="nav('chercher')"><i class="ti ti-search"></i>Chercher</div>
+      <div class="bnav-item hidden" id="b-suivi" onclick="nav('suivi')"><i class="ti ti-route"></i>Mon parcours</div>
       <div class="bnav-item" id="b-modules" onclick="nav('modules')"><i class="ti ti-books"></i>Modules</div>
 
       <div class="bnav-item" id="b-anciens" onclick="nav('anciens')"><i class="ti ti-users-group"></i>Contacts</div>
@@ -664,8 +700,11 @@ button,input,select,textarea{font-family:var(--ff)}
         <div style="font-family:var(--fg);font-size:1.6rem;font-weight:700;letter-spacing:-.5px">Bonjour, Pays <span id="d-prenom">—</span></div>
         <div style="font-size:.78rem;color:var(--t3);margin-top:2px" id="d-date"></div>
       </div>
+      <div id="d-recherche"></div>
       <div id="d-rappel"></div>
       <div id="d-admin"></div>
+      <div id="d-etape"></div>
+      <div id="d-examen"></div>
       <div id="annonces-dashboard" style="margin-bottom:1rem"></div>
       <div id="d-email-perso"></div>
       <div id="d-modules"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
@@ -840,9 +879,17 @@ button,input,select,textarea{font-family:var(--ff)}
     </div>
 
 
+    <!-- CHERCHER -->
+    <div class="vue" id="v-chercher">
+      <label class="acc-rech ch-champ"><i class="ti ti-search"></i><input id="ch-input" placeholder="Cours, exercice, mot-clé…" autocomplete="off" oninput="saisieChercher(this.value)"/></label>
+      <div class="ch-filtres" id="ch-filtres"></div>
+      <div id="ch-resultats"></div>
+    </div>
+
     <!-- SUIVI -->
     <div class="vue" id="v-suivi">
-      <div style="margin-bottom:1.2rem"><div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Mon suivi</div></div>
+      <div style="margin-bottom:1.2rem"><div style="font-family:var(--fg);font-size:1.4rem;font-weight:700;letter-spacing:-.5px">Mon parcours</div></div>
+      <div id="suivi-liens"></div>
       <div id="v-suivi-body"><div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div></div>
     </div>
 
@@ -1138,7 +1185,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.30-1610'
+const VERSION_APP = '2026.10.30-1645'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1861,7 +1908,7 @@ async function verifierMiseAJour(){
   const v=await versionEnLigne()
   if(!v||v<=VERSION_APP) return
   const page=localStorage.getItem('pm_page')||'dashboard'
-  const pageSure=['dashboard','dashboard-ancien','modules','module','suivi','carnet','anciens','resultats'].indexOf(page)>=0
+  const pageSure=['dashboard','dashboard-ancien','chercher','modules','module','suivi','carnet','anciens','resultats'].indexOf(page)>=0
   if(pageSure&&!enQuizOuFenetre()){rechargerVersion(v);return}
   if(document.getElementById('bandeau-maj')) return
   const d=document.createElement('div');d.id='bandeau-maj'
@@ -2379,6 +2426,9 @@ async function initAppInterne() {
     afficherFormulaireTelephone()
   }
 
+  // Aspirants et apprentis : 3 onglets (Modules, Carnet et Contacts sont dans Mon parcours)
+  ;['b-chercher','b-suivi','n-chercher','n-suivi'].forEach(id=>G.aspirant?sh(id):hi(id))
+  if(G.aspirant){;['b-modules','b-anciens','b-carnet'].forEach(id=>hi(id));document.getElementById('btn-search-mob')?.remove()}
   // Dashboard selon rôle
   if(G.ancien) {
     ;['n-carnet','b-carnet'].forEach(id=>hi(id))
@@ -2403,7 +2453,7 @@ async function initAppInterne() {
     }
   } else {
     const savedP=localStorage.getItem('pm_page')
-    const okP=['dashboard','modules','module','suivi','carnet','anciens']
+    const okP=['dashboard','chercher','modules','module','suivi','carnet','anciens']
     chargerAnnonces()
     verifierInscription()
     // Jour d'examen ou rattrapage ouvert : l'examen est sur l'accueil
@@ -2458,6 +2508,7 @@ function nav(page,sansHistorique) {
   if(page!=='dashboard'&&_accTimer){clearInterval(_accTimer);_accTimer=null}
   if(page==='modules') loadModules()
   if(page==='suivi') loadSuivi()
+  if(page==='chercher') afficherChercher()
   if(page==='ressources') loadResAdmin()
   if(page==='quiz-admin'){loadQuizAdmin();chargerBrouillons();recupererLocal()}
   if(page==='corrections') chargerCorrections()
@@ -2630,6 +2681,9 @@ async function loadDashboardAdmin(){
 async function loadDashboard() {
   if(G.admin){const z=$('d-admin');if(z)z.style.display='';return loadDashboardAdmin()}
   else{const z=$('d-admin');if(z){z.innerHTML='';z.style.display='none'}}
+  // Accueil de l'aspirant : la recherche, la prochaine etape, puis les modules
+  const zd=$('d-date');if(zd) zd.style.display='none'
+  $('d-recherche').innerHTML='<button class="acc-rech" onclick="nav(\'chercher\')"><i class="ti ti-search"></i>Cours, exercice, mot-clé…</button>'
   const {data:t}=await db.from('tentatives').select('*, quiz(module_id,titre)').eq('aspirant_id',G.profil.id).order('completed_at',{ascending:false})
   const tents=t||[]
   const {data:pd}=await db.from('profils').select('points_total,streak_semaines,streak_pause').eq('id',G.profil.id).single()
@@ -2655,41 +2709,129 @@ async function loadDashboard() {
   // Examen du jour : en haut de l'accueil, accessible en un geste
   await afficherExamensAccueil(allExD,tents)
   const monMod=G.profil.module_inscrit
-  const sansModule=!!G.profil.sans_module
-  $('d-modules').innerHTML=MODULES.map(m=>{
+  await afficherEtapeAccueil(monMod,tents)
+  afficherProchainExamen(allExD,tents,monMod)
+  $('d-modules').innerHTML='<div class="acc-grille">'+MODULES.map(m=>{
     const exM=allExD.filter(x=>x.module_id===m.id)
     const exVal=exM.filter(x=>tents.some(tt=>tt.quiz_id===x.id&&tt.valide)).length
     const nbReq=examensRequis()
     const fini=nbReq>0&&exVal>=nbReq
     const inscrit=monMod===m.id
-    // Pastilles : une par examen du module
     const dejaAcquis=(G.profil.modules_valides||[]).map(Number).indexOf(m.id)>=0
-    const pastilles=(dejaAcquis||!suitLesModules()||G.profil.sans_module||!nbReq)?'':Array.from({length:nbReq}).map((_,i)=>`<span style="width:11px;height:11px;border-radius:50%;background:${i<exVal?'var(--v)':'var(--field)'};display:inline-block"></span>`).join('')
-    const etat=dejaAcquis?'<span class="badge badge-v"><i class="ti ti-check"></i> Validé</span>'
-      :!suitLesModules()?'<span style="font-size:.8rem;color:var(--t3)">Cours et ressources</span>'
-      :G.profil.sans_module?'<span style="font-size:.8rem;color:var(--t3)">Cours et exercices</span>'
-      :!nbReq?'<span style="font-size:.8rem;color:var(--t3)">Bientôt disponible</span>'
-      :fini?'<span class="badge badge-v"><i class="ti ti-check"></i> Théorie OK</span>'
-      :`<span style="font-size:.82rem;font-weight:600;color:var(--t2)">${exVal} sur ${nbReq}</span>`
-    return `<div class="card" style="cursor:pointer;margin-bottom:10px" onclick="ouvrirModule(${m.id})">
-      <div style="display:flex;align-items:center;gap:14px;padding:16px 18px">
-        <div style="width:46px;height:46px;border-radius:14px;background:${m.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${m.icon}" style="color:${m.ic};font-size:1.25rem"></i></div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:.98rem;font-weight:600;letter-spacing:-.01em">${m.nom}${inscrit?' <span class="badge badge-rl" style="font-size:.62rem;vertical-align:middle">MON MODULE</span>':''}</div>
-          <div style="display:flex;align-items:center;gap:7px;margin-top:7px">${pastilles}<span style="margin-left:${pastilles?'4px':'0'}">${etat}</span></div>
-        </div>
-        <i class="ti ti-chevron-right" style="color:var(--t3);font-size:1.1rem;flex-shrink:0"></i>
-      </div>
-    </div>`
+    const etat=dejaAcquis?'Validé'
+      :!suitLesModules()?'Cours et ressources'
+      :G.profil.sans_module?'Cours et exercices'
+      :!nbReq?'Bientôt disponible'
+      :fini?'Théorie OK'
+      :inscrit?exVal+(exVal>1?' examens':' examen')+' sur '+nbReq
+      :'À venir'
+    return '<button class="acc-tuile'+(inscrit?' mien':'')+'" onclick="ouvrirModule('+m.id+')"><b>'+echapAttr(m.nom)+'</b><span>'+etat+'</span></button>'
+  }).join('')+'</div>'
+  $('d-activite').innerHTML=''
+}
+// Titres en majuscules dans la base : plus lisibles en phrase
+function titreLisible(t){
+  const s=String(t||'').trim()
+  const texte=s===s.toUpperCase()?s.toLowerCase():s
+  return texte.charAt(0).toLocaleUpperCase('fr-FR')+texte.slice(1)
+}
+// Prochaine etape : le premier exercice pas encore fait du module de l'aspirant.
+// Un examen a passer maintenant reste seul en haut de l'accueil.
+async function afficherEtapeAccueil(monMod,tents){
+  const el=$('d-etape');if(!el) return
+  if(document.querySelector('#d-rappel .ej-rouge,#d-rappel .ej-sombre')){el.innerHTML='';return}
+  if(!monMod){
+    el.innerHTML='<div class="acc-etape"><div class="acc-etape-label">Pour commencer</div><div class="acc-etape-titre">Explore les modules</div><div class="acc-etape-info">Cours et exercices</div><button class="acc-btn" onclick="nav(\'modules\')">Voir les modules</button></div>'
+    return
+  }
+  const m=MODULES.find(function(x){return x.id===monMod})
+  const {data:qz}=await db.from('quiz').select('id,titre,mode_examen,niveau').eq('module_id',monMod).eq('actif',true).or('archive.is.null,archive.eq.false').order('niveau')
+  const faits=new Set((tents||[]).map(function(x){return x.quiz_id}))
+  const suivant=(qz||[]).find(function(q){return !q.mode_examen&&!faits.has(q.id)})
+  const nomMod=m?echapAttr(m.nom):''
+  el.innerHTML=suivant
+    ?'<div class="acc-etape"><div class="acc-etape-label">Ta prochaine étape</div><div class="acc-etape-titre">'+echapAttr(titreLisible(suivant.titre))+'</div><div class="acc-etape-info">Exercice · '+nomMod+'</div><button class="acc-btn" data-quiz="'+echapAttr(suivant.id)+'" onclick="commencer(this.dataset.quiz)">Continuer</button></div>'
+    :'<div class="acc-etape"><div class="acc-etape-label">Tous les exercices sont faits</div><div class="acc-etape-titre">Révise ton module</div><div class="acc-etape-info">'+nomMod+'</div><button class="acc-btn" onclick="ouvrirModule('+monMod+')">Ouvrir le module</button></div>'
+}
+// Un examen a moins de 7 jours a deja sa carte en haut de l'accueil
+function afficherProchainExamen(exams,tents,monMod){
+  const el=$('d-examen');if(!el) return
+  el.innerHTML=''
+  if(!monMod||G.profil.sans_module||!suitLesModules()) return
+  const n=Date.now(),dans7=n+7*86400000
+  const prochain=(exams||[]).filter(function(q){return Number(q.module_id)===monMod&&q.date_debut&&new Date(q.date_debut).getTime()>n&&!(tents||[]).some(function(t){return t.quiz_id===q.id})})
+    .sort(function(a,b){return new Date(a.date_debut)-new Date(b.date_debut)})[0]
+  if(!prochain||new Date(prochain.date_debut).getTime()<=dans7) return
+  el.innerHTML='<div class="acc-ligne"><span>Prochain examen</span><span>'+new Date(prochain.date_debut).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+'</span></div>'
+}
+
+// ─── PAGE CHERCHER (aspirants) ─────────────────────────────────────────────
+let _chFiltre='tout',_chTexte='',_chResultats=[],_chTok=0,_chMinuteur=null
+const MOTS_CHERCHER=['pompe','vérin','distributeur','moteur','circuit','sécurité']
+function sansAccents(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()}
+function afficherChercher(){
+  $('ch-filtres').innerHTML=[['tout','Tout'],['cours','Cours'],['exercice','Exercices']].map(function(f){
+    return '<button class="ch-puce'+(_chFiltre===f[0]?' on':'')+'" onclick="filtrerChercher(\''+f[0]+'\')">'+f[1]+'</button>'
   }).join('')
-  const recents=tents.slice(0,3)
-  $('d-activite').innerHTML=recents.length?`<div style="margin-top:1.4rem">
-    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:600;margin-bottom:.7rem">Derniers passages</div>
-    ${recents.map(x=>`<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--bord)">
-      <i class="ti ${x.valide?'ti-circle-check':'ti-circle-x'}" style="color:${x.valide?'var(--v)':'var(--t3)'};font-size:1.1rem;flex-shrink:0"></i>
-      <span style="flex:1;font-size:.85rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.quiz?.titre||'—'}</span>
-      <span style="font-size:.72rem;color:var(--t3);flex-shrink:0">${new Date(x.completed_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span>
-    </div>`).join('')}</div>`:''
+  if(_chTexte.length<2) afficherMotsChercher()
+  else afficherResultatsChercher()
+}
+function motsChercherHtml(exclu){
+  return '<div class="ch-mots">'+MOTS_CHERCHER.filter(function(m){return sansAccents(m)!==sansAccents(exclu)}).map(function(m){
+    return '<button class="ch-mot" data-mot="'+m+'" onclick="motChercher(this.dataset.mot)">'+m+'</button>'
+  }).join('')+'</div>'
+}
+function afficherMotsChercher(){$('ch-resultats').innerHTML='<p class="ch-titre">Essaie avec</p>'+motsChercherHtml('')}
+function filtrerChercher(f){_chFiltre=f;afficherChercher()}
+function motChercher(m){$('ch-input').value=m;_chTexte=m;lancerChercher()}
+function saisieChercher(v){
+  _chTexte=String(v||'').trim()
+  clearTimeout(_chMinuteur)
+  if(_chTexte.length<2){_chTok++;_chResultats=[];afficherMotsChercher();return}
+  _chMinuteur=setTimeout(lancerChercher,250)
+}
+async function lancerChercher(){
+  const tok=++_chTok
+  $('ch-resultats').innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
+  // Sans accents : "verin" trouve "vérin". Chaque voyelle ou c vaut n'importe quelle lettre,
+  // puis le filtre ci-dessous garde les vrais resultats.
+  const mots=sansAccents(_chTexte).replace(/[%_,()]/g,' ').split(/\s+/).filter(Boolean)
+  const motif='%'+mots.map(function(m){return m.replace(/[aeiouc]/g,'_')}).join('%')+'%'
+  const [rr,rq]=await Promise.all([
+    avecReprises(function(){return db.from('ressources').select('id,titre,type,module_id,storage_path,url_externe').ilike('titre',motif).limit(40)},1,10000),
+    avecReprises(function(){return db.from('quiz').select('id,titre,module_id,mode_examen').ilike('titre',motif).eq('actif',true).or('archive.is.null,archive.eq.false').limit(40)},1,10000)
+  ])
+  if(tok!==_chTok) return
+  if(rr.error&&rq.error){$('ch-resultats').innerHTML='<p class="ch-titre">La recherche ne répond pas. Vérifie ton réseau, puis réessaie.</p>';_chResultats=[];return}
+  const garde=function(x){const t=sansAccents(x.titre);return mots.every(function(m){return t.indexOf(m)>=0})}
+  const rang=function(x){const t=sansAccents(x.titre);return (t.indexOf(mots[0])===0?0:1000)+t.length}
+  const cours=(rr.data||[]).filter(garde).map(function(x){return {genre:'cours',o:x}})
+  const exos=(rq.data||[]).filter(function(q){return !q.mode_examen&&garde(q)}).map(function(x){return {genre:'exercice',o:x}})
+  _chResultats=cours.concat(exos).sort(function(a,b){return rang(a.o)-rang(b.o)})
+  afficherResultatsChercher()
+}
+function sousTitreChercher(r){
+  const m=MODULES.find(function(x){return x.id===Number(r.o.module_id)})
+  const genre=r.genre==='exercice'?'Exercice':'Cours'+(r.o.type?' '+String(r.o.type).toUpperCase():'')
+  return echapAttr(genre+(m?' · '+m.nom:''))
+}
+function afficherResultatsChercher(){
+  const el=$('ch-resultats')
+  const liste=_chResultats.map(function(r,i){return {r:r,i:i}}).filter(function(x){return _chFiltre==='tout'||x.r.genre===_chFiltre})
+  if(!liste.length){el.innerHTML='<p class="ch-titre">Rien trouvé pour « '+echapAttr(_chTexte)+' ». Essaie un autre mot :</p>'+motsChercherHtml(_chTexte);return}
+  const p=liste[0]
+  let h='<div class="ch-carte"><div class="ch-label">Meilleur résultat</div><h2>'+echapAttr(titreLisible(p.r.o.titre))+'</h2><span class="ch-sous">'+sousTitreChercher(p.r)+'</span>'
+    +'<button class="acc-btn" onclick="ouvrirResultatChercher('+p.i+')">'+(p.r.genre==='exercice'?'Voir l\'exercice':'Ouvrir le cours')+'</button></div>'
+  if(liste.length>1) h+='<div class="ch-liste">'+liste.slice(1,12).map(function(x){
+    return '<button class="ch-ligne" onclick="ouvrirResultatChercher('+x.i+')"><b>'+echapAttr(titreLisible(x.r.o.titre))+'</b><span class="ch-sous">'+sousTitreChercher(x.r)+'</span></button>'
+  }).join('')+'</div>'
+  h+='<p class="ch-titre">Cherche aussi</p>'+motsChercherHtml(_chTexte)
+  el.innerHTML=h
+}
+function ouvrirResultatChercher(i){
+  const r=_chResultats[i];if(!r) return
+  if(r.genre==='exercice') ouvrirModule(Number(r.o.module_id))
+  else ouvrirRes(r.o.id,r.o.storage_path||'',r.o.url_externe||'')
 }
 
 // ─── EXAMEN DU JOUR SUR L'ACCUEIL ──────────────────────────────────────────
@@ -3887,6 +4029,9 @@ async function uploaderFichierLibre(input) {
 
 // ─── SUIVI ─────────────────────────────────────────────────────────────────
 async function loadSuivi() {
+  // Ce qui n'a plus d'onglet reste a portee de main
+  const zl=$('suivi-liens')
+  if(zl) zl.innerHTML=G.aspirant?'<div class="ch-mots" style="margin-bottom:1rem"><button class="ch-puce" onclick="nav(\'modules\')">Tous les modules</button><button class="ch-puce" onclick="nav(\'carnet\')">Carnet de bord</button><button class="ch-puce" onclick="nav(\'anciens\')">Contacts</button></div>':''
   const [{data:t},{data:aq}]=await Promise.all([
     db.from('tentatives').select('*, quiz(module_id,titre,niveau)').eq('aspirant_id',G.profil.id).order('completed_at',{ascending:false}),
     db.from('quiz').select('*').eq('actif',true).or('archive.is.null,archive.eq.false').order('module_id').order('niveau')
