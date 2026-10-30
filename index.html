@@ -1138,7 +1138,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.30-1518'
+const VERSION_APP = '2026.10.30-1534'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1228,7 +1228,9 @@ function sauverCopieEnCours(){
       debut:G.debutCopie||null,
       quand:Date.now()
     }
-    try{localStorage.setItem(CLE_COPIE,JSON.stringify(b))}
+    const complet=JSON.stringify(b)
+    ecrireCopieDurable({quand:b.quand,copie:complet})
+    try{localStorage.setItem(CLE_COPIE,complet)}
     catch(e){
       // Memoire du navigateur pleine (photos gardees dans la copie) :
       // on conserve au moins les reponses et les pieces deja deposees
@@ -1240,6 +1242,61 @@ function sauverCopieEnCours(){
 
 function effacerCopieEnCours(){
   try{localStorage.removeItem(CLE_COPIE)}catch(e){}
+  ecrireCopieDurable({quand:Date.now(),efface:true})
+}
+
+// Sauvegarde durable. localStorage n'est ecrit sur le disque qu'apres plusieurs
+// secondes : si l'application est fermee de force avant, la copie est perdue
+// (un simple rafraichissement, lui, ne perd rien). IndexedDB ecrit tout de suite.
+// Au demarrage, restaurerCopieDurable() remet dans localStorage la version la plus recente.
+let _baseCopie=null
+function ouvrirBaseCopie(){
+  if(_baseCopie) return _baseCopie
+  _baseCopie=new Promise(function(ok,ko){
+    try{
+      const r=indexedDB.open('progmeca_copie',1)
+      r.onupgradeneeded=function(){r.result.createObjectStore('copie')}
+      r.onsuccess=function(){r.result.onclose=function(){_baseCopie=null};ok(r.result)}
+      r.onerror=function(){ko(r.error)}
+    }catch(e){ko(e)}
+  })
+  _baseCopie.catch(function(){_baseCopie=null})
+  return _baseCopie
+}
+async function ecrireCopieDurable(v){
+  // Deux essais : iOS peut fermer la base quand l'application passe en arriere-plan
+  for(let i=0;i<2;i++){
+    try{
+      const d=await ouvrirBaseCopie()
+      d.transaction('copie','readwrite',{durability:'strict'}).objectStore('copie').put(v,'courante')
+      return
+    }catch(e){_baseCopie=null}
+  }
+}
+function lireCopieDurable(){
+  return new Promise(function(ok){
+    const t=setTimeout(function(){ok(null)},1500)
+    ouvrirBaseCopie().then(function(d){
+      const r=d.transaction('copie').objectStore('copie').get('courante')
+      r.onsuccess=function(){clearTimeout(t);ok(r.result||null)}
+      r.onerror=function(){clearTimeout(t);ok(null)}
+    }).catch(function(){clearTimeout(t);ok(null)})
+  })
+}
+async function restaurerCopieDurable(){
+  try{
+    const v=await lireCopieDurable()
+    if(!v) return
+    const local=JSON.parse(localStorage.getItem(CLE_COPIE)||'null')
+    // Copie envoyee ou abandonnee : son effacement a pu se perdre dans localStorage
+    if(v.efface){if(local&&(local.quand||0)<=v.quand)localStorage.removeItem(CLE_COPIE);return}
+    if(local&&(local.quand||0)>(v.quand||0)) return
+    try{localStorage.setItem(CLE_COPIE,v.copie)}
+    catch(e){
+      const b=JSON.parse(v.copie);b.fichiersLibres=piecesSansImages(b.fichiersLibres)
+      localStorage.setItem(CLE_COPIE,JSON.stringify(b))
+    }
+  }catch(e){}
 }
 
 function lireCopieEnCours(){
@@ -2183,6 +2240,7 @@ window.addEventListener('popstate',function(ev){
 async function finDemarrage(){while(G.demarrage) await new Promise(function(ok){setTimeout(ok,100)})}
 async function initApp(){
   G.demarrage=true
+  await restaurerCopieDurable()
   try{await initAppInterne()}finally{G.demarrage=false}
 }
 async function initAppInterne() {
