@@ -1138,7 +1138,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.30-1407'
+const VERSION_APP = '2026.10.30-1453'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1218,6 +1218,7 @@ function sauverCopieEnCours(){
       quizId:G.quizActif.id,
       uid:(G.profil&&G.profil.id)||null,
       aEnvoyer:!!G.aEnvoyer,
+      examen:!!(G.quizActif.mode_examen&&!G.quizActif.essai),
       titre:G.quizActif.titre||'',
       reponses:G.reponses||{},
       fichiersLibres:G.fichiersLibres||{},
@@ -1263,6 +1264,9 @@ window.addEventListener('pagehide',function(){
 })
 
 async function proposerRepriseCopie(){
+  // Le telephone a pu recharger la page pendant que l'appareil photo etait ouvert
+  let attente=0
+  try{attente=parseInt(localStorage.getItem(CLE_ATTENTE_FICHIER)||'0',10)||0;localStorage.removeItem(CLE_ATTENTE_FICHIER)}catch(e){}
   const b=lireCopieEnCours()
   if(!b) return
   if(document.getElementById('v-quiz')&&document.getElementById('v-quiz').classList.contains('on')) return
@@ -1270,6 +1274,12 @@ async function proposerRepriseCopie(){
   if(b.uid&&G.profil&&b.uid!==G.profil.id) return
   // Copie terminee mais pas encore partie : on la renvoie sans rien demander
   if(b.aEnvoyer){reprendreCopie();return}
+  // Retour de l'appareil photo apres un rechargement : la copie se rouvre seule
+  if(attente&&Date.now()-attente<15*60*1000){
+    await reprendreCopie()
+    alert("Ton téléphone a rechargé la page pendant la photo.\n\nTa copie est bien là, mais la photo n'a pas pu revenir.\n\nPrends-la avec l'appareil photo de ton téléphone, puis utilise le bouton Galerie.")
+    return
+  }
   const nb=Object.keys(b.reponses||{}).length
   const modal=document.createElement('div');modal.id='modal-reprise'
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9997;display:flex;align-items:center;justify-content:center;padding:1rem'
@@ -1875,10 +1885,35 @@ function suivreEnvoi(promesse){
   p.then(function(){_envoisPJ=_envoisPJ.filter(function(x){return x!==p})})
   return p
 }
-async function ajouterPieceJointe(qid,fichier){
-  const piece={id:'pj'+Date.now()+Math.random().toString(36).slice(2,6),nom:fichier.name||'photo.jpg',type:estImageFichier(fichier)?'photo':'fichier',etat:'envoi'}
-  _fichiersPJ[piece.id]=fichier
+// Photo prise en direct : le fichier peut etre encore en ecriture, ou devenir
+// illisible ensuite, et certains telephones ne donnent ni type ni extension.
+// On le lit tout de suite en memoire, avec de nouveaux essais si besoin.
+async function copierEnMemoire(f){
+  if(!f||!f.arrayBuffer||f.size>50*1024*1024) return f
+  for(let i=0;i<3;i++){
+    if(i) await new Promise(function(ok){setTimeout(ok,700*i)})
+    try{
+      const buf=await f.arrayBuffer()
+      if(!buf||!buf.byteLength) continue
+      const o=new Uint8Array(buf.slice(0,12))
+      let type=f.type
+      if(!type||type==='application/octet-stream'){
+        if(o[0]===0xFF&&o[1]===0xD8) type='image/jpeg'
+        else if(o[0]===0x89&&o[1]===0x50) type='image/png'
+        else if(String.fromCharCode(o[4],o[5],o[6],o[7])==='ftyp') type='image/heic'
+      }
+      return new File([buf],f.name||'photo.jpg',{type:type||'application/octet-stream',lastModified:Date.now()})
+    }catch(e){}
+  }
+  return f
+}
+async function ajouterPieceJointe(qid,fichierRecu){
+  const piece={id:'pj'+Date.now()+Math.random().toString(36).slice(2,6),nom:fichierRecu.name||'photo.jpg',type:estImageFichier(fichierRecu)?'photo':'fichier',etat:'envoi'}
   const liste=piecesJointes(G.fichiersLibres[qid]);liste.push(piece);G.fichiersLibres[qid]=liste
+  afficherPiecesJointes(qid)
+  const fichier=await copierEnMemoire(fichierRecu)
+  piece.type=estImageFichier(fichier)?'photo':'fichier'
+  _fichiersPJ[piece.id]=fichier
   try{if(piece.type==='photo')_apercusPJ[piece.id]=URL.createObjectURL(fichier)}catch(e){}
   afficherPiecesJointes(qid)
   await traiterPiece(qid,piece,fichier)
@@ -1951,7 +1986,9 @@ function brouillonLibre(){
 }
 let _brouillonTimer=null
 function brouillonLibreSaisie(){clearTimeout(_brouillonTimer);_brouillonTimer=setTimeout(function(){brouillonLibre();sauverCopieEnCours()},700)}
-function avantChoixFichier(){brouillonLibre();sauverCopieEnCours()}
+const CLE_ATTENTE_FICHIER='pm_attente_fichier'
+function avantChoixFichier(){brouillonLibre();sauverCopieEnCours();try{localStorage.setItem(CLE_ATTENTE_FICHIER,String(Date.now()))}catch(e){}}
+function choixFichierAnnule(){try{localStorage.removeItem(CLE_ATTENTE_FICHIER)}catch(e){}}
 // Avant l'envoi de la copie : les pieces gardees dans la copie (reseau ou
 // droits indisponibles pendant l'examen) partent si possible dans le stockage
 async function allegerPiecesJointes(){
@@ -3059,6 +3096,8 @@ async function commencerEssai(){
   // Une seule copie en cours sur le telephone : l'essai ne doit pas ecraser un vrai examen
   const local=lireCopieEnCours()
   if(local&&local.quizId!==ESSAI_ID){toast('Termine d abord ton examen en cours','err');return}
+  // Essai deja commence : on le reprend au lieu de repartir de zero
+  if(local&&(!local.uid||!G.profil||local.uid===G.profil.id)) return reprendreCopie()
   if(await miseAJourAvantExamen(ESSAI_ID,false)) return
   _copiePartie=false
   G.quizActif=quizEssai();G.questions=questionsEssai();G.reponses={};G.fichiersLibres={};G.etape=0;G.choix=null;G.confirme=false
@@ -3127,6 +3166,10 @@ async function commencer(qid) {
   if(qid===ESSAI_ID) return commencerEssai()
   // Une copie attend encore le reseau : elle ne doit pas etre ecrasee par une nouvelle
   if(G.aEnvoyer){toast('Ta copie précédente n est pas encore partie','err');nav('resultats');return}
+  // Un autre examen est en cours sur ce telephone : sa copie ne doit pas etre ecrasee
+  const localC=lireCopieEnCours()
+  const localAMoi=!!localC&&(!localC.uid||!G.profil||localC.uid===G.profil.id)
+  if(localAMoi&&localC.examen&&localC.quizId!==qid){toast('Termine d abord ton examen en cours','err');return}
   _copiePartie=false
   const {data:qinfo}=await db.from('quiz').select('mode_examen,date_debut,date_fin').eq('id',qid).single()
   const isExamen=qinfo?.mode_examen
@@ -3154,6 +3197,8 @@ async function commencer(qid) {
     // On ne supprime RIEN ici : l'ancienne copie reste en base tant que la
     // nouvelle n'est pas envoyee. Rien ne peut etre perdu en cas de plantage.
   }
+  // Copie de cet examen deja commencee sur ce telephone : on la reprend, jamais de zero
+  if(isExamen&&localAMoi&&localC.quizId===qid) return reprendreCopie()
   // Un gacheur peut refaire un examen autant de fois qu'il veut : c'est un test
   if(isExamen&&exist&&G.admin){await db.from('tentatives').delete().eq('id',exist.id)}
   if(!isExamen&&exist){
@@ -3250,11 +3295,17 @@ function showQ() {
     $('q-opts').innerHTML=`<div id="zone-annot" style="display:none;margin-bottom:.9rem"></div>
       <textarea id="rep-libre" class="ftextarea" rows="4" placeholder="Rédige ta réponse ici..." style="width:100%;margin-bottom:.8rem" oninput="brouillonLibreSaisie()">${echapAttr(G.reponses[q.id]||'')}</textarea>
       <div id="pj-liste"></div>
-      <label style="position:relative;display:flex;align-items:center;gap:10px;padding:13px 14px;border:1.5px dashed var(--bord2);border-radius:12px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--t1);background:var(--bg)">
-        <i class="ti ti-camera" style="font-size:1.2rem;color:var(--r)"></i> Ajouter une photo de ton schéma ou un fichier
-        <input type="file" id="fichier-libre" multiple accept="image/*,.pdf,.doc,.docx,.sldprt,.dwg" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0" onclick="avantChoixFichier()" onchange="uploaderFichierLibre(this)"/>
-      </label>
-      <div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.45"><i class="ti ti-bulb"></i> Conseil : prends d'abord la photo avec l'appareil photo de ton téléphone, puis choisis-la ici dans ta galerie. Tu peux en ajouter plusieurs.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <label style="position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 10px;border:1.5px dashed var(--bord2);border-radius:12px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--t1);background:var(--bg);text-align:center">
+          <i class="ti ti-camera" style="font-size:1.2rem;color:var(--r)"></i> Prendre une photo
+          <input type="file" id="fichier-camera" accept="image/*" capture="environment" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0" onclick="avantChoixFichier()" oncancel="choixFichierAnnule()" onchange="uploaderFichierLibre(this)"/>
+        </label>
+        <label style="position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 10px;border:1.5px dashed var(--bord2);border-radius:12px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--t1);background:var(--bg);text-align:center">
+          <i class="ti ti-photo" style="font-size:1.2rem;color:var(--r)"></i> Galerie ou fichier
+          <input type="file" id="fichier-libre" multiple accept="image/*,.pdf,.doc,.docx,.sldprt,.dwg" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0" onclick="avantChoixFichier()" oncancel="choixFichierAnnule()" onchange="uploaderFichierLibre(this)"/>
+        </label>
+      </div>
+      <div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.45"><i class="ti ti-bulb"></i> Si la photo en direct ne revient pas, prends-la avec l'appareil photo de ton téléphone, puis choisis-la avec Galerie. Tu peux en ajouter plusieurs.</div>
       <div id="fichier-statut" style="font-size:.72rem;color:var(--v);margin-top:4px"></div>`
     afficherPiecesJointes(q.id)
     $('btn-valider').disabled=false
@@ -3271,6 +3322,10 @@ function showQ() {
   }
   sh('btn-valider');hi('btn-suivant');hi('btn-terminer')
   if(typeQ!=='libre'){G.choix=null;G.confirme=false}
+  // Retour sur une question deja commencee : la reponse reste selectionnee
+  const dejaRep=G.reponses&&G.reponses[q.id]
+  if(typeQ==='multi'&&Array.isArray(dejaRep)){_multiSelect=new Set();dejaRep.forEach(function(i){choisirMulti(i)})}
+  else if(typeQ!=='multi'&&typeQ!=='libre'&&Number.isInteger(dejaRep)&&(q.options||[])[dejaRep]!==undefined) choisir(dejaRep)
 }
 
 let _multiSelect = new Set()
@@ -3291,12 +3346,19 @@ function choisirMulti(i) {
     }
   })
   $('btn-valider').disabled=_multiSelect.size===0
+  // Gardee tout de suite : l'aspirant peut quitter avant d'avoir valide
+  const qm=G.questions[G.etape]
+  if(_multiSelect.size) G.reponses[qm.id]=[..._multiSelect];else delete G.reponses[qm.id]
+  sauverCopieEnCours()
 }
 
 function choisir(i) {
   if(G.confirme) return;G.choix=i
   G.questions[G.etape].options.forEach((_,j)=>{const b=$('o'+j),d=$('d'+j);b.classList.toggle('sel',j===i)})
   $('btn-valider').disabled=false
+  // Gardee tout de suite : l'aspirant peut quitter avant d'avoir valide
+  G.reponses[G.questions[G.etape].id]=i
+  sauverCopieEnCours()
 }
 
 async function valider() {
@@ -3706,14 +3768,15 @@ async function voirHistorique() {
 }
 
 async function uploaderFichierLibre(input) {
+  choixFichierAnnule()
   const fichiers=Array.from(input.files||[])
-  try{input.value=''}catch(e){}
   if(!fichiers.length||!G.questions[G.etape]) return
   // La question est fixee AVANT l'envoi : si l'aspirant passe a la suite
   // pendant l'envoi, la photo reste rattachee a la bonne question
   const qid=G.questions[G.etape].id
   brouillonLibre()
-  fichiers.forEach(function(f){suivreEnvoi(ajouterPieceJointe(qid,f))})
+  // Le champ n'est vide qu'une fois les fichiers lus : le vider avant peut les rendre illisibles
+  Promise.all(fichiers.map(function(f){return suivreEnvoi(ajouterPieceJointe(qid,f))})).then(function(){try{input.value=''}catch(e){}})
 }
 
 // ─── SUIVI ─────────────────────────────────────────────────────────────────
