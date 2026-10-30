@@ -1138,7 +1138,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.30-1534'
+const VERSION_APP = '2026.10.30-1610'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1230,6 +1230,7 @@ function sauverCopieEnCours(){
     }
     const complet=JSON.stringify(b)
     ecrireCopieDurable({quand:b.quand,copie:complet})
+    envoyerCopieEnLigne({quand:b.quand,etat:JSON.stringify(Object.assign({},b,{fichiersLibres:piecesSansImages(b.fichiersLibres)}))})
     try{localStorage.setItem(CLE_COPIE,complet)}
     catch(e){
       // Memoire du navigateur pleine (photos gardees dans la copie) :
@@ -1242,7 +1243,43 @@ function sauverCopieEnCours(){
 
 function effacerCopieEnCours(){
   try{localStorage.removeItem(CLE_COPIE)}catch(e){}
-  ecrireCopieDurable({quand:Date.now(),efface:true})
+  const quand=Date.now()
+  ecrireCopieDurable({quand:quand,efface:true})
+  envoyerCopieEnLigne({quand:quand,etat:null});pousserCopieEnLigne()
+}
+
+// Copie aussi gardee en ligne (table copies_brouillon) : elle revient meme si le
+// telephone perd sa memoire a la fermeture, ou si l'aspirant change d'appareil.
+let _minuteurEnLigne=null,_copieAPousser=null
+function envoyerCopieEnLigne(v){
+  _copieAPousser=v
+  clearTimeout(_minuteurEnLigne);_minuteurEnLigne=setTimeout(pousserCopieEnLigne,800)
+}
+async function pousserCopieEnLigne(){
+  const v=_copieAPousser
+  clearTimeout(_minuteurEnLigne)
+  if(!v||!G.profil) return
+  _copieAPousser=null
+  try{await db.from('copies_brouillon').upsert({aspirant_id:G.profil.id,quand:v.quand,etat:v.etat,maj_le:new Date().toISOString()})}catch(e){}
+}
+async function restaurerCopieEnLigne(){
+  try{
+    const r=await avecReprises(function(){return db.from('copies_brouillon').select('quand,etat').eq('aspirant_id',G.profil.id).maybeSingle()},1,2500)
+    if(r.error) return 'erreur : '+(r.error.message||'')
+    if(!r.data||!r.data.quand) return 'rien en ligne'
+    const local=JSON.parse(localStorage.getItem(CLE_COPIE)||'null')
+    if(local&&(local.quand||0)>=r.data.quand) return 'locale a jour'
+    if(!r.data.etat){if(local)localStorage.removeItem(CLE_COPIE);return 'effacee en ligne'}
+    localStorage.setItem(CLE_COPIE,r.data.etat)
+    ecrireCopieDurable({quand:r.data.quand,copie:r.data.etat})
+    return 'restauree depuis la ligne'
+  }catch(e){return 'erreur : '+((e&&e.message)||'')}
+}
+// Releve technique du demarrage (aucune reponse ni note) : ce que le telephone a retrouve
+function noterDiag(extra){
+  G.diag=Object.assign(G.diag||{},extra)
+  if(!G.profil) return
+  try{db.from('copies_brouillon').upsert({aspirant_id:G.profil.id,diag:Object.assign({},G.diag,{version:VERSION_APP,heure:new Date().toISOString(),appli:window.matchMedia&&matchMedia('(display-mode: standalone)').matches||navigator.standalone===true,appareil:String(navigator.userAgent||'').slice(0,160)})}).then(function(){},function(){})}catch(e){}
 }
 
 // Sauvegarde durable. localStorage n'est ecrit sur le disque qu'apres plusieurs
@@ -1286,8 +1323,9 @@ function lireCopieDurable(){
 async function restaurerCopieDurable(){
   try{
     const v=await lireCopieDurable()
-    if(!v) return
     const local=JSON.parse(localStorage.getItem(CLE_COPIE)||'null')
+    G.diag={local:local?local.quand:null,durable:v?(v.efface?'effacee':v.quand):null,accueil:Date.now()}
+    if(!v) return
     // Copie envoyee ou abandonnee : son effacement a pu se perdre dans localStorage
     if(v.efface){if(local&&(local.quand||0)<=v.quand)localStorage.removeItem(CLE_COPIE);return}
     if(local&&(local.quand||0)>(v.quand||0)) return
@@ -1313,11 +1351,11 @@ function lireCopieEnCours(){
 // Conserver la copie des que l'application passe en arriere-plan
 document.addEventListener('visibilitychange',function(){
   const v=document.getElementById('v-quiz')
-  if(document.hidden&&v&&v.classList.contains('on')) sauverCopieEnCours()
+  if(document.hidden&&v&&v.classList.contains('on')){sauverCopieEnCours();pousserCopieEnLigne()}
 })
 window.addEventListener('pagehide',function(){
   const v=document.getElementById('v-quiz')
-  if(v&&v.classList.contains('on')) sauverCopieEnCours()
+  if(v&&v.classList.contains('on')){sauverCopieEnCours();pousserCopieEnLigne()}
 })
 
 async function proposerRepriseCopie(){
@@ -1325,10 +1363,11 @@ async function proposerRepriseCopie(){
   let attente=0
   try{attente=parseInt(localStorage.getItem(CLE_ATTENTE_FICHIER)||'0',10)||0;localStorage.removeItem(CLE_ATTENTE_FICHIER)}catch(e){}
   const b=lireCopieEnCours()
-  if(!b) return
-  if(document.getElementById('v-quiz')&&document.getElementById('v-quiz').classList.contains('on')) return
+  if(!b){noterDiag({reprise:'aucune copie'});return}
+  if(document.getElementById('v-quiz')&&document.getElementById('v-quiz').classList.contains('on')){noterDiag({reprise:'deja dans le quiz'});return}
   // Copie d'un autre compte sur ce telephone : on n'y touche pas
-  if(b.uid&&G.profil&&b.uid!==G.profil.id) return
+  if(b.uid&&G.profil&&b.uid!==G.profil.id){noterDiag({reprise:'autre compte'});return}
+  noterDiag({reprise:b.aEnvoyer?'renvoi':(attente?'retour photo':'fenetre'),copie:b.quand,etape:b.etape,nbReponses:Object.keys(b.reponses||{}).length})
   // Copie terminee mais pas encore partie : on la renvoie sans rien demander
   if(b.aEnvoyer){reprendreCopie();return}
   // Retour de l'appareil photo apres un rechargement : la copie se rouvre seule
@@ -2249,6 +2288,8 @@ async function initAppInterne() {
   const {data:p}=await db.from('profils').select('*').eq('id',user.id).single()
   if(!p){await db.auth.signOut();return}
   G.profil=p;G.admin=p.role==='admin';G.userEmail=user.email||''
+  // Memoire du telephone perdue a la fermeture : la copie revient depuis la ligne
+  G.diag=Object.assign(G.diag||{},{enLigne:await restaurerCopieEnLigne()})
   // Compagnon itinerant : memes droits que l'Ancien (ressources, suivi, mini-stages)
   G.compagnon=p.role==='compagnon'
   G.ancien=p.role==='ancien'||G.compagnon

@@ -45,6 +45,21 @@ function tuer(dir){
  const r3=await p.evaluate(()=>({modal:!!document.getElementById('modal-reprise'),local:localStorage.getItem('pm_copie_en_cours')}))
  console.log('apres abandon :',JSON.stringify(r3))
  verifie(!r3.modal&&!r3.local,'copie abandonnee ou envoyee : ne revient pas')
+ // 3) Telephone qui a tout perdu : la copie revient depuis la ligne
+ const r4=await p.evaluate(async()=>{
+   const etat=JSON.stringify({quizId:'essai',uid:'a2',titre:"Examen d'essai",reponses:{essai1:0},fichiersLibres:{},etape:1,quand:Date.now()})
+   __DB.copies_brouillon=[{aspirant_id:'a2',quand:Date.now()+5,etat}]
+   localStorage.removeItem('pm_copie_en_cours')
+   const res=await restaurerCopieEnLigne();await proposerRepriseCopie()
+   const avant=(document.getElementById('modal-reprise')||{}).innerText||null
+   document.getElementById('modal-reprise')?.remove();await reprendreCopie()
+   return {res,avant,etape:G.etape,rep:G.reponses.essai1}})
+ console.log('depuis la ligne :',JSON.stringify(r4).slice(0,170))
+ verifie(r4.res==='restauree depuis la ligne'&&/1 réponse/.test(r4.avant||'')&&r4.etape===1&&r4.rep===0,'copie restauree depuis la ligne')
+ // 4) Copie effacee en ligne (envoyee sur un autre appareil) : elle ne revient pas
+ const r5=await p.evaluate(async()=>{arreterTimer();localStorage.setItem('pm_copie_en_cours',JSON.stringify({quizId:'essai',quand:Date.now()-1000}));__DB.copies_brouillon=[{aspirant_id:'a2',quand:Date.now(),etat:null}];return {res:await restaurerCopieEnLigne(),local:localStorage.getItem('pm_copie_en_cours')}})
+ console.log('effacee en ligne :',JSON.stringify(r5))
+ verifie(r5.res==='effacee en ligne'&&!r5.local,'copie effacee en ligne : ne revient pas')
  console.log('ERREURS JS :',errs.length?errs:'aucune')
  await c.close();try{fs.rmSync(dir,{recursive:true,force:true})}catch(e){}
  process.exit(echecs?1:0)
