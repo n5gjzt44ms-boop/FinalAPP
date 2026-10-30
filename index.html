@@ -1138,7 +1138,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.30-1453'
+const VERSION_APP = '2026.10.30-1518'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1297,6 +1297,7 @@ async function reprendreCopie(){
   const b=lireCopieEnCours()
   document.getElementById('modal-reprise')?.remove()
   if(!b) return
+  await finDemarrage()
   if(await miseAJourAvantExamen(b.quizId,true)) return
   const [rq,rqs]=b.quizId===ESSAI_ID?[{data:quizEssai()},{data:questionsEssai()}]:await Promise.all([
     avecReprises(function(){return db.from('quiz').select('*').eq('id',b.quizId).single()}),
@@ -2178,7 +2179,13 @@ window.addEventListener('popstate',function(ev){
   document.head.appendChild(l)
 }catch(e){}})()
 
-async function initApp() {
+// Une reprise attend la fin du demarrage : sinon l'ouverture de l'accueil la referme
+async function finDemarrage(){while(G.demarrage) await new Promise(function(ok){setTimeout(ok,100)})}
+async function initApp(){
+  G.demarrage=true
+  try{await initAppInterne()}finally{G.demarrage=false}
+}
+async function initAppInterne() {
   const {data:{user}}=await db.auth.getUser()
   if(!user) return
   const {data:p}=await db.from('profils').select('*').eq('id',user.id).single()
@@ -3104,7 +3111,7 @@ async function commencerEssai(){
   G.finExamen=new Date(Date.now()+10*60*1000)
   G.debutCopie=Date.now()
   if(typeof _multiSelect!=='undefined') _multiSelect=new Set()
-  nav('quiz');showQ();demarrerTimer()
+  nav('quiz');showQ();demarrerTimer();sauverCopieEnCours()
 }
 function masquerEssai(){try{localStorage.setItem(CLE_ESSAI_MASQUE,'1')}catch(e){};loadDashboard()}
 function ligneEssai(ok,titre,detail){
@@ -3222,7 +3229,7 @@ async function commencer(qid) {
   G.quizActif=q;G.questions=qs||[];G.reponses={};G.fichiersLibres={};G.etape=0;G.choix=null;G.confirme=false
   G.finExamen=calculerFinExamen(q)
   G.debutCopie=Date.now()
-  nav('quiz');showQ();demarrerTimer()
+  nav('quiz');showQ();demarrerTimer();sauverCopieEnCours()
 }
 
 function showQ() {
@@ -3436,7 +3443,7 @@ async function valider() {
   hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant')
 }
 
-function suivant(){sauverCopieEnCours();G.etape++;G.choix=null;G.confirme=false;_multiSelect=new Set();showQ()}
+function suivant(){G.etape++;G.choix=null;G.confirme=false;_multiSelect=new Set();sauverCopieEnCours();showQ()}
 
 // Reseau faible : on reessaie seul, avec un delai maximum par essai.
 // Seules les pannes reseau sont rejouees (un refus de la base ne changerait pas).
