@@ -102,7 +102,7 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - En ligne : v2026.10.30-1610.
 - `copies_brouillon` (`sql/brouillon_en_ligne.sql`, exécuté le 30/10) : une ligne par personne. `etat` = copie en cours sans images, `diag` = relevé du démarrage (dates, version, appareil), jamais de réponse ni de note. Pour diagnostiquer un téléphone : lire `diag` et `maj_le`.
 - `sql/anti_doublons.sql` (index `uniq_tentative_envoi`) : exécuté le 30/10.
-- `sql/essai_photos.sql` : pas encore exécuté. Sans cette règle, les photos de l'examen d'essai restent dans le stockage (`essai_*`) ; l'essai fonctionne quand même.
+- `sql/essai_photos.sql` : exécuté le 30/10. Les photos d'essai déposées avant cette date restent dans le stockage (`essai_*`). Retrait réel à vérifier au prochain essai avec photo.
 - Stockage : aucune règle de suppression sauf celle de l'essai. `remove()` ne fait donc rien, même pour un gâcheur (fichiers de ressources supprimées encore stockés).
 - SQL : la requête de vérification renvoie les 10 lignes attendues (30/10).
 - Quelques copies de rattrapage parties vides (ancien bug, ou téléphone resté sur une ancienne version). Leur accès est encore ouvert : les aspirants doivent repasser l'examen avec la version à jour.
