@@ -27,7 +27,7 @@ window.__DB=DB
 function Q(t){this.t=t;this.f=[];this.one=false;this.headc=false}
 const P=Q.prototype
 ;['order','limit','range','gte','lte','or','not','ilike','upsert','update','delete','insert','neq','contains'].forEach(m=>P[m]=function(){
-  if(m==='ilike'){const [col,pat]=arguments;const s=pat.replace(/%/g,'').toLowerCase();this.f.push(r=>String(r[col]||'').toLowerCase().includes(s))}
+  if(m==='ilike'){const [col,pat]=arguments;const re=new RegExp('^'+pat.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*').replace(/_/g,'.')+'$','i');this.f.push(r=>re.test(String(r[col]||'')))}
   if(m==='or'&&/ilike/.test(arguments[0])){const s=(arguments[0].match(/%([^%]+)%/)||[])[1]||'';this.f.push(r=>((r.prenom||'')+' '+(r.nom||'')).toLowerCase().includes(s.toLowerCase()))}
   return this})
 P.select=function(a,o){if(o&&o.head)this.headc=true;return this}
