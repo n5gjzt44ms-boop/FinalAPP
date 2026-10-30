@@ -98,7 +98,7 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - Chaque scénario affiche ce qu'il voit et finit par « ERREURS JS : aucune ». Lire la sortie, pas seulement « OK ».
 
 ## État actuel (30/10/2026)
-- En ligne : v2026.10.30-1453.
+- En ligne : v2026.10.30-1518.
 - `sql/anti_doublons.sql` (index `uniq_tentative_envoi`) : exécuté le 30/10.
 - `sql/essai_photos.sql` : pas encore exécuté. Sans cette règle, les photos de l'examen d'essai restent dans le stockage (`essai_*`) ; l'essai fonctionne quand même.
 - Stockage : aucune règle de suppression sauf celle de l'essai. `remove()` ne fait donc rien, même pour un gâcheur (fichiers de ressources supprimées encore stockés).
@@ -116,4 +116,5 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - 30/10 (v2026.10.30-1226) : copie terminée sans réseau gardée sur le téléphone et renvoyée seule au retour du réseau (une seule fois). Reprises automatiques sur réseau faible. Une note n'est plus effacée sans être archivée (rattrapage, déblocage, suppression de copie). Un quiz qui a des copies est archivé au lieu d'être supprimé. Dépôts de fichiers : les échecs sont signalés. Scénario `e2e_envoi.js`.
 - 30/10 (v2026.10.30-1332) : si la base refuse une copie en doublon (même heure de début), la copie déjà arrivée compte : rien n'est renvoyé ni effacé. Ajout de `sql/anti_doublons.sql` et du scénario `e2e_depots.js` (doublon, dépôts en échec, quiz avec copies archivé).
 - 30/10 (v2026.10.30-1407) : examen d'essai sur l'accueil aspirant et dans les raccourcis gâcheur : mêmes écrans qu'un examen, vérification de l'envoi, de la photo et de la version, sans copie ni note. Scénario `e2e_essai.js`.
-- 30/10 (v2026.10.30-1453) : quitter un examen puis revenir ne repart plus de zéro (boutons Commencer et essai). Réponse sélectionnée gardée avant validation. Un exercice ne peut plus écraser un examen en cours. Bouton « Prendre une photo » séparé de « Galerie ou fichier », photo lue en mémoire tout de suite, avec reprise et message si le téléphone recharge la page. Scénario `e2e_reprise.js`. Photo en direct à confirmer sur de vrais téléphones.
+- 30/10 (v2026.10.30-1453) : quitter un examen puis revenir ne repart plus de zéro (boutons Commencer et essai). Réponse sélectionnée gardée avant validation. Un exercice ne peut plus écraser un examen en cours. Bouton « Prendre une photo » séparé de « Galerie ou fichier », photo lue en mémoire tout de suite, avec reprise et message si le téléphone recharge la page. Scénario `e2e_reprise.js`. Photo en direct confirmée par Benoît.
+- 30/10 (v2026.10.30-1518) : copie enregistrée dès l'ouverture de l'examen et à la bonne question après Suivant. Une reprise attend la fin du démarrage (`finDemarrage()`) pour que l'accueil ne la referme pas. Fermer puis reprendre vérifié sur le vrai site avec le compte aspirant de test (ordinateur). Retour à zéro signalé sur téléphone, cause à confirmer.
