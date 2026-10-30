@@ -97,9 +97,8 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - Chaque scénario affiche ce qu'il voit et finit par « ERREURS JS : aucune ». Lire la sortie, pas seulement « OK ».
 
 ## État actuel (30/10/2026)
-- En ligne : v2026.10.29-1045.
-- SQL dont l'exécution est confirmée : `copie_manquante_droits`, `repasser_examen_droits`, `protection_rattrapage`.
-- À confirmer avec la requête ci-dessus : `rattrapage_date_limite`, `depot_photos_examen`, `historique_admin`, et les blocs 3-4 de `reparation_copies_et_carnet`.
+- En ligne : v2026.10.30-1226.
+- SQL : la requête de vérification renvoie les 10 lignes attendues (30/10).
 - Quelques copies de rattrapage parties vides (ancien bug, ou téléphone resté sur une ancienne version). Leur accès est encore ouvert : les aspirants doivent repasser l'examen avec la version à jour.
 - Copies aux réponses orphelines (quiz modifiés après l'examen : soudage, Partie 1 électrique, Moteur) : seule la note enregistrée compte.
 - Examens électriques Parties 2, 3 et 4 (30/11, 04/01, 25/01) : encore privés au 27/10. Les publier avant leur date ; l'accueil gâcheur le signale.
@@ -110,3 +109,4 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - 28/10 : rattrapage envoyé vide au bout d'une seconde (le minuteur visait la fin du créneau) : corrigé. Photos de schéma refusées par le stockage : elles sont maintenant réduites et gardées dans la copie si besoin. Examen du jour sur l'accueil aspirant, nouvel accueil gâcheur, barre du bas Copies et Aspirants.
 - 29/10 : mise à jour automatique avant chaque examen. Version et heure de début enregistrées dans chaque copie (badge « Envoyée X s après le début »). La base refuse les copies vides pendant un rattrapage. Questionnaire des Anciens réparé (il plantait à l'ouverture).
 - 30/10 : passage à Claude Code. Ajout de ce fichier, des tests (`tests/`) et des SQL (`sql/`) dans le dépôt.
+- 30/10 (v2026.10.30-1226) : copie terminée sans réseau gardée sur le téléphone et renvoyée seule au retour du réseau (une seule fois). Reprises automatiques sur réseau faible. Une note n'est plus effacée sans être archivée (rattrapage, déblocage, suppression de copie). Un quiz qui a des copies est archivé au lieu d'être supprimé. Dépôts de fichiers : les échecs sont signalés. Scénario `e2e_envoi.js`.
