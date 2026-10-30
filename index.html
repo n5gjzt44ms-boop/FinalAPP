@@ -781,9 +781,9 @@ button,input,select,textarea{font-family:var(--ff)}
         </div>
         <div class="card hidden" id="r-revisions"></div>
         <div class="card">
-          <div class="card-head"><span class="card-title">Détail des réponses</span></div>
+          <div class="card-head"><span class="card-title" id="r-detail-titre">Détail des réponses</span></div>
           <div class="card-body" id="r-detail"></div>
-          <div class="card-foot">
+          <div class="card-foot" id="r-foot">
             <button class="btn btn-ghost" onclick="retourModule()"><i class="ti ti-arrow-left"></i> Retour</button>
             <button class="btn btn-ghost btn-sm" onclick="voirHistorique()"><i class="ti ti-history"></i> Historique</button>
           </div>
@@ -1138,7 +1138,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.30-1332'
+const VERSION_APP = '2026.10.30-1407'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1288,7 +1288,7 @@ async function reprendreCopie(){
   document.getElementById('modal-reprise')?.remove()
   if(!b) return
   if(await miseAJourAvantExamen(b.quizId,true)) return
-  const [rq,rqs]=await Promise.all([
+  const [rq,rqs]=b.quizId===ESSAI_ID?[{data:quizEssai()},{data:questionsEssai()}]:await Promise.all([
     avecReprises(function(){return db.from('quiz').select('*').eq('id',b.quizId).single()}),
     avecReprises(function(){return db.from('questions').select('*').eq('quiz_id',b.quizId).order('ordre')})
   ])
@@ -1858,7 +1858,9 @@ function reduireImage(fichier,maxCote,qualite){
 async function envoyerAuStockage(blob,nom,contentType){
   if(!blob||!G.profil) return {erreur:'aucun fichier'}
   const propre=String(nom||'piece').replace(/[^a-zA-Z0-9._-]/g,'-').slice(-60)
-  const path='reponses-libres/'+G.profil.id+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+propre
+  // Prefixe essai_ : seules ces photos peuvent etre retirees par l'aspirant (sql/essai_photos.sql)
+  const prefixe=(G.quizActif&&G.quizActif.essai)?'essai_':''
+  const path='reponses-libres/'+G.profil.id+'/'+prefixe+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+propre
   try{
     const envoi=db.storage.from('ressources').upload(path,blob,{contentType:contentType||blob.type||'application/octet-stream',upsert:false})
     const delai=new Promise(function(res){setTimeout(function(){res({error:{message:'le réseau ne répond pas'}})},45000)})
@@ -2466,6 +2468,7 @@ async function loadDashboardAdmin(){
   const tuiles=[
     {p:"allerCorrections('attente',0)",i:'ti-checkbox',t:'Copies',b:aCorriger.length},
     {p:"nav('quiz-admin')",i:'ti-help-circle',t:'Quiz et examens'},
+    {p:"commencerEssai()",i:'ti-school',t:"Examen d'essai"},
     {p:"nav('aspirants')",i:'ti-users',t:'Aspirants'},
     {p:"nav('inscriptions-admin')",i:'ti-calendar-event',t:'Inscriptions'},
     {p:"nav('annonces-admin')",i:'ti-speakerphone',t:'Annonces'},
@@ -2594,7 +2597,7 @@ async function afficherExamensAccueil(exams,tents){
   cartes.sort(function(a,b){return (ordre[a.etat]-ordre[b.etat])||((a.deb?a.deb.getTime():0)-(b.deb?b.deb.getTime():0))})
   let unBientot=false
   const aAfficher=cartes.filter(function(x){if(x.etat!=='bientot')return true;if(unBientot)return false;unBientot=true;return true})
-  el.innerHTML=aAfficher.map(carteExamenAccueil).join('')
+  el.innerHTML=aAfficher.map(carteExamenAccueil).join('')+carteEssaiAccueil(cartes,passeLesExamens,local)
   if(el.querySelector('.acc-cd')) _accTimer=setInterval(majComptesAccueil,1000)
 }
 function carteExamenAccueil(x){
@@ -3041,7 +3044,87 @@ function compteARebours(dateDebut,dateFin) {
 }
 
 // ─── QUIZ PASSATION ────────────────────────────────────────────────────────
+// ─── EXAMEN D'ESSAI ────────────────────────────────────────────────────────
+// Meme parcours qu'un vrai examen (minuteur, photo, envoi, reprise), mais rien
+// n'est enregistre en base : aucune copie, aucune note, aucun point.
+const ESSAI_ID='essai',CLE_ESSAI='pm_essai_fait',CLE_ESSAI_MASQUE='pm_essai_masque'
+function quizEssai(){return {id:ESSAI_ID,titre:"Examen d'essai",mode_examen:true,essai:true,module_id:null}}
+function questionsEssai(){return [
+  {id:'essai1',ordre:1,type_question:'qcm',points:1,enonce:"Ceci est un essai : rien n'est noté. Touche une réponse, puis Valider.",options:['Je choisis celle-ci','Ou plutôt celle-là']},
+  {id:'essai2',ordre:2,type_question:'multi',points:1,enonce:"Ici, plusieurs réponses sont possibles. Touche-en au moins une, puis Valider.",options:['Première réponse','Deuxième réponse','Troisième réponse']},
+  {id:'essai3',ordre:3,type_question:'libre',points:1,enonce:"Écris quelques mots, puis joins une photo. Par exemple un petit croquis sur une feuille. C'est le geste le plus important à essayer.",options:[]}
+]}
+async function commencerEssai(){
+  if(G.aEnvoyer){toast('Ta copie précédente n est pas encore partie','err');nav('resultats');return}
+  // Une seule copie en cours sur le telephone : l'essai ne doit pas ecraser un vrai examen
+  const local=lireCopieEnCours()
+  if(local&&local.quizId!==ESSAI_ID){toast('Termine d abord ton examen en cours','err');return}
+  if(await miseAJourAvantExamen(ESSAI_ID,false)) return
+  _copiePartie=false
+  G.quizActif=quizEssai();G.questions=questionsEssai();G.reponses={};G.fichiersLibres={};G.etape=0;G.choix=null;G.confirme=false
+  G.finExamen=new Date(Date.now()+10*60*1000)
+  G.debutCopie=Date.now()
+  if(typeof _multiSelect!=='undefined') _multiSelect=new Set()
+  nav('quiz');showQ();demarrerTimer()
+}
+function masquerEssai(){try{localStorage.setItem(CLE_ESSAI_MASQUE,'1')}catch(e){};loadDashboard()}
+function ligneEssai(ok,titre,detail){
+  return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--bord)"><i class="ti '+(ok?'ti-circle-check':'ti-alert-triangle')+'" style="font-size:1.2rem;flex-shrink:0;color:'+(ok?'var(--v)':'var(--amber)')+'"></i>'
+    +'<div style="min-width:0"><div style="font-size:.86rem;font-weight:600">'+titre+'</div><div style="font-size:.75rem;color:var(--t2);margin-top:2px;line-height:1.45">'+detail+'</div></div></div>'
+}
+// Fin de l'essai : on verifie le reseau, les photos et la version, puis on efface tout
+async function finEssai(){
+  const net=await avecReprises(function(){return db.from('quiz').select('id').limit(1)})
+  if(net.error){afficherEchecEnvoi(net.error);return}
+  const pieces=[]
+  Object.keys(G.fichiersLibres||{}).forEach(function(q){piecesJointes(G.fichiersLibres[q]).forEach(function(p){pieces.push(p)})})
+  const recues=pieces.filter(function(p){return p.path}),gardees=pieces.filter(function(p){return !p.path&&p.image}),ratees=pieces.filter(function(p){return !p.path&&!p.image})
+  const v=await versionEnLigne()
+  const aJour=!v||v<=VERSION_APP
+  const photoOk=recues.length>0&&!gardees.length&&!ratees.length
+  const tout=photoOk&&aJour
+  // Les photos d'essai ne servent a rien : on les retire du stockage
+  if(recues.length){try{await db.storage.from('ressources').remove(recues.map(function(p){return p.path}))}catch(e){}}
+  _copiePartie=true;G.aEnvoyer=false;effacerCopieEnCours()
+  if(tout){try{localStorage.setItem(CLE_ESSAI,new Date().toISOString())}catch(e){}}
+  const c=$('r-circle');c.style.borderColor=tout?'var(--v)':'var(--amber)'
+  $('r-score').textContent=tout?'✓':'!';$('r-score').style.color=tout?'var(--v)':'var(--amber)';$('r-total').textContent=''
+  $('r-verdict').textContent=tout?'Ton téléphone est prêt':'Encore un point à vérifier';$('r-verdict').style.color=tout?'var(--v)':'var(--amber)'
+  $('r-msg').textContent="C'était un essai : aucune copie ni note n'a été créée."
+  $('r-comps').innerHTML='';hi('r-revisions')
+  $('r-detail-titre').textContent='Ce qui a été vérifié'
+  $('r-foot').style.display='none';$('r-historique').style.display='none'
+  $('r-detail').innerHTML=ligneEssai(true,'Envoi','Le serveur a bien répondu à ton téléphone.')
+    +(photoOk?ligneEssai(true,'Photo',recues.length>1?recues.length+' photos ont bien été reçues.':'Ta photo a bien été reçue.')
+      :!pieces.length?ligneEssai(false,'Photo',"Tu n'as pas joint de photo. Refais l'essai pour vérifier ce geste.")
+      :gardees.length?ligneEssai(false,'Photo',"Le dépôt de ta photo a échoué. Le jour de l'examen, elle resterait dans ta copie, mais préviens ton gâcheur.")
+      :ligneEssai(false,'Photo',"Une pièce n'a pas pu être jointe. Essaie avec une photo prise depuis ta galerie."))
+    +(aJour?ligneEssai(true,'Application','Tu as la dernière version.'):ligneEssai(false,'Application',"Une nouvelle version existe : ferme puis rouvre l'application."))
+    +'<p style="font-size:.76rem;color:var(--t2);line-height:1.5;margin:.9rem 0">Bon à savoir : pendant un vrai examen, si le réseau coupe au moment d\'envoyer, ta copie reste sur ton téléphone et repart toute seule.</p>'
+    +'<button class="btn btn-r btn-full" onclick="nav(\'dashboard\')"><i class="ti ti-home"></i> Retour à l\'accueil</button>'
+    +'<button class="btn btn-ghost btn-full" style="margin-top:.6rem" onclick="commencerEssai()"><i class="ti ti-refresh"></i> Refaire l\'essai</button>'
+}
+function carteEssaiAccueil(cartes,passeLesExamens,local){
+  if(local&&local.quizId===ESSAI_ID){
+    return '<div class="ej ej-blanc" style="border-left:4px solid var(--b)"><div class="ej-label" style="color:var(--b)"><i class="ti ti-school"></i> Examen d\'essai en cours</div>'
+      +'<div class="ej-meta" style="color:var(--t2)">Reprends là où tu t\'étais arrêté.</div>'
+      +'<button class="btn btn-r ej-btn" onclick="reprendreCopie()"><i class="ti ti-player-play"></i> Reprendre l\'essai</button></div>'
+  }
+  if(!passeLesExamens) return ''
+  // Un vrai examen est prioritaire : on ne propose pas l'essai a ce moment-la
+  if(cartes.some(function(x){return ['reprendre','en_cours','rattrapage','aujourdhui'].indexOf(x.etat)>=0})) return ''
+  let vu=false
+  try{vu=!!(localStorage.getItem(CLE_ESSAI)||localStorage.getItem(CLE_ESSAI_MASQUE))}catch(e){}
+  if(vu) return '<button class="btn btn-ghost btn-sm" style="margin-bottom:10px" onclick="commencerEssai()"><i class="ti ti-school"></i> Refaire l\'examen d\'essai</button>'
+  return '<div class="ej ej-blanc" style="border-left:4px solid var(--b)"><div class="ej-label" style="color:var(--b)"><i class="ti ti-school"></i> Prépare-toi en 2 minutes</div>'
+    +'<div class="ej-titre" style="font-size:.98rem">Fais l\'examen d\'essai</div>'
+    +'<div class="ej-meta" style="color:var(--t2)">Essaie les questions et l\'envoi d\'une photo avant le jour J. Rien n\'est noté et aucune copie n\'est créée.</div>'
+    +'<button class="btn btn-r ej-btn" onclick="commencerEssai()"><i class="ti ti-player-play"></i> Commencer l\'essai</button>'
+    +'<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="masquerEssai()">Plus tard</button></div>'
+}
+
 async function commencer(qid) {
+  if(qid===ESSAI_ID) return commencerEssai()
   // Une copie attend encore le reseau : elle ne doit pas etre ecrasee par une nouvelle
   if(G.aEnvoyer){toast('Ta copie précédente n est pas encore partie','err');nav('resultats');return}
   _copiePartie=false
@@ -3348,6 +3431,8 @@ async function envoyerCopie() {
     try{await Promise.all(_envoisPJ.slice())}catch(e){}
   }
   try{await allegerPiecesJointes()}catch(e){}
+  // Examen d'essai : verification seulement, rien n'est ecrit en base
+  if(G.quizActif&&G.quizActif.essai) return finEssai()
   const rqr=await avecReprises(function(){return db.from('questions').select('*').eq('quiz_id',G.quizActif.id)})
   const qr=rqr.data
   if(!qr?.length){afficherEchecEnvoi(rqr.error||{message:'questions introuvables'});return}
@@ -3478,6 +3563,7 @@ async function voirRes(tentId) {
 
 function afficheRes() {
   const {tent,questions,parComp,score,valide,modId,reps}=G.tentResult
+  $('r-detail-titre').textContent='Détail des réponses';$('r-foot').style.display=''
   const aDesLibres=G.tentResult?.aDesLibres||questions.some(q=>q.type_question==='libre')
   const enAttente=aDesLibres&&(tent?.note_admin===null||tent?.note_admin===undefined)
   const c=$('r-circle')

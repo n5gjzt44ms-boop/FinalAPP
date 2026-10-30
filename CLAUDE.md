@@ -34,6 +34,7 @@ En fin de session, le mettre à jour avec la commande `/fin-de-session`.
 - Mise à jour automatique : `versionEnLigne()`, `miseAJourAvantExamen()` (avant tout examen ; l'examen se rouvre seul après), `verifierMiseAJour()` (au retour dans l'appli et toutes les 10 min).
 - Accueil aspirant : `loadDashboard()` puis `afficherExamensAccueil()`. Carte en haut de l'accueil : examen du jour avec compte à rebours, examen en cours, rattrapage ouvert, copie à reprendre.
 - Accueil gâcheur : `loadDashboardAdmin()`. À faire (copies, absents, aspirants sans module), examens du jour avec bouton « Publier », prochains examens, rattrapages, raccourcis.
+- Examen d'essai : `commencerEssai()`, `finEssai()`, `carteEssaiAccueil()`. Questions dans le code (`questionsEssai()`), `quiz.essai=true`, aucune écriture en base. Fait ou masqué : `localStorage` (`pm_essai_fait`, `pm_essai_masque`).
 - Passage d'un quiz : `ouvrirModule()` et `renderEval()`, puis `commencer(qid)`, `showQ()`, `valider()`, `suivant()`, `terminer()`. `terminer()` envoie la copie avec deux replis, puis archive l'ancienne copie et retire le rattrapage.
 - Reprise après un rechargement (appareil photo, PDF) : `sauverCopieEnCours()` et `reprendreCopie()` (`localStorage` `pm_copie_en_cours`, valable 12 h).
 - Pièces jointes (schéma fait à la main) : `uploaderFichierLibre()`, `reduireImage()` (1600 px, JPEG 0,72), `envoyerAuStockage()`. Si le dépôt échoue, l'image est gardée dans la copie. `piecesJointes()` lit aussi l'ancien format (un objet unique).
@@ -97,8 +98,10 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - Chaque scénario affiche ce qu'il voit et finit par « ERREURS JS : aucune ». Lire la sortie, pas seulement « OK ».
 
 ## État actuel (30/10/2026)
-- En ligne : v2026.10.30-1332.
-- `sql/anti_doublons.sql` (index `uniq_tentative_envoi`) : à exécuter une fois cette version en ligne (prévu depuis l'autre session).
+- En ligne : v2026.10.30-1407.
+- `sql/anti_doublons.sql` (index `uniq_tentative_envoi`) : exécuté le 30/10.
+- `sql/essai_photos.sql` : pas encore exécuté. Sans cette règle, les photos de l'examen d'essai restent dans le stockage (`essai_*`) ; l'essai fonctionne quand même.
+- Stockage : aucune règle de suppression sauf celle de l'essai. `remove()` ne fait donc rien, même pour un gâcheur (fichiers de ressources supprimées encore stockés).
 - SQL : la requête de vérification renvoie les 10 lignes attendues (30/10).
 - Quelques copies de rattrapage parties vides (ancien bug, ou téléphone resté sur une ancienne version). Leur accès est encore ouvert : les aspirants doivent repasser l'examen avec la version à jour.
 - Copies aux réponses orphelines (quiz modifiés après l'examen : soudage, Partie 1 électrique, Moteur) : seule la note enregistrée compte.
@@ -112,3 +115,4 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - 30/10 : passage à Claude Code. Ajout de ce fichier, des tests (`tests/`) et des SQL (`sql/`) dans le dépôt.
 - 30/10 (v2026.10.30-1226) : copie terminée sans réseau gardée sur le téléphone et renvoyée seule au retour du réseau (une seule fois). Reprises automatiques sur réseau faible. Une note n'est plus effacée sans être archivée (rattrapage, déblocage, suppression de copie). Un quiz qui a des copies est archivé au lieu d'être supprimé. Dépôts de fichiers : les échecs sont signalés. Scénario `e2e_envoi.js`.
 - 30/10 (v2026.10.30-1332) : si la base refuse une copie en doublon (même heure de début), la copie déjà arrivée compte : rien n'est renvoyé ni effacé. Ajout de `sql/anti_doublons.sql` et du scénario `e2e_depots.js` (doublon, dépôts en échec, quiz avec copies archivé).
+- 30/10 (v2026.10.30-1407) : examen d'essai sur l'accueil aspirant et dans les raccourcis gâcheur : mêmes écrans qu'un examen, vérification de l'envoi, de la photo et de la version, sans copie ni note. Scénario `e2e_essai.js`.
