@@ -25,7 +25,7 @@ En fin de session, le mettre à jour avec la commande `/fin-de-session`.
 ## Façon de travailler
 - À chaque livraison, incrémenter `VERSION_APP` (format `AAAA.MM.JJ-HHMM`). Elle s'affiche en haut de l'appli et sert à la mise à jour automatique des téléphones.
 - Tester avant de pousser : `npm test` (voir « Tests »). Pour chaque bug corrigé, ajouter un scénario.
-- SQL : Benoît l'exécute lui-même dans Supabase (SQL Editor). Fournir un fichier autonome et rejouable (`IF NOT EXISTS`, `DROP POLICY IF EXISTS`), rangé dans `sql/`. Le SQL Editor n'affiche que le résultat de la dernière requête : mettre la vérification à la fin.
+- SQL : Benoît autorise Claude à exécuter le SQL rejouable via le connecteur Supabase ; toute suppression de copies, notes ou fichiers reste à lui demander. Fichier autonome et rejouable (`IF NOT EXISTS`, `DROP POLICY IF EXISTS`), rangé dans `sql/`, vérification à la fin.
 - Code : commentaires en français sans accents (style existant). Interface en français ; on tutoie les aspirants (« Pays »).
 - Design : police Inter, fond crème `#EDECE9`, cartes arrondies, ombres douces. Couleurs par variables CSS (`--r` rouge, `--v` vert, `--amber`, `--b` bleu). Mode sombre : `body.dark`.
 
@@ -97,7 +97,8 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - Chaque scénario affiche ce qu'il voit et finit par « ERREURS JS : aucune ». Lire la sortie, pas seulement « OK ».
 
 ## État actuel (30/10/2026)
-- En ligne : v2026.10.30-1226.
+- En ligne : v2026.10.30-1332.
+- `sql/anti_doublons.sql` (index `uniq_tentative_envoi`) : à exécuter une fois cette version en ligne (prévu depuis l'autre session).
 - SQL : la requête de vérification renvoie les 10 lignes attendues (30/10).
 - Quelques copies de rattrapage parties vides (ancien bug, ou téléphone resté sur une ancienne version). Leur accès est encore ouvert : les aspirants doivent repasser l'examen avec la version à jour.
 - Copies aux réponses orphelines (quiz modifiés après l'examen : soudage, Partie 1 électrique, Moteur) : seule la note enregistrée compte.
@@ -110,3 +111,4 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - 29/10 : mise à jour automatique avant chaque examen. Version et heure de début enregistrées dans chaque copie (badge « Envoyée X s après le début »). La base refuse les copies vides pendant un rattrapage. Questionnaire des Anciens réparé (il plantait à l'ouverture).
 - 30/10 : passage à Claude Code. Ajout de ce fichier, des tests (`tests/`) et des SQL (`sql/`) dans le dépôt.
 - 30/10 (v2026.10.30-1226) : copie terminée sans réseau gardée sur le téléphone et renvoyée seule au retour du réseau (une seule fois). Reprises automatiques sur réseau faible. Une note n'est plus effacée sans être archivée (rattrapage, déblocage, suppression de copie). Un quiz qui a des copies est archivé au lieu d'être supprimé. Dépôts de fichiers : les échecs sont signalés. Scénario `e2e_envoi.js`.
+- 30/10 (v2026.10.30-1332) : si la base refuse une copie en doublon (même heure de début), la copie déjà arrivée compte : rien n'est renvoyé ni effacé. Ajout de `sql/anti_doublons.sql` et du scénario `e2e_depots.js` (doublon, dépôts en échec, quiz avec copies archivé).

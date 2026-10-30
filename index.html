@@ -1138,7 +1138,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.30-1226'
+const VERSION_APP = '2026.10.30-1332'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -3405,6 +3405,13 @@ async function envoyerCopie() {
   if(tentErr&&/copie vide/i.test(tentErr.message||'')){
     alert("Tu n'as répondu à aucune question : ta copie n'est pas envoyée.\n\nTon rattrapage reste ouvert, tu peux recommencer quand tu veux.")
     G.aEnvoyer=false;effacerCopieEnCours();nav('dashboard');return
+  }
+  // Refus de doublon : si la meme copie (meme heure de debut) est deja en base,
+  // c'est qu'un essai precedent est arrive. Elle est envoyee, rien a retirer.
+  if(tentErr&&(tentErr.code==='23505'||/duplicate|unique/i.test(tentErr.message||''))&&G.debutCopie){
+    const rd=await avecReprises(function(){return db.from('tentatives').select('*').eq('aspirant_id',G.profil.id).eq('quiz_id',G.quizActif.id)})
+    const deja=(rd.data||[]).find(function(a){return a.commence_le&&new Date(a.commence_le).getTime()===new Date(G.debutCopie).getTime()})
+    if(deja){tent=deja;tentErr=null;if(ancienneCopie)ancienneCopie=ancienneCopie.filter(function(a){return a.id!==deja.id})}
   }
   // Contrainte d'unicite (une copie par examen) : on retire l'ancienne puis on renvoie
   if(tentErr&&(tentErr.code==='23505'||/duplicate|unique/i.test(tentErr.message||''))&&ancienneCopie&&ancienneCopie.length){
