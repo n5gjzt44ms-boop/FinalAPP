@@ -1,0 +1,13 @@
+{
+  "name": "progmeca",
+  "private": true,
+  "description": "ProgMéca — application en un seul fichier (index.html). Ce fichier ne sert qu'aux tests.",
+  "scripts": {
+    "test": "node tests/lancer.js",
+    "test:long": "node tests/lancer.js --long",
+    "test:detail": "node tests/lancer.js --detail"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}
