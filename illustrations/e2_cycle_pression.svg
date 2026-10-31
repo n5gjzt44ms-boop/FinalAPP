@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" role="img" aria-label="Courbe de pression au cours d'un cycle de travail, avec des pointes brèves à la pression maximale publiée">
+<rect width="900" height="460" fill="#FFFFFF"/>
+<g fill="none" stroke="#141414" stroke-width="5" stroke-linecap="round"><path d="M110 40V380H860"/></g>
+<path d="M110 100H860" fill="none" stroke="#C13B3A" stroke-width="4" stroke-dasharray="14 10"/>
+<path d="M110 300L190 260L250 280L290 100L315 270L420 240L490 290L560 230L600 100L625 280L730 250L860 290" fill="none" stroke="#185FA5" stroke-width="7" stroke-linejoin="round"/>
+<g font-family="Arial,Helvetica,sans-serif" fill="#141414">
+<text x="60" y="220" font-size="30" font-weight="700" transform="rotate(-90 60 220)" text-anchor="middle">Pression</text>
+<text x="485" y="430" font-size="30" font-weight="700" text-anchor="middle">Temps de travail</text>
+<text x="860" y="85" font-size="26" fill="#9C2B2A" font-weight="700" text-anchor="end">Pression maximale publiée</text>
+</g>
+</svg>

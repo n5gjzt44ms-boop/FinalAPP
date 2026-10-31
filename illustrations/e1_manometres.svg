@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" role="img" aria-label="Deux manomètres : 194 bars à la sortie de pompe B et 180 bars à la prise de pilotage X">
+<rect width="900" height="430" fill="#FFFFFF"/>
+<g fill="#FFFFFF" stroke="#141414" stroke-width="8"><circle cx="240" cy="190" r="140"/><circle cx="660" cy="190" r="140"/></g>
+<g stroke="#C13B3A" stroke-width="10" stroke-linecap="round"><path d="M240 190L332 110"/><path d="M660 190L745 130"/></g>
+<g fill="#141414"><circle cx="240" cy="190" r="14"/><circle cx="660" cy="190" r="14"/></g>
+<g font-family="Arial,Helvetica,sans-serif" text-anchor="middle" fill="#141414">
+<text x="240" y="285" font-size="58" font-weight="800">194</text><text x="240" y="320" font-size="24">bar</text>
+<text x="660" y="285" font-size="58" font-weight="800">180</text><text x="660" y="320" font-size="24">bar</text>
+<text x="240" y="395" font-size="30" font-weight="700">Sortie de pompe (B)</text>
+<text x="660" y="395" font-size="30" font-weight="700">Prise de pilotage (X)</text>
+</g>
+</svg>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-label="Schéma simplifié d'une pompe à cylindrée variable avec quatre lignes numérotées de 1 à 4">
+<rect width="900" height="520" fill="#FFFFFF"/>
+<g fill="none" stroke="#141414" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="230" cy="260" r="78"/>
+<path d="M230 182l-20 34h40z" fill="#141414"/>
+<path d="M150 345L310 175"/>
+<path d="M310 175l-26 8M310 175l-8 26"/>
+<path d="M230 182V90H560"/>
+<rect x="560" y="55" width="170" height="70" rx="8"/>
+<path d="M730 90H840"/>
+<path d="M230 338V450H330"/>
+<path d="M290 305L440 450H500"/>
+<path d="M730 125V250H390"/>
+<path d="M390 250L304 250" stroke-dasharray="14 10" stroke="#C13B3A"/>
+<path d="M730 125V250H390" stroke-dasharray="14 10" stroke="#C13B3A"/>
+<path d="M300 490H560M300 490V450M560 490V450"/>
+</g>
+<g font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="30" fill="#141414">
+<text x="645" y="100" text-anchor="middle" font-size="26">Orifice</text>
+<text x="785" y="72" text-anchor="middle" font-size="24" font-weight="400">vers vérin</text>
+<text x="430" y="478" text-anchor="middle" font-size="24" font-weight="400">Réservoir</text>
+<text x="230" y="272" text-anchor="middle" font-size="26">Pompe</text>
+</g>
+<g font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="30" fill="#FFFFFF" text-anchor="middle">
+<circle cx="190" cy="410" r="27" fill="#C13B3A"/><text x="190" y="421">1</text>
+<circle cx="400" cy="90" r="27" fill="#C13B3A"/><text x="400" y="101">2</text>
+<circle cx="385" cy="395" r="27" fill="#C13B3A"/><text x="385" y="406">3</text>
+<circle cx="560" cy="250" r="27" fill="#C13B3A"/><text x="560" y="261">4</text>
+</g>
+</svg>

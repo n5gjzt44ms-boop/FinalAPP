@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" role="img" aria-label="Graphique du débit de la pompe en fonction de la pression de service. La zone autour de la consigne de 280 bars est marquée d'un point d'interrogation.">
+<rect width="900" height="480" fill="#FFFFFF"/>
+<g fill="none" stroke="#141414" stroke-width="5" stroke-linecap="round">
+<path d="M120 50V400H850"/>
+<path d="M120 50l-10 22M120 50l10 22M850 400l-22-10M850 400l-22 10"/>
+<path d="M120 130H660" stroke="#185FA5" stroke-width="8"/>
+<path d="M690 50V400" stroke="#C13B3A" stroke-dasharray="14 10"/>
+</g>
+<g font-family="Arial,Helvetica,sans-serif" fill="#141414">
+<text x="60" y="240" font-size="30" font-weight="700" transform="rotate(-90 60 240)" text-anchor="middle">Débit</text>
+<text x="470" y="455" font-size="30" font-weight="700" text-anchor="middle">Pression de service (bar)</text>
+<text x="690" y="440" font-size="28" text-anchor="middle" fill="#9C2B2A" font-weight="700">280</text>
+<text x="360" y="110" font-size="28" text-anchor="middle" fill="#124A80">Cylindrée maximale</text>
+</g>
+<circle cx="735" cy="250" r="46" fill="#C13B3A"/>
+<text x="735" y="272" font-family="Arial,Helvetica,sans-serif" font-size="60" font-weight="800" fill="#FFFFFF" text-anchor="middle">?</text>
+</svg>
