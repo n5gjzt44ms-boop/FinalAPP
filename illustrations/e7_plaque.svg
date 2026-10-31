@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" role="img" aria-label="Plaque signalétique fictive d'un moteur de 11 kW">
+<rect width="900" height="440" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="46" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Plaque du moteur (exemple d'école)</text><rect x="170" y="90" width="560" height="320" fill="#E8E4DA" rx="14" stroke="#141414" stroke-width="5"/><text x="450" y="150" font-size="28" fill="#141414" text-anchor="middle" font-weight="700">Moteur asynchrone triphasé</text><text x="450" y="215" font-size="32" fill="#141414" text-anchor="middle" font-weight="700">11 kW · 400 V · 21,5 A</text><text x="450" y="275" font-size="32" fill="#141414" text-anchor="middle" font-weight="700">50 Hz · 1460 tr/min</text><text x="450" y="335" font-size="28" fill="#141414" text-anchor="middle" font-weight="700">cos φ 0,84 · Service S1</text>
+</g>
+</svg>

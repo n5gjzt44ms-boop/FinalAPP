@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" role="img" aria-label="Pendant une rampe de décélération, la tension du bus continu monte vers le seuil de coupure">
+<rect width="900" height="430" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="46" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Décélération d'une charge à forte inertie</text><line x1="90" y1="390" x2="840" y2="390" stroke="#141414" stroke-width="5" stroke-linecap="round"/><line x1="90" y1="390" x2="90" y2="90" stroke="#141414" stroke-width="5" stroke-linecap="round"/><path d="M90 140 H300 L520 370 H830" fill="none" stroke="#185FA5" stroke-width="9"/><text x="330" y="125" font-size="28" fill="#185FA5" text-anchor="start" font-weight="700">Vitesse</text><path d="M90 290 H300 C350 280 420 180 480 145 L500 145" fill="none" stroke="#C13B3A" stroke-width="9"/><text x="530" y="150" font-size="28" fill="#C13B3A" text-anchor="start" font-weight="700">Tension du bus</text><line x1="480" y1="90" x2="780" y2="90" stroke="#C13B3A" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 8"/><text x="790" y="80" font-size="24" fill="#C13B3A" text-anchor="end" font-weight="700">Seuil de coupure</text>
+</g>
+</svg>

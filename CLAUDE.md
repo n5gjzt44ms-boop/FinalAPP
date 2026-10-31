@@ -108,10 +108,12 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - Installation (une fois) : `npm install`, puis `npx playwright install chromium`. Ensuite `npm test`. `npm run test:long` ajoute le rattrapage de 65 s, `npm run test:detail` affiche toutes les sorties.
 - Chaque scénario affiche ce qu'il voit et finit par « ERREURS JS : aucune ». Lire la sortie, pas seulement « OK ».
 
-## État actuel (30/10/2026)
+## État actuel (31/10/2026)
 - En ligne : v2026.10.31-0810.
+- Lot 2 d'exercices, déposé privé le 31/10 (`actif=false`), à relire et publier par un gâcheur : Module 1 niveaux 24 et 25 (roulements), Module 3 niveaux 19 et 20 (portées de roulement), Module 4 niveaux 22 et 23 (variateur). Schémas `e3_` à `e8_` dans `illustrations/`.
+- Sources lisibles automatiquement : SKF 140-710 (roulements) et Danfoss MG.11.B4.22 (variateur, gamme CVC). Refusées ou introuvables le 31/10 : fiches de vérins Rexroth, Bossard et les catalogues Schneider. Pas encore de source pour un exercice Schneider.
 - Exercices : 78, tous rattachés à au moins un cours (`quiz.cours_lies`, `sql/cours_lies.sql`, exécuté). Rattachement fait automatiquement par les titres le 31/10 : à contrôler par les gâcheurs (bouton Cours dans Quiz et examens). Le plus incertain : Hydraulique niveau 6 (modes dans un circuit), rattaché à « analyser les types de circuit ».
-- Lot pilote Hydraulique, niveaux 25 et 26 (pompe variable, translation) : validé sur le fond par Benoît (« top »), encore privé (`actif=false`). Publier seulement sur sa demande.
+- Lot pilote Hydraulique, niveaux 25 et 26 (pompe variable, translation) : publié le 31/10 à la demande de Benoît.
 - `copies_brouillon` (`sql/brouillon_en_ligne.sql`, exécuté le 30/10) : une ligne par personne. `etat` = copie en cours sans images, `diag` = relevé du démarrage (dates, version, appareil), jamais de réponse ni de note. Pour diagnostiquer un téléphone : lire `diag` et `maj_le`.
 - `sql/anti_doublons.sql` (index `uniq_tentative_envoi`) : exécuté le 30/10.
 - `sql/essai_photos.sql` : exécuté le 30/10. Les photos d'essai déposées avant cette date restent dans le stockage (`essai_*`). Retrait réel à vérifier au prochain essai avec photo.
@@ -135,3 +137,4 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - 30/10 (v2026.10.30-1534) : retour à zéro après fermeture complète de l'appli. Cause : `localStorage` n'est écrit sur le disque qu'après plusieurs secondes. La copie est aussi écrite en IndexedDB (`ecrireCopieDurable()`, `restaurerCopieDurable()` au démarrage). Scénario `e2e_fermeture.js`, qui tue vraiment le navigateur. Benoît : toujours à zéro sur téléphone.
 - 30/10 (v2026.10.30-1610) : copie en cours aussi gardée en ligne (`copies_brouillon`, `restaurerCopieEnLigne()`), plus un relevé au démarrage (`noterDiag()`) pour comprendre ce que voit le téléphone. (v2026.10.30-1645 : accueil et recherche de la piste A, scénario `e2e_essentiel.js`.) Confirmé par Benoît sur iPhone (iOS 18.5, Safari) : à la réouverture, `localStorage` et IndexedDB étaient vides, la copie est revenue depuis la ligne. Mémoire locale vide : le test était fait en navigation privée, qui efface tout à la fermeture de l'onglet. Safari normal pas encore testé. Sans réseau, seule la mémoire locale protège la copie.
 - 31/10 (v2026.10.31-0810) : cours à réviser affichés avant chaque exercice, gestion des liens pour les gâcheurs. Scénario dans `e2e_essentiel.js`.
+- 31/10 : lot pilote Hydraulique publié. Lot 2 déposé en privé : 6 exercices de 8 questions (modules 1, 3 et 4) et 28 schémas.
