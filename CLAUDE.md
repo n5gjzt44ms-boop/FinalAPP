@@ -31,7 +31,8 @@ En fin de session, le mettre à jour avec la commande `/fin-de-session`.
 
 ## Contenu pédagogique (critères de Benoît)
 - Rythme visé : 2 à 3 exercices par module et par semaine, en haussant le niveau (calcul, lecture de schéma, diagnostic, choix de composant), à partir de cours et de ressources de fabricants ou de constructeurs.
-- Sources : composants hydrauliques, électriques et mécaniques industriels, et matériel roulant. Par exemple Bosch Rexroth, Parker, Schneider, Danfoss, SKF, Seb Hydrau (orthographe à confirmer), Case IH, Fendt, Kubota, Mecalac, John Deere, Wirtgen, Dynapac. Pas de mécanique automobile ni moto.
+- Sources : composants hydrauliques, électriques et mécaniques industriels, et matériel roulant. Par exemple Bosch Rexroth, Parker, Schneider, Danfoss, SKF, Seb Hydrau (orthographe à confirmer), Case IH, Fendt, Kubota, Mecalac, John Deere, Wirtgen, Dynapac. Pas de mécanique automobile ni moto, ni d'électricité du bâtiment (chauffage, ventilation, climatisation) : vérifier la gamme du document, pas seulement le fabricant.
+- Public : techniciens de maintenance industrielle et mécaniciens d'engins (travaux publics, bateau, agricole, forestier, dameuse).
 - Illustrer le plus possible : schémas maison dans `illustrations/` (SVG, adresse complète dans `questions.medias`). Ne pas copier les images des fabricants.
 - Un exercice cite sa source et sa page dans `reponse_type`. Distracteurs de longueur égale, issus d'erreurs réelles. Type `multi` (l'explication s'affiche). Une question `libre` envoie l'exercice en correction chez un gâcheur.
 - Déposé privé (`actif=false`). Un gâcheur relit et publie.
@@ -110,8 +111,9 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 
 ## État actuel (31/10/2026)
 - En ligne : v2026.10.31-0810.
-- Lot 2 d'exercices, déposé privé le 31/10 (`actif=false`), à relire et publier par un gâcheur : Module 1 niveaux 24 et 25 (roulements), Module 3 niveaux 19 et 20 (portées de roulement), Module 4 niveaux 22 et 23 (variateur). Schémas `e3_` à `e8_` dans `illustrations/`.
-- Sources lisibles automatiquement : SKF 140-710 (roulements) et Danfoss MG.11.B4.22 (variateur, gamme CVC). Refusées ou introuvables le 31/10 : fiches de vérins Rexroth, Bossard et les catalogues Schneider. Pas encore de source pour un exercice Schneider.
+- Lot 2 d'exercices, déposé privé le 31/10 (`actif=false`), à relire et publier par un gâcheur : Module 1 niveaux 24 et 25 (roulements), Module 3 niveaux 19 et 20 (portées de roulement), Module 4 niveaux 24 et 25 (électricité d'engin). Schémas `e3_` à `e6_` et `e9_` dans `illustrations/`.
+- Module 4 niveaux 22 et 23 (variateur, source Danfoss gamme bâtiment) : refusés par Benoît, archivés sans copie. Leurs schémas `e7_` et `e8_` ne servent qu'à eux.
+- Sources lisibles automatiquement : SKF 140-710 (roulements) et Danfoss PLUS+1 MC0XX-0XX, BC152886484710 (contrôleurs d'engins). Refusées ou introuvables le 31/10 : fiches de vérins Rexroth, Bossard et les catalogues Schneider. Pas encore de source pour un variateur industriel.
 - Exercices : 78, tous rattachés à au moins un cours (`quiz.cours_lies`, `sql/cours_lies.sql`, exécuté). Rattachement fait automatiquement par les titres le 31/10 : à contrôler par les gâcheurs (bouton Cours dans Quiz et examens). Le plus incertain : Hydraulique niveau 6 (modes dans un circuit), rattaché à « analyser les types de circuit ».
 - Lot pilote Hydraulique, niveaux 25 et 26 (pompe variable, translation) : publié le 31/10 à la demande de Benoît.
 - `copies_brouillon` (`sql/brouillon_en_ligne.sql`, exécuté le 30/10) : une ligne par personne. `etat` = copie en cours sans images, `diag` = relevé du démarrage (dates, version, appareil), jamais de réponse ni de note. Pour diagnostiquer un téléphone : lire `diag` et `maj_le`.
@@ -137,4 +139,4 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - 30/10 (v2026.10.30-1534) : retour à zéro après fermeture complète de l'appli. Cause : `localStorage` n'est écrit sur le disque qu'après plusieurs secondes. La copie est aussi écrite en IndexedDB (`ecrireCopieDurable()`, `restaurerCopieDurable()` au démarrage). Scénario `e2e_fermeture.js`, qui tue vraiment le navigateur. Benoît : toujours à zéro sur téléphone.
 - 30/10 (v2026.10.30-1610) : copie en cours aussi gardée en ligne (`copies_brouillon`, `restaurerCopieEnLigne()`), plus un relevé au démarrage (`noterDiag()`) pour comprendre ce que voit le téléphone. (v2026.10.30-1645 : accueil et recherche de la piste A, scénario `e2e_essentiel.js`.) Confirmé par Benoît sur iPhone (iOS 18.5, Safari) : à la réouverture, `localStorage` et IndexedDB étaient vides, la copie est revenue depuis la ligne. Mémoire locale vide : le test était fait en navigation privée, qui efface tout à la fermeture de l'onglet. Safari normal pas encore testé. Sans réseau, seule la mémoire locale protège la copie.
 - 31/10 (v2026.10.31-0810) : cours à réviser affichés avant chaque exercice, gestion des liens pour les gâcheurs. Scénario dans `e2e_essentiel.js`.
-- 31/10 : lot pilote Hydraulique publié. Lot 2 déposé en privé : 6 exercices de 8 questions (modules 1, 3 et 4) et 28 schémas.
+- 31/10 : lot pilote Hydraulique publié. Lot 2 déposé en privé : 6 exercices de 8 questions (modules 1, 3 et 4). Les 2 exercices de variateur issus d'une gamme bâtiment sont remplacés par 2 exercices d'électricité d'engin.
