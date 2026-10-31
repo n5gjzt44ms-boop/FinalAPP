@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 410" role="img" aria-label="Joint en aluminium et trois moyens de nettoyage : solvant, brosse inox, soufflette">
+<rect width="900" height="410" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="46" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Préparer un joint en aluminium</text><rect x="90" y="250" width="310" height="60" fill="#D6D6D2" stroke="#141414" stroke-width="3"/><rect x="500" y="250" width="310" height="60" fill="#D6D6D2" stroke="#141414" stroke-width="3"/><rect x="90" y="110" width="210" height="70" fill="#E8E4DA" rx="10" stroke="#141414" stroke-width="4"/><text x="195" y="154" font-size="26" fill="#141414" text-anchor="middle" font-weight="700">Solvant</text><rect x="345" y="110" width="210" height="70" fill="#E8E4DA" rx="10" stroke="#141414" stroke-width="4"/><text x="450" y="154" font-size="26" fill="#141414" text-anchor="middle" font-weight="700">Brosse inox</text><rect x="600" y="110" width="210" height="70" fill="#E8E4DA" rx="10" stroke="#141414" stroke-width="4"/><text x="705" y="154" font-size="26" fill="#141414" text-anchor="middle" font-weight="700">Soufflette</text><text x="450" y="375" font-size="28" fill="#C13B3A" text-anchor="middle" font-weight="700">Dans quel ordre, et que faut-il exclure ?</text>
+</g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 410" role="img" aria-label="Carter en fonte avec une fissure dont les deux extrémités sont repérées a">
+<rect width="900" height="410" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="46" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Carter en fonte fissuré</text><rect x="110" y="110" width="680" height="270" fill="#B9B6AE" rx="30" stroke="#141414" stroke-width="6"/><circle cx="400" cy="245" r="60" fill="#FFFFFF" stroke="#141414" stroke-width="5"/><path d="M230 170 L270 205 L255 240 L300 270 L285 320" fill="none" stroke="#141414" stroke-width="6"/><circle cx="205" cy="150" r="22" fill="#C13B3A"/><text x="205" y="159" font-size="25" fill="#FFFFFF" text-anchor="middle" font-weight="700">a</text><circle cx="285" cy="350" r="22" fill="#C13B3A"/><text x="285" y="359" font-size="25" fill="#FFFFFF" text-anchor="middle" font-weight="700">a</text><text x="620" y="180" font-size="26" fill="#141414" text-anchor="middle" font-weight="700">Fissure à réparer</text><text x="620" y="225" font-size="26" fill="#141414" text-anchor="middle" font-weight="700">à l'électrode nickel</text>
+</g>
+</svg>
