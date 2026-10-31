@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" role="img" aria-label="Engin à roues chargé en descente, entraîné par la pente, qui freine avec sa transmission hydrostatique">
+<rect width="900" height="480" fill="#FFFFFF"/>
+<g transform="rotate(12.5 450 300)">
+<rect x="-300" y="400" width="1500" height="500" fill="#E8E4DA"/>
+<rect x="260" y="250" width="270" height="100" rx="12" fill="#C13B3A"/>
+<rect x="290" y="170" width="120" height="90" rx="8" fill="#FFFFFF" stroke="#141414" stroke-width="6"/>
+<path d="M530 290l80-40v-40" fill="none" stroke="#141414" stroke-width="14" stroke-linecap="round"/>
+<path d="M590 200h60l-20 60h-60z" fill="#141414"/>
+<circle cx="315" cy="350" r="50" fill="#141414"/><circle cx="315" cy="350" r="18" fill="#D6D6D2"/>
+<circle cx="480" cy="350" r="50" fill="#141414"/><circle cx="480" cy="350" r="18" fill="#D6D6D2"/>
+<path d="M640 330H800" stroke="#185FA5" stroke-width="10" stroke-linecap="round"/><path d="M830 330l-36-20v40z" fill="#185FA5"/>
+</g>
+<g font-family="Arial,Helvetica,sans-serif" font-weight="700" text-anchor="middle">
+<text x="450" y="50" font-size="32" fill="#141414">La charge entraîne la machine</text>
+<text x="450" y="95" font-size="28" fill="#9C2B2A">Que devient la transmission ?</text>
+</g>
+</svg>

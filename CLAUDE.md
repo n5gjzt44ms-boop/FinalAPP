@@ -29,6 +29,13 @@ En fin de session, le mettre à jour avec la commande `/fin-de-session`.
 - Code : commentaires en français sans accents (style existant). Interface en français ; on tutoie les aspirants (« Pays »).
 - Design : police Inter, fond crème `#EDECE9`, cartes arrondies, ombres douces. Couleurs par variables CSS (`--r` rouge, `--v` vert, `--amber`, `--b` bleu). Mode sombre : `body.dark`.
 
+## Contenu pédagogique (critères de Benoît)
+- Rythme visé : 2 à 3 exercices par module et par semaine, en haussant le niveau (calcul, lecture de schéma, diagnostic, choix de composant), à partir de cours et de ressources de fabricants ou de constructeurs.
+- Sources : composants hydrauliques, électriques et mécaniques industriels, et matériel roulant. Par exemple Bosch Rexroth, Parker, Schneider, Danfoss, SKF, Seb Hydrau (orthographe à confirmer), Case IH, Fendt, Kubota, Mecalac, John Deere, Wirtgen, Dynapac. Pas de mécanique automobile ni moto.
+- Illustrer le plus possible : schémas maison dans `illustrations/` (SVG, adresse complète dans `questions.medias`). Ne pas copier les images des fabricants.
+- Un exercice cite sa source et sa page dans `reponse_type`. Distracteurs de longueur égale, issus d'erreurs réelles. Type `multi` (l'explication s'affiche). Une question `libre` envoie l'exercice en correction chez un gâcheur.
+- Déposé privé (`actif=false`). Un gâcheur relit et publie.
+
 ## Plan du code (`index.html`)
 - Démarrage et navigation : `initApp()`, `nav(page)`, `rafraichirPage()` (toutes les 90 s), `PAGES_ADMIN`.
 - Mise à jour automatique : `versionEnLigne()`, `miseAJourAvantExamen()` (avant tout examen ; l'examen se rouvre seul après), `verifierMiseAJour()` (au retour dans l'appli et toutes les 10 min).

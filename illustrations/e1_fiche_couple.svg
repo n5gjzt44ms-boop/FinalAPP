@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" role="img" aria-label="Données : cylindrée 45 centimètres cubes par tour, différence de pression 250 bars, rendement hydromécanique 0,93">
+<rect width="900" height="360" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif" text-anchor="middle">
+<rect x="30" y="60" width="260" height="240" rx="24" fill="#E3EBF3"/><text x="160" y="125" font-size="30" font-weight="700" fill="#124A80">Cylindrée</text><text x="160" y="200" font-size="58" font-weight="800" fill="#141414">45</text><text x="160" y="255" font-size="28" fill="#141414">cm³/tr</text>
+<rect x="320" y="60" width="260" height="240" rx="24" fill="#F0E7DA"/><text x="450" y="125" font-size="30" font-weight="700" fill="#6F410A">Pression diff.</text><text x="450" y="200" font-size="58" font-weight="800" fill="#141414">250</text><text x="450" y="255" font-size="28" fill="#141414">bar</text>
+<rect x="610" y="60" width="260" height="240" rx="24" fill="#F4E4E3"/><text x="740" y="125" font-size="30" font-weight="700" fill="#9C2B2A">Rendement hm.</text><text x="740" y="200" font-size="58" font-weight="800" fill="#141414">0,93</text><text x="740" y="255" font-size="28" fill="#141414">ηhm</text>
+</g>
+</svg>

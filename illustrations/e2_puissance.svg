@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" role="img" aria-label="Comparaison : puissance de coin de la machine 167 kilowatts, puissance du moteur thermique disponible 100 kilowatts">
+<rect width="900" height="400" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif" fill="#141414">
+<text x="40" y="65" font-size="30" font-weight="700">Puissance de coin de la machine</text>
+<rect x="40" y="85" width="810" height="84" rx="14" fill="#C13B3A"/><text x="825" y="142" font-size="42" font-weight="800" fill="#FFFFFF" text-anchor="end">167 kW</text>
+<text x="40" y="245" font-size="30" font-weight="700">Moteur thermique disponible</text>
+<rect x="40" y="265" width="485" height="84" rx="14" fill="#185FA5"/><text x="500" y="322" font-size="42" font-weight="800" fill="#FFFFFF" text-anchor="end">100 kW</text>
+</g>
+</svg>
