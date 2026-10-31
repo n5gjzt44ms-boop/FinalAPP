@@ -35,11 +35,13 @@ En fin de session, le mettre à jour avec la commande `/fin-de-session`.
 - Illustrer le plus possible : schémas maison dans `illustrations/` (SVG, adresse complète dans `questions.medias`). Ne pas copier les images des fabricants.
 - Un exercice cite sa source et sa page dans `reponse_type`. Distracteurs de longueur égale, issus d'erreurs réelles. Type `multi` (l'explication s'affiche). Une question `libre` envoie l'exercice en correction chez un gâcheur.
 - Déposé privé (`actif=false`). Un gâcheur relit et publie.
+- Tout exercice est rattaché à au moins un cours (`quiz.cours_lies`), affiché avant de commencer. Un document de fabricant cité s'y ajoute en lien (`{u,n}`). Jamais pour un examen.
 
 ## Plan du code (`index.html`)
 - Démarrage et navigation : `initApp()`, `nav(page)`, `rafraichirPage()` (toutes les 90 s), `PAGES_ADMIN`.
 - Mise à jour automatique : `versionEnLigne()`, `miseAJourAvantExamen()` (avant tout examen ; l'examen se rouvre seul après), `verifierMiseAJour()` (au retour dans l'appli et toutes les 10 min).
 - Accueil aspirant : `loadDashboard()` puis `afficherExamensAccueil()`. Carte en haut de l'accueil : examen du jour avec compte à rebours, examen en cours, rattrapage ouvert, copie à reprendre. Ensuite `afficherEtapeAccueil()` (premier exercice pas fait du module), `afficherProchainExamen()`, 4 tuiles de modules. Onglets : Accueil, Chercher, Mon parcours (`suivi`, avec les liens vers Modules, Carnet et Contacts).
+- Cours avant un exercice : `coursDeLExercice()`, `afficherCoursAvant()` (depuis `commencer(qid,coursVus)`). Gestion des liens par les gâcheurs : `gererCoursLies()`.
 - Page Chercher : `afficherChercher()`, `lancerChercher()` (sans accents, exercices et cours, jamais les examens).
 - Accueil gâcheur : `loadDashboardAdmin()`. À faire (copies, absents, aspirants sans module), examens du jour avec bouton « Publier », prochains examens, rattrapages, raccourcis.
 - Examen d'essai : `commencerEssai()`, `finEssai()`, `carteEssaiAccueil()`. Questions dans le code (`questionsEssai()`), `quiz.essai=true`, aucune écriture en base. Fait ou masqué : `localStorage` (`pm_essai_fait`, `pm_essai_masque`).
@@ -107,7 +109,9 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - Chaque scénario affiche ce qu'il voit et finit par « ERREURS JS : aucune ». Lire la sortie, pas seulement « OK ».
 
 ## État actuel (30/10/2026)
-- En ligne : v2026.10.30-1645.
+- En ligne : v2026.10.31-0810.
+- Exercices : 78, tous rattachés à au moins un cours (`quiz.cours_lies`, `sql/cours_lies.sql`, exécuté). Rattachement fait automatiquement par les titres le 31/10 : à contrôler par les gâcheurs (bouton Cours dans Quiz et examens). Le plus incertain : Hydraulique niveau 6 (modes dans un circuit), rattaché à « analyser les types de circuit ».
+- Lot pilote Hydraulique, niveaux 25 et 26 (pompe variable, translation) : validé sur le fond par Benoît (« top »), encore privé (`actif=false`). Publier seulement sur sa demande.
 - `copies_brouillon` (`sql/brouillon_en_ligne.sql`, exécuté le 30/10) : une ligne par personne. `etat` = copie en cours sans images, `diag` = relevé du démarrage (dates, version, appareil), jamais de réponse ni de note. Pour diagnostiquer un téléphone : lire `diag` et `maj_le`.
 - `sql/anti_doublons.sql` (index `uniq_tentative_envoi`) : exécuté le 30/10.
 - `sql/essai_photos.sql` : exécuté le 30/10. Les photos d'essai déposées avant cette date restent dans le stockage (`essai_*`). Retrait réel à vérifier au prochain essai avec photo.
@@ -130,3 +134,4 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - 30/10 (v2026.10.30-1518) : copie enregistrée dès l'ouverture de l'examen et à la bonne question après Suivant. Une reprise attend la fin du démarrage (`finDemarrage()`) pour que l'accueil ne la referme pas. Fermer puis reprendre vérifié sur le vrai site avec le compte aspirant de test (ordinateur). 
 - 30/10 (v2026.10.30-1534) : retour à zéro après fermeture complète de l'appli. Cause : `localStorage` n'est écrit sur le disque qu'après plusieurs secondes. La copie est aussi écrite en IndexedDB (`ecrireCopieDurable()`, `restaurerCopieDurable()` au démarrage). Scénario `e2e_fermeture.js`, qui tue vraiment le navigateur. Benoît : toujours à zéro sur téléphone.
 - 30/10 (v2026.10.30-1610) : copie en cours aussi gardée en ligne (`copies_brouillon`, `restaurerCopieEnLigne()`), plus un relevé au démarrage (`noterDiag()`) pour comprendre ce que voit le téléphone. (v2026.10.30-1645 : accueil et recherche de la piste A, scénario `e2e_essentiel.js`.) Confirmé par Benoît sur iPhone (iOS 18.5, Safari) : à la réouverture, `localStorage` et IndexedDB étaient vides, la copie est revenue depuis la ligne. Mémoire locale vide : le test était fait en navigation privée, qui efface tout à la fermeture de l'onglet. Safari normal pas encore testé. Sans réseau, seule la mémoire locale protège la copie.
+- 31/10 (v2026.10.31-0810) : cours à réviser affichés avant chaque exercice, gestion des liens pour les gâcheurs. Scénario dans `e2e_essentiel.js`.
