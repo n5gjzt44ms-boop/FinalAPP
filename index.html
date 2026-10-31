@@ -1185,7 +1185,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.30-1645'
+const VERSION_APP = '2026.10.31-0810'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -2295,7 +2295,7 @@ window.addEventListener('popstate',function(ev){
     }
   }
   // Une fenetre ouverte ? Le retour la ferme d'abord
-  const modaux=['modal-fiche-compte','modal-menu-admin','modal-recherche','modal-mon-profil','modal-tel-aspirant','modal-admin-profil']
+  const modaux=['modal-cours','modal-cours-admin','modal-fiche-compte','modal-menu-admin','modal-recherche','modal-mon-profil','modal-tel-aspirant','modal-admin-profil']
   for(let i=0;i<modaux.length;i++){
     const m=document.getElementById(modaux[i])
     if(m){
@@ -3410,7 +3410,79 @@ function carteEssaiAccueil(cartes,passeLesExamens,local){
     +'<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="masquerEssai()">Plus tard</button></div>'
 }
 
-async function commencer(qid) {
+// ─── COURS A REVISER AVANT UN EXERCICE ─────────────────────────────────────
+// quiz.cours_lies : [{r:id d'une ressource}] ou [{u:adresse,n:nom}] pour un document de fabricant
+let _coursAvant=[],_listeCoursLies=null
+async function coursDeLExercice(qid){
+  const {data:q,error}=await db.from('quiz').select('cours_lies').eq('id',qid).single()
+  const liens=(q&&Array.isArray(q.cours_lies))?q.cours_lies:[]
+  if(error||!liens.length) return []
+  const ids=liens.filter(function(l){return l.r}).map(function(l){return l.r})
+  let res=[]
+  if(ids.length){const r=await db.from('ressources').select('id,titre,type,storage_path,url_externe').in('id',ids);res=r.data||[]}
+  return liens.map(function(l){
+    if(l.u) return {nom:l.n||'Document du fabricant',externe:l.u}
+    const x=res.find(function(y){return y.id===l.r})
+    return x?{nom:titreLisible(x.titre),id:x.id,path:x.storage_path||'',url:x.url_externe||''}:null
+  }).filter(Boolean)
+}
+function afficherCoursAvant(qid,cours){
+  _coursAvant=cours
+  document.getElementById('modal-cours')?.remove()
+  const m=document.createElement('div');m.id='modal-cours'
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9990;display:flex;align-items:center;justify-content:center;padding:1rem'
+  m.innerHTML='<div style="background:var(--card);border-radius:24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;padding:1.5rem">'
+    +'<div class="ch-label" style="font-size:.82rem;font-weight:600;color:var(--r2)">Avant de commencer</div>'
+    +'<h2 style="font-size:1.25rem;font-weight:700;letter-spacing:-.01em;margin:6px 0 4px">À réviser pour réussir</h2>'
+    +'<p style="font-size:.84rem;color:var(--t2);margin:0 0 .8rem;line-height:1.45">'+(cours.length>1?'Ces documents t\'aideront':'Ce document t\'aidera')+' pour cet exercice.</p>'
+    +'<div class="ch-liste" style="background:var(--card2);margin-bottom:.4rem">'+cours.map(function(c,i){
+      return '<button class="ch-ligne" onclick="ouvrirCoursAvant('+i+')"><b>'+echapAttr(c.nom)+'</b><span class="ch-sous">'+(c.externe?'Document du fabricant':'Cours')+' · Ouvrir</span></button>'
+    }).join('')+'</div>'
+    +'<button class="acc-btn" data-quiz="'+echapAttr(qid)+'" onclick="document.getElementById(\'modal-cours\').remove();commencer(this.dataset.quiz,true)">Commencer l\'exercice</button>'
+    +'<button class="btn btn-ghost btn-full" style="margin-top:.6rem" onclick="document.getElementById(\'modal-cours\').remove()">Plus tard</button>'
+  +'</div>'
+  document.body.appendChild(m)
+}
+function ouvrirCoursAvant(i){
+  const c=_coursAvant[i];if(!c) return
+  if(c.externe){window.open(c.externe,'_blank','noopener');return}
+  ouvrirRes(c.id,c.path,c.url)
+}
+// Gacheur : choisir les cours rattaches a un exercice
+async function gererCoursLies(qid){
+  if(!G.admin){toast('Action réservée aux gâcheurs','err');return}
+  const {data:q}=await db.from('quiz').select('id,titre,module_id,cours_lies').eq('id',qid).single()
+  if(!q){toast('Exercice introuvable','err');return}
+  const {data:rs,error}=await db.from('ressources').select('id,titre').eq('module_id',q.module_id).order('titre')
+  if(error){toast('Erreur : '+error.message,'err');return}
+  const liens=Array.isArray(q.cours_lies)?q.cours_lies:[]
+  _listeCoursLies={qid:qid,externes:liens.filter(function(l){return l.u})}
+  const pris=liens.map(function(l){return l.r}).filter(Boolean)
+  document.getElementById('modal-cours-admin')?.remove()
+  const m=document.createElement('div');m.id='modal-cours-admin'
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9990;display:flex;align-items:center;justify-content:center;padding:1rem'
+  m.innerHTML='<div style="background:var(--card);border-radius:24px;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;padding:1.3rem">'
+    +'<h2 style="font-size:1.1rem;font-weight:700;margin:0 0 2px">Cours à réviser</h2>'
+    +'<p style="font-size:.8rem;color:var(--t2);margin:0 0 .7rem">'+echapAttr(titreLisible(q.titre))+'</p>'
+    +(_listeCoursLies.externes.length?'<p style="font-size:.76rem;color:var(--t2);margin:0 0 .6rem">Documents de fabricant conservés : '+_listeCoursLies.externes.map(function(l){return echapAttr(l.n||l.u)}).join(', ')+'</p>':'')
+    +'<div style="flex:1;overflow-y:auto;margin-bottom:.8rem">'+(rs||[]).map(function(r){
+      return '<label style="display:flex;align-items:center;gap:10px;min-height:44px;font-size:.86rem;border-bottom:1px solid var(--bord)"><input type="checkbox" class="cours-lie" value="'+echapAttr(r.id)+'"'+(pris.indexOf(r.id)>=0?' checked':'')+'/>'+echapAttr(titreLisible(r.titre))+'</label>'
+    }).join('')+'</div>'
+    +'<button class="btn btn-r btn-full" onclick="enregistrerCoursLies()">Enregistrer</button>'
+    +'<button class="btn btn-ghost btn-full" style="margin-top:.5rem" onclick="document.getElementById(\'modal-cours-admin\').remove()">Annuler</button>'
+  +'</div>'
+  document.body.appendChild(m)
+}
+async function enregistrerCoursLies(){
+  const x=_listeCoursLies;if(!x) return
+  const coches=[...document.querySelectorAll('#modal-cours-admin .cours-lie:checked')].map(function(c){return {r:c.value}})
+  const maj=await db.from('quiz').update({cours_lies:coches.concat(x.externes)}).eq('id',x.qid).select('id')
+  if(maj.error||!maj.data||!maj.data.length){toast('NON enregistré : '+((maj.error&&maj.error.message)||'droits insuffisants'),'err');return}
+  document.getElementById('modal-cours-admin')?.remove()
+  toast('Cours enregistrés','ok')
+}
+
+async function commencer(qid,coursVus) {
   if(qid===ESSAI_ID) return commencerEssai()
   // Une copie attend encore le reseau : elle ne doit pas etre ecrasee par une nouvelle
   if(G.aEnvoyer){toast('Ta copie précédente n est pas encore partie','err');nav('resultats');return}
@@ -3423,6 +3495,12 @@ async function commencer(qid) {
   const isExamen=qinfo?.mode_examen
   // Un examen ne demarre jamais sur une ancienne version de l'application
   if(isExamen&&await miseAJourAvantExamen(qid,false)) return
+  // Exercice : d'abord les cours a reviser. Une panne ici n'empeche pas de commencer.
+  if(!isExamen&&!coursVus){
+    let cours=[]
+    try{cours=await coursDeLExercice(qid)}catch(e){}
+    if(cours.length){afficherCoursAvant(qid,cours);return}
+  }
   // Hors creneau : il faut un rattrapage encore valable (date limite non depassee)
   if(isExamen&&!G.admin){
     const n=new Date(),deb=qinfo.date_debut?new Date(qinfo.date_debut):null,fin=qinfo.date_fin?new Date(qinfo.date_fin):null
@@ -4431,6 +4509,7 @@ async function loadQuizAdmin() {
       : `<button class="btn btn-ghost btn-sm btn-icon" onclick="archiverQuiz('${x.id}',true)" title="Archiver pour réutilisation ultérieure"><i class="ti ti-archive"></i></button>`}
     <button class="btn btn-ghost btn-sm btn-icon" onclick="editerQuiz('${x.id}')" title="Modifier"><i class="ti ti-pencil"></i></button>
     <button class="btn btn-ghost btn-sm btn-icon" onclick="dupliquerQuiz('${x.id}')"><i class="ti ti-copy"></i></button>
+    ${x.mode_examen?'':`<button class="btn btn-ghost btn-sm" onclick="gererCoursLies('${x.id}')" title="Cours à réviser"><i class="ti ti-book"></i> Cours</button>`}
     <button class="btn btn-ghost btn-sm btn-icon" onclick="delQuiz('${x.id}')"><i class="ti ti-trash"></i></button>
   </div>`).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz pour ce module.</p>'
 }

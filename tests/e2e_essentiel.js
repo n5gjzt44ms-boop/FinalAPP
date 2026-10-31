@@ -57,6 +57,18 @@ const {chromium}=require('playwright');const fs=require('fs'),os=require('os'),p
  const liens=await pg.evaluate(()=>document.getElementById('suivi-liens').innerText)
  console.log('mon parcours :',liens.replace(/\n+/g,' | '))
  verifie(/Tous les modules/.test(liens)&&/Carnet/.test(liens)&&/Contacts/.test(liens),'modules, carnet et contacts accessibles')
+ // 7) Cours a reviser avant un exercice, jamais avant un examen
+ const cr=await pg.evaluate(async()=>{const x=__DB.quiz.find(q=>q.id==='xH');x.cours_lies=[{r:'r1'},{u:'https://exemple.test/doc.pdf',n:'Doc fabricant'},{r:'disparu'}]
+   await commencer('xH');const m=document.getElementById('modal-cours');const txt=m?m.innerText:'';const lignes=m?m.querySelectorAll('.ch-ligne').length:0;const quiz=document.getElementById('v-quiz').classList.contains('on');m&&m.remove()
+   const e=__DB.quiz.find(q=>q.id==='qH');e.cours_lies=[{r:'r1'}];__DB.rattrapages=[{quiz_id:'qH',aspirant_id:'a2',date_limite:'2030-01-01T00:00:00Z'}];__DB.tentatives=__DB.tentatives.filter(t=>t.quiz_id!=='qH');await commencer('qH');const exam=!!document.getElementById('modal-cours');const pris=document.getElementById('v-quiz').classList.contains('on');arreterTimer();effacerCopieEnCours();nav('dashboard');return {txt:txt.replace(/\n+/g,' | ').slice(0,150),lignes,quiz,exam,pris}})
+ console.log('avant exercice :',JSON.stringify(cr))
+ verifie(cr.lignes===2&&!cr.quiz&&/Doc fabricant/.test(cr.txt),'cours affiches avant l exercice, lien casse ignore')
+ verifie(!cr.exam&&cr.pris,'examen : pas d ecran de cours')
+ // 8) Gacheur : gerer les liens, en gardant les documents de fabricant
+ const ad=await pg.evaluate(async()=>{G.admin=true;let envoi=null;const f=db.from;db.from=function(t){const q=f(t);if(t==='quiz'){const u=q.update;q.update=function(v){envoi=v;return u.apply(q,arguments)}};return q}
+   await gererCoursLies('xH');const nb=document.querySelectorAll('#modal-cours-admin .cours-lie').length;document.querySelectorAll('#modal-cours-admin .cours-lie').forEach(c=>{c.checked=c.value==='r2'});await enregistrerCoursLies();db.from=f;G.admin=false;return {nb,envoi,ferme:!document.getElementById('modal-cours-admin')}})
+ console.log('gacheur :',JSON.stringify(ad))
+ verifie(ad.nb>=2&&ad.envoi.cours_lies.length===2&&ad.envoi.cours_lies[0].r==='r2'&&ad.envoi.cours_lies[1].n==='Doc fabricant'&&ad.ferme,'liens modifies, document de fabricant garde')
  console.log('ERREURS JS :',errs.length?errs:'aucune')
  await b.close();process.exit(echecs?1:0)
 })().catch(e=>{console.error(e);process.exit(1)})
