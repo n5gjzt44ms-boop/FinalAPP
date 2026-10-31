@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 410" role="img" aria-label="Paire de fils torsadés sur une longueur d'un mètre">
+<rect width="900" height="410" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="46" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Paire de fils d'un capteur</text><path d="M80 220 q18 -60 37 0 t37 0 q18 -60 37 0 t37 0 q18 -60 37 0 t37 0 q18 -60 37 0 t37 0 q18 -60 37 0 t37 0 q18 -60 37 0 t37 0 q18 -60 37 0 t37 0 q18 -60 37 0 t37 0 q18 -60 37 0 t37 0 q18 -60 37 0 t37 0" fill="none" stroke="#185FA5" stroke-width="7"/><path d="M80 220 q18 60 37 0 t37 0 q18 60 37 0 t37 0 q18 60 37 0 t37 0 q18 60 37 0 t37 0 q18 60 37 0 t37 0 q18 60 37 0 t37 0 q18 60 37 0 t37 0 q18 60 37 0 t37 0 q18 60 37 0 t37 0 q18 60 37 0 t37 0" fill="none" stroke="#C13B3A" stroke-width="7"/><line x1="80" y1="320" x2="820" y2="320" stroke="#124A80" stroke-width="4" stroke-linecap="round"/><line x1="80" y1="300" x2="80" y2="340" stroke="#124A80" stroke-width="4" stroke-linecap="round"/><line x1="820" y1="300" x2="820" y2="340" stroke="#124A80" stroke-width="4" stroke-linecap="round"/><text x="450" y="370" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Longueur : 1 m</text>
+</g>
+</svg>
