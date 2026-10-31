@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" role="img" aria-label="Résistance typique du 6061-T6 : 45 ksi non soudé, 27 ksi soudé">
+<rect width="900" height="430" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="46" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Résistance d'un 6061-T6 avant et après soudage</text><line x1="120" y1="370" x2="780" y2="370" stroke="#141414" stroke-width="5" stroke-linecap="round"/><rect x="210" y="110" width="170" height="260" fill="#185FA5" rx="4"/><text x="295" y="95" font-size="32" fill="#185FA5" text-anchor="middle" font-weight="700">45 ksi</text><text x="295" y="410" font-size="26" fill="#141414" text-anchor="middle" font-weight="700">Non soudé</text><rect x="530" y="214" width="170" height="156" fill="#C13B3A" rx="4"/><text x="615" y="199" font-size="32" fill="#C13B3A" text-anchor="middle" font-weight="700">27 ksi</text><text x="615" y="410" font-size="26" fill="#141414" text-anchor="middle" font-weight="700">Soudé</text>
+</g>
+</svg>

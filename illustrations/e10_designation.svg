@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" role="img" aria-label="Désignation 6061-T6 : la famille d'alliage et l'état à identifier">
+<rect width="900" height="420" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="46" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Lire la désignation d'un aluminium</text><rect x="150" y="110" width="600" height="150" fill="#E8E4DA" rx="12" stroke="#141414" stroke-width="5"/><text x="450" y="212" font-size="72" fill="#141414" text-anchor="middle" font-weight="700">6061-T6</text><line x1="290" y1="340" x2="290" y2="294" stroke="#124A80" stroke-width="8" stroke-linecap="round"/><polygon points="290,268 306,294 274,294" fill="#124A80"/><text x="290" y="385" font-size="28" fill="#124A80" text-anchor="middle" font-weight="700">Famille d'alliage</text><line x1="630" y1="340" x2="630" y2="294" stroke="#C13B3A" stroke-width="8" stroke-linecap="round"/><polygon points="630,268 646,294 614,294" fill="#C13B3A"/><text x="630" y="385" font-size="28" fill="#C13B3A" text-anchor="middle" font-weight="700">État : T6 = ?</text>
+</g>
+</svg>
