@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" role="img" aria-label="Coupe d'un palier avec roulement et cavité à remplir de graisse">
+<rect width="900" height="480" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="46" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Palier graissé : jusqu'où remplir ?</text><rect x="190" y="110" width="520" height="300" fill="#E8E4DA" rx="16" stroke="#141414" stroke-width="5"/><rect x="240" y="150" width="420" height="220" fill="#FFFFFF" stroke="#141414" stroke-width="3"/><rect x="60" y="230" width="780" height="60" fill="#D6D6D2" stroke="#141414" stroke-width="3"/><rect x="417" y="212" width="66" height="18" fill="#185FA5"/><circle cx="450" cy="194" r="17" fill="#141414"/><rect x="417" y="158" width="66" height="18" fill="#C13B3A"/><rect x="417" y="290" width="66" height="18" fill="#185FA5"/><circle cx="450" cy="326" r="17" fill="#141414"/><rect x="417" y="344" width="66" height="18" fill="#C13B3A"/><text x="450" y="450" font-size="26" fill="#C13B3A" text-anchor="middle" font-weight="700">Graisse à doser : ni trop, ni trop peu</text>
+</g>
+</svg>
