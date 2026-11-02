@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" role="img" aria-label="Angle de pli sous charge et après retour élastique">
+<rect width="900" height="380" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="44" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Retour élastique après pliage</text><path d="M150 140 L300 300 L450 140" fill="none" stroke="#185FA5" stroke-width="8"/><text x="300" y="340" font-size="22" fill="#185FA5" text-anchor="middle">Sous charge</text><path d="M500 170 L650 300 L800 170" fill="none" stroke="#C13B3A" stroke-width="8"/><text x="650" y="340" font-size="22" fill="#C13B3A" text-anchor="middle">Après déchargement</text><line x1="650" y1="300" x2="800" y2="140" stroke="#185FA5" stroke-width="2" stroke-dasharray="6 6"/><text x="780" y="120" font-size="24" fill="#C13B3A" text-anchor="middle" font-weight="700">Retour ?</text>
+</g>
+</svg>

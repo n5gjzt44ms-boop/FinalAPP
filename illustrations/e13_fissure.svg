@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" role="img" aria-label="Coupe d une tôle pliée avec côté intérieur et côté extérieur">
+<rect width="900" height="380" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="44" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Fissure dans un pli</text><path d="M150 120 L380 280 Q450 330 520 280 L750 120" fill="none" stroke="#D6D6D2" stroke-width="50"/><path d="M150 120 L380 280 Q450 330 520 280 L750 120" fill="none" stroke="#141414" stroke-width="2"/><path d="M440 280 l8 -12 l-6 -8 l10 -10" fill="none" stroke="#C13B3A" stroke-width="4"/><text x="450" y="220" font-size="20" fill="#C13B3A" text-anchor="middle">Côté intérieur (compression)</text><text x="450" y="365" font-size="20" fill="#185FA5" text-anchor="middle">Côté extérieur (traction)</text>
+</g>
+</svg>

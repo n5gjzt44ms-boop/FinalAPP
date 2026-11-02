@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" role="img" aria-label="Référence de connecteur DEUTSCH découpée en groupes">
+<rect width="900" height="360" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="44" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Lire la référence DEUTSCH</text><text x="450" y="160" font-size="64" fill="#124A80" text-anchor="middle" font-weight="700">DT 06 - 4 S</text><line x1="295" y1="190" x2="295" y2="240" stroke="#185FA5" stroke-width="3"/><text x="295" y="275" font-size="24" fill="#185FA5" text-anchor="middle" font-weight="700">Série</text><line x1="410" y1="190" x2="410" y2="240" stroke="#185FA5" stroke-width="3"/><text x="410" y="275" font-size="24" fill="#C13B3A" text-anchor="middle" font-weight="700">?</text><line x1="530" y1="190" x2="530" y2="240" stroke="#185FA5" stroke-width="3"/><text x="530" y="275" font-size="24" fill="#C13B3A" text-anchor="middle" font-weight="700">?</text><line x1="610" y1="190" x2="610" y2="240" stroke="#185FA5" stroke-width="3"/><text x="610" y="275" font-size="24" fill="#C13B3A" text-anchor="middle" font-weight="700">?</text><text x="450" y="330" font-size="22" fill="#124A80" text-anchor="middle">Fiche ou embase ? Voies ? Contacts ?</text>
+</g>
+</svg>
