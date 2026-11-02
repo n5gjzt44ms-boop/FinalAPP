@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" role="img" aria-label="Torche de soudage MAG qui avance sur une tôle">
+<rect width="900" height="400" fill="#FFFFFF"/>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="450" y="44" font-size="30" fill="#124A80" text-anchor="middle" font-weight="700">Énergie de soudage au MAG</text><rect x="80" y="280" width="740" height="50" fill="#D6D6D2" stroke="#141414" stroke-width="4" rx="0"/><path d="M300 280 Q340 262 380 280" fill="#C13B3A" stroke="#C13B3A" stroke-width="2"/><rect transform="rotate(-20 415 180)" x="390" y="120" width="50" height="120" fill="#E8E4DA" stroke="#141414" stroke-width="4" rx="8"/><line x1="445" y1="240" x2="430" y2="278" stroke="#141414" stroke-width="4"/><line x1="500" y1="360" x2="680" y2="360" stroke="#185FA5" stroke-width="4"/><path d="M680 360 L665.3 366.2 L665.3 353.8 Z" fill="#185FA5"/><text x="590" y="392" font-size="22" fill="#185FA5" text-anchor="middle">v (mm/min)</text><text x="560" y="150" font-size="24" fill="#124A80" text-anchor="start">U (V)</text><text x="560" y="190" font-size="24" fill="#124A80" text-anchor="start">I (A)</text><text x="560" y="230" font-size="24" fill="#124A80" text-anchor="start">Rendement k</text><text x="200" y="160" font-size="34" fill="#C13B3A" text-anchor="middle" font-weight="700">Q = ?</text>
+</g>
+</svg>
