@@ -112,7 +112,7 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - Chaque scénario affiche ce qu'il voit et finit par « ERREURS JS : aucune ». Lire la sortie, pas seulement « OK ».
 
 ## État actuel (31/10/2026)
-- En ligne : v2026.10.31-0810. Version v2026.11.09-1626 (import Word/PDF) prête, à mettre en ligne après la fin des examens ouverts jusqu'au 10/11.
+- En ligne : v2026.11.09-1626 (import d'un quiz Word ou PDF, mis en ligne le 09/11 au soir à la demande de Benoît, examens encore ouverts mais aucune copie en cours). Premier import réel par un gâcheur à surveiller (dépôt des images dans le stockage pas encore vérifié en vrai).
 - Tâche `progmeca-exercices-hebdo` : chaque lundi vers 7 h 30, 2 exercices par module déposés en privé, si l'appli est ouverte (sinon au prochain lancement). Première exécution le 02/11.
 - Lot 3 (02/11), 8 exercices PRIVÉS à relire puis publier : Module 1 niveaux 28 et 29 (courroies, Gates E2/20087), Module 2 niveaux 27 (accumulateur à vessie, HYDAC 3.201) et 28 (valve d'équilibrage, Sun Hydraulics CBCG-LKN et CWGA-LHV), Module 3 niveaux 21 et 22 (souder et plier du Hardox, SSAB 103 et 105), Module 4 niveaux 26 (détecteur inductif, Turck) et 27 (connecteurs DEUTSCH DT, TE). Schémas `e11_` à `e14_`.
 - Lot 4 (09/11), 8 exercices PRIVÉS à relire puis publier : Module 1 niveaux 30 et 31 (chaînes à rouleaux, Tsubaki TCLI&M06 et guide de dépannage), Module 2 niveaux 29 et 30 (pompe à engrenages, Marzocchi GHP CD6.0), Module 3 niveaux 23 et 24 (rechargement dur, Lincoln C7.710), Module 4 niveaux 28 et 29 (capteur de pression 4-20 mA, ifm PT5xxE et SICK PFT-2). Schémas `e15_` à `e18_`, en ligne depuis le 09/11 (la tâche fusionne désormais les schémas même pendant un examen).
