@@ -28,7 +28,7 @@ const GUIDES = {
     titre: "Guide administrateur",
     couleur: 'var(--r)', fond: 'var(--rl)',
     etapes: [
-      {icon:'ti-layout-dashboard', titre:'Accueil', texte:"Ce qui demande votre attention : copies a corriger, examens du jour (publies ou non), absents, rattrapages ouverts. Tout se regle en un clic. En bas : Copies, Aspirants, Modules et Gerer."},
+      {icon:'ti-layout-dashboard', titre:'Accueil', texte:"Ce qui demande votre attention : copies a corriger, examens du jour (publies ou non), absents, rattrapages ouverts, nouveaux exercices a relire puis publier. Tout se regle en un clic. En bas : Copies, Aspirants, Modules et Gerer."},
       {icon:'ti-help-circle', titre:'Gerer les quiz', texte:"Creez des exercices (repassables) ou des examens (avec creneau horaire). Questions QCM, Vrai/Faux ou reponse libre."},
       {icon:'ti-upload', titre:'Ressources', texte:"Uploadez des PDFs, Word ou CAO par module. Organisez en dossiers."},
       {icon:'ti-speakerphone', titre:'Annonces', texte:"Publiez des annonces visibles par tous les aspirants. Choisissez duree et niveau."},
@@ -139,7 +139,7 @@ const GUIDES = {
     titre: "Guide administrateur",
     couleur: 'var(--r)', fond: 'var(--rl)',
     etapes: [
-      {icon:'ti-layout-dashboard', titre:'Accueil', texte:"Ce qui demande votre attention : copies a corriger, examens du jour (publies ou non), absents, rattrapages ouverts. Tout se regle en un clic. En bas : Copies, Aspirants, Modules et Gerer."},
+      {icon:'ti-layout-dashboard', titre:'Accueil', texte:"Ce qui demande votre attention : copies a corriger, examens du jour (publies ou non), absents, rattrapages ouverts, nouveaux exercices a relire puis publier. Tout se regle en un clic. En bas : Copies, Aspirants, Modules et Gerer."},
       {icon:'ti-help-circle', titre:'Gerer les quiz', texte:"Creez des exercices (repassables) ou des examens (avec creneau horaire). Questions QCM, Vrai/Faux ou reponse libre."},
       {icon:'ti-upload', titre:'Ressources', texte:"Uploadez des PDFs, Word ou CAO par module. Organisez en dossiers."},
       {icon:'ti-speakerphone', titre:'Annonces', texte:"Publiez des annonces visibles par tous les aspirants. Choisissez duree et niveau."},
@@ -1188,7 +1188,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.11.09-1626'
+const VERSION_APP = '2026.11.09-1930'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -2536,6 +2536,30 @@ function allerCorrections(vue,mod){
   document.querySelectorAll('#filtres-corr button').forEach(function(b){b.className=parseInt(b.dataset.cm)===_corrFiltre?'btn btn-dark btn-sm':'btn btn-ghost btn-sm'})
 }
 let _admExams={}
+let _admExos={}
+// Publication d'un exercice relu (accueil gacheur ou fenetre de relecture)
+async function publierExercice(id){
+  if(!G.admin) return
+  const q=_admExos[id]||{}
+  if(!confirm('Publier l’exercice « '+(q.titre||'cet exercice')+' » ?\n\nLes aspirants pourront le faire tout de suite.')) return
+  const {data,error}=await db.from('quiz').update({actif:true}).eq('id',id).select('id')
+  if(error){toast('Erreur : '+error.message,'err');return}
+  if(!data||!data.length){toast('Publication refusée par la base : rien n’a changé','err');return}
+  toast('Exercice publié','ok')
+  document.getElementById('modal-previsu')?.remove()
+  const vd=$('v-dashboard'),vq=$('v-quiz-admin')
+  if(vd&&vd.classList.contains('on')) loadDashboard()
+  if(vq&&vq.classList.contains('on')) loadQuizAdmin()
+}
+// Document PDF d'une question, ouvert depuis la fenetre de relecture.
+// L'onglet s'ouvre pendant le clic (sinon Safari le bloque apres l'attente).
+async function ouvrirMediaPrevisu(p){
+  let onglet=null
+  try{onglet=window.open('','_blank')}catch(e){onglet=null}
+  const u=await urlImage(p)
+  if(!u){if(onglet)onglet.close();toast('Document indisponible','err');return}
+  if(onglet) onglet.location.href=u; else window.open(u,'_blank')
+}
 async function publierDepuisAccueil(id){
   if(!G.admin) return
   const titre=(_admExams[id]&&_admExams[id].titre)||''
@@ -2550,12 +2574,24 @@ async function loadDashboardAdmin(){
   const titreEl=$('d-prenom')&&$('d-prenom').parentElement
   if(titreEl) titreEl.innerHTML='Bonjour <span id="d-prenom">'+echapAttr(G.profil.prenom||G.profil.nom||'')+'</span>'
   if(!zone.innerHTML) zone.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
-  const [rQ,rT,rP,rR]=await Promise.all([
+  const [rQ,rT,rP,rR,rX]=await Promise.all([
     db.from('quiz').select('id,titre,module_id,date_debut,date_fin,actif,archive,mode_examen').eq('mode_examen',true),
     db.from('tentatives').select('id,aspirant_id,quiz_id,note_admin,completed_at').limit(5000),
     db.from('profils').select('id,prenom,nom,role,module_inscrit,metier,sans_module,modules_valides').in('role',['aspirant','apprenti']),
-    db.from('rattrapages').select('*')
+    db.from('rattrapages').select('*'),
+    db.from('quiz').select('id,titre,module_id,niveau,actif,archive,mode_examen,created_at').eq('actif',false)
   ])
+  // Exercices deposes en prive (production de la semaine, quiz importes...) :
+  // le gacheur les relit et les publie depuis l'accueil.
+  const exos=(rX.data||[]).filter(function(q){return !q.mode_examen&&!q.archive}).sort(function(a,b){
+    return (Number(a.module_id)-Number(b.module_id))||((Number(a.niveau)||0)-(Number(b.niveau)||0))
+  })
+  _admExos={};exos.forEach(function(q){_admExos[q.id]=q})
+  const nbQuestionsExo={}
+  if(exos.length){
+    const {data:qx}=await db.from('questions').select('quiz_id').in('quiz_id',exos.map(function(q){return q.id}))
+    ;(qx||[]).forEach(function(x){nbQuestionsExo[x.quiz_id]=(nbQuestionsExo[x.quiz_id]||0)+1})
+  }
   const n=new Date()
   const exams=(rQ.data||[]).filter(function(q){return !q.archive})
   const mapQ={};exams.forEach(function(q){mapQ[q.id]=q})
@@ -2598,6 +2634,7 @@ async function loadDashboardAdmin(){
   if(aCorriger.length) aFaire.push(ligne({clic:"allerCorrections('attente',0)",ic:'ti-checkbox',fond:'var(--rl)',coul:'var(--r)',t1:'Copies à corriger',t2:'Examens rendus en attente de ta note',nb:aCorriger.length}))
   if(absents) aFaire.push(ligne({clic:"allerCorrections('absents',0)",ic:'ti-user-x',fond:'var(--amberl)',coul:'var(--amber)',t1:'Absents sans rattrapage',t2:'Examens terminés : rouvre l’accès ou crée la copie',nb:absents}))
   if(sansModule) aFaire.push(ligne({clic:"nav('aspirants')",ic:'ti-user-question',fond:'var(--bl)',coul:'var(--b)',t1:'Aspirants sans module',t2:'Ils ne peuvent passer aucun examen',nb:sansModule}))
+  if(exos.length) aFaire.push(ligne({clic:"document.getElementById('adm-exos').scrollIntoView({behavior:'smooth',block:'start'})",ic:'ti-eye-check',fond:'var(--amberl)',coul:'var(--amber)',t1:'Exercices à relire',t2:'Nouveaux exercices privés : lis les réponses, puis publie',nb:exos.length}))
   h+='<div class="adm-h">À faire</div>'
   h+=aFaire.length?aFaire.join(''):'<div class="adm-row"><div class="adm-ic" style="background:var(--vl);color:var(--v)"><i class="ti ti-circle-check"></i></div><div class="adm-tx"><div class="adm-t1">Rien d’urgent</div><div class="adm-t2">Toutes les copies sont corrigées.</div></div></div>'
   // ── Examens du jour ──
@@ -2645,6 +2682,21 @@ async function loadDashboardAdmin(){
         +'<div class="adm-tx"><div class="adm-t1">'+echapAttr(q.titre)+'</div><div class="adm-t2">'+nomMod(q.module_id)+' · '+d.toLocaleDateString('fr-FR',{weekday:'long'})+' '+heureFr(d)+' · '+attendusDe(q).length+' attendus</div></div>'
         +(q.actif?'<span class="adm-pill" style="background:var(--vl);color:var(--v)">Publié</span>'
           :'<button class="btn btn-r btn-sm" style="flex-shrink:0" onclick="publierDepuisAccueil(\''+q.id+'\')">Publier</button>')
+      +'</div>'
+    }).join('')
+  }
+  // ── Exercices a relire (prives) ──
+  if(exos.length){
+    h+='<div class="adm-h" id="adm-exos" style="scroll-margin-top:70px">Exercices à relire · '+exos.length+' <a onclick="nav(\'quiz-admin\')">Tous les quiz</a></div>'
+    h+='<div style="font-size:.76rem;color:var(--t2);line-height:1.45;margin:-.2rem 0 .7rem">Les aspirants ne les voient pas encore. Touche un exercice pour lire ses questions et les réponses attendues, puis publie-le.</div>'
+    h+=exos.map(function(q){
+      const nbq=nbQuestionsExo[q.id]||0
+      const dep=q.created_at?new Date(q.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):''
+      return '<div class="adm-row clic" data-quiz="'+echapAttr(q.id)+'" onclick="previsualiserQuiz(this.dataset.quiz)">'
+        +'<div class="adm-date"><b>'+(q.niveau!=null?Number(q.niveau):'–')+'</b><span>niveau</span></div>'
+        +'<div class="adm-tx"><div class="adm-t1">'+echapAttr(q.titre||'Sans titre')+'</div>'
+        +'<div class="adm-t2">'+nomMod(q.module_id)+' · '+nbq+' question'+(nbq>1?'s':'')+(dep?' · déposé le '+dep:'')+'</div></div>'
+        +'<button class="btn btn-r btn-sm" style="flex-shrink:0" data-quiz="'+echapAttr(q.id)+'" onclick="event.stopPropagation();publierExercice(this.dataset.quiz)">Publier</button>'
       +'</div>'
     }).join('')
   }
@@ -4967,12 +5019,18 @@ async function supprimerCorrige(quizId){
 
 async function previsualiserQuiz(id){
   if(!G.admin){toast('Réservé aux gâcheurs','err');return}
-  const [{data:qz},{data:qs}]=await Promise.all([
+  const [{data:qz},{data:qs},cours]=await Promise.all([
     db.from('quiz').select('*').eq('id',id).single(),
-    db.from('questions').select('*').eq('quiz_id',id).order('ordre')
+    db.from('questions').select('*').eq('quiz_id',id).order('ordre'),
+    coursDeLExercice(id).catch(function(){return []})
   ])
   if(!qz){toast('Quiz introuvable','err');return}
+  document.getElementById('modal-previsu')?.remove()
   const questions=qs||[]
+  // Exercice prive : on peut le publier depuis cette fenetre
+  const aPublier=!qz.actif&&!qz.archive&&!qz.mode_examen
+  if(aPublier&&!_admExos[id]) _admExos[id]=qz
+  _coursAvant=cours||[]
   const modal=document.createElement('div');modal.id='modal-previsu'
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem'
   modal.onclick=function(e){if(e.target===modal)modal.remove()}
@@ -4997,18 +5055,26 @@ async function previsualiserQuiz(id){
     if(!q.enonce||!q.enonce.trim()) alerte.push('énoncé vide')
     if(q.type_question!=='libre'&&opts.filter(function(o){return o&&o.trim()}).length<2) alerte.push('moins de 2 propositions')
     if(q.type_question!=='libre'&&!bonnes.length) alerte.push('aucune bonne réponse')
+    if(q.type_question==='libre'&&!(q.reponse_type||'').trim()) alerte.push('pas de réponse attendue')
+    // Schemas et documents de la question (toutes les pieces, pas seulement la premiere)
+    const mds=Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url}]:[])
+    const blocMedias=mds.map(function(m){
+      if(m.t==='pdf') return '<button class="btn btn-ghost btn-sm" style="margin-top:8px" data-p="'+echapAttr(m.p)+'" onclick="ouvrirMediaPrevisu(this.dataset.p)"><i class="ti ti-file-type-pdf" style="color:var(--r)"></i> '+echapAttr(m.n||'Document')+'</button>'
+      return '<img data-img="'+echapAttr(m.p)+'" onclick="if(this.src)agrandirImage(this.src)" style="display:block;max-width:100%;max-height:320px;object-fit:contain;border-radius:10px;margin-top:8px;background:#fff;border:1px solid var(--bord);cursor:zoom-in"/>'
+    }).join('')
+    const titreRep=q.type_question==='libre'?'Réponse attendue':'Explication'
 
     return '<div style="border-bottom:1px solid var(--bord);padding:14px 0">'
       +'<div style="display:flex;gap:10px;margin-bottom:8px">'
         +'<span style="font-family:var(--fg);font-weight:700;color:var(--t3);flex-shrink:0">'+(i+1)+'</span>'
         +'<div style="flex:1;min-width:0">'
           +'<div style="font-size:.88rem;font-weight:500;line-height:1.5">'+(q.enonce||'<span style="color:var(--r)">Énoncé manquant</span>')+'</div>'
-          +(q.image_url?'<img data-img="'+echapAttr(q.image_url)+'" style="max-width:100%;border-radius:10px;margin-top:8px"/>':'')
+          +blocMedias
         +'</div>'
         +'<span style="font-size:.7rem;color:var(--t3);flex-shrink:0">'+(q.points||0)+' pt</span>'
       +'</div>'
       +'<div style="padding-left:24px">'+blocOpts
-      +(q.reponse_type?'<div style="font-size:.76rem;color:var(--t2);background:var(--field);border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.5"><b>Explication :</b> '+q.reponse_type+'</div>':'')
+      +(q.reponse_type?'<div style="font-size:.76rem;color:var(--t2);background:var(--field);border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.5"><b>'+titreRep+' :</b> '+q.reponse_type+'</div>':'')
       +(alerte.length?'<div style="font-size:.74rem;color:var(--r);margin-top:6px"><i class="ti ti-alert-triangle"></i> '+alerte.join(' · ')+'</div>':'')
       +'</div></div>'
   }).join('')
@@ -5016,14 +5082,19 @@ async function previsualiserQuiz(id){
   modal.innerHTML='<div style="background:var(--card);border-radius:20px;width:100%;max-width:640px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
     +'<div style="background:var(--dark);padding:1.1rem 1.3rem;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'
       +'<div style="min-width:0"><div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">'+qz.titre+'</div>'
-      +'<div style="font-size:.72rem;color:#888;margin-top:3px">'+(mod?mod.nom:'')+' — '+questions.length+' question'+(questions.length>1?'s':'')+' — '+totalPts+' points'+(qz.mode_examen?' — EXAMEN':'')+'</div></div>'
+      +'<div style="font-size:.72rem;color:#888;margin-top:3px">'+(mod?mod.nom:'')+' — '+(qz.niveau!=null?'niveau '+Number(qz.niveau)+' — ':'')+questions.length+' question'+(questions.length>1?'s':'')+' — '+totalPts+' points'+(qz.mode_examen?' — EXAMEN':'')+(qz.actif?'':' — PRIVÉ')+'</div></div>'
       +'<button onclick="document.getElementById(\'modal-previsu\').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem;flex-shrink:0"><i class="ti ti-x"></i></button>'
     +'</div>'
-    +'<div style="padding:0 1.3rem;overflow-y:auto;flex:1">'+(questions.length?corps:'<p style="padding:2rem 0;text-align:center;color:var(--t3);font-size:.85rem">Aucune question dans ce quiz.</p>')+'</div>'
-    +'<div style="padding:.9rem 1.3rem;border-top:1px solid var(--bord);display:flex;gap:8px">'
-      +'<button class="btn btn-ghost btn-sm" style="flex:1" onclick="document.getElementById(\'modal-previsu\').remove();ouvrirCorrige(\''+id+'\')"><i class="ti ti-file-check"></i> Corrigé</button>'
+    +'<div style="padding:0 1.3rem;overflow-y:auto;flex:1">'
+      +(_coursAvant.length&&!qz.mode_examen?'<div style="padding:12px 0 2px"><div style="font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:6px">Cours affichés avant l’exercice</div>'
+        +_coursAvant.map(function(c,k){return '<button class="btn btn-ghost btn-sm" style="margin:0 6px 6px 0" onclick="ouvrirCoursAvant('+k+')"><i class="ti '+(c.externe?'ti-external-link':'ti-book')+'"></i> '+echapAttr(c.nom)+'</button>'}).join('')+'</div>'
+        :(!qz.mode_examen?'<div style="font-size:.76rem;color:var(--r);padding:12px 0 0"><i class="ti ti-alert-triangle"></i> Aucun cours rattaché à cet exercice.</div>':''))
+      +(questions.length?corps:'<p style="padding:2rem 0;text-align:center;color:var(--t3);font-size:.85rem">Aucune question dans ce quiz.</p>')+'</div>'
+    +'<div style="padding:.9rem 1.3rem;border-top:1px solid var(--bord);display:flex;gap:8px;flex-wrap:wrap">'
+      +(qz.mode_examen?'<button class="btn btn-ghost btn-sm" style="flex:1" onclick="document.getElementById(\'modal-previsu\').remove();ouvrirCorrige(\''+id+'\')"><i class="ti ti-file-check"></i> Corrigé</button>':'')
       +'<button class="btn btn-ghost btn-sm" style="flex:1" onclick="document.getElementById(\'modal-previsu\').remove();editerQuiz(\''+id+'\')"><i class="ti ti-pencil"></i> Modifier</button>'
-      +'<button class="btn btn-r btn-sm" style="flex:1" onclick="document.getElementById(\'modal-previsu\').remove();commencer(\''+id+'\')"><i class="ti ti-player-play"></i> Passer en conditions réelles</button>'
+      +'<button class="btn '+(aPublier?'btn-ghost':'btn-r')+' btn-sm" style="flex:1" onclick="document.getElementById(\'modal-previsu\').remove();commencer(\''+id+'\')"><i class="ti ti-player-play"></i> '+(qz.mode_examen?'Passer en conditions réelles':'Tester')+'</button>'
+      +(aPublier?'<button class="btn btn-r btn-sm" id="previsu-publier" style="flex:1" data-quiz="'+echapAttr(id)+'" onclick="publierExercice(this.dataset.quiz)"><i class="ti ti-world"></i> Publier</button>':'')
     +'</div>'
   +'</div>'
   document.body.appendChild(modal)
@@ -7566,7 +7637,7 @@ const GUIDES = {
     titre: "Guide administrateur",
     couleur: 'var(--r)', fond: 'var(--rl)',
     etapes: [
-      {icon:'ti-layout-dashboard', titre:'Accueil', texte:"Ce qui demande votre attention : copies a corriger, examens du jour (publies ou non), absents, rattrapages ouverts. Tout se regle en un clic. En bas : Copies, Aspirants, Modules et Gerer."},
+      {icon:'ti-layout-dashboard', titre:'Accueil', texte:"Ce qui demande votre attention : copies a corriger, examens du jour (publies ou non), absents, rattrapages ouverts, nouveaux exercices a relire puis publier. Tout se regle en un clic. En bas : Copies, Aspirants, Modules et Gerer."},
       {icon:'ti-help-circle', titre:'Gerer les quiz', texte:"Creez des exercices (repassables) ou des examens (avec creneau horaire). Questions QCM, Vrai/Faux ou reponse libre."},
       {icon:'ti-upload', titre:'Ressources', texte:"Uploadez des PDFs, Word ou CAO par module. Organisez en dossiers."},
       {icon:'ti-speakerphone', titre:'Annonces', texte:"Publiez des annonces visibles par tous les aspirants. Choisissez duree et niveau."},
