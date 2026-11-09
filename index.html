@@ -985,7 +985,10 @@ button,input,select,textarea{font-family:var(--ff)}
               </div>
             </div>
             <div id="mq-questions-list"></div>
-            <button class="btn btn-ghost btn-full" style="border-style:dashed;margin-bottom:1rem" onclick="ajouterQuestion()"><i class="ti ti-plus"></i> Ajouter une question</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+              <button class="btn btn-ghost" style="flex:1;min-width:180px;border-style:dashed" onclick="ajouterQuestion()"><i class="ti ti-plus"></i> Ajouter une question</button>
+              <label class="btn btn-ghost" id="mq-import" style="flex:1;min-width:180px;border-style:dashed;position:relative;overflow:hidden;cursor:pointer"><i class="ti ti-file-import"></i> Importer un Word ou un PDF<input type="file" accept=".docx,.pdf,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="choisirFichierImport(this)" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0"/></label>
+            </div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:.8rem 1rem;background:var(--bg);border-radius:10px;margin-bottom:1rem;border:1px solid var(--bord)">
               <span style="font-size:.82rem;font-weight:600" id="mq-total">0 question</span>
               <span style="font-size:.72rem;color:var(--t3)">Score ramené sur 20 · Seuil 14/20</span>
@@ -1185,7 +1188,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.10.31-0810'
+const VERSION_APP = '2026.11.09-1626'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -4376,6 +4379,357 @@ function majBonneReponse(i,j,coche,type){
 }
 
 function supprimerQuestion(idx){mqQuestions.splice(idx,1);renderQuestions();sauverBrouillon()}
+function retirerMediaQuestion(i,k){const q=mqQuestions[i];if(!q||!q.medias)return;q.medias.splice(k,1);renderQuestions();sauverBrouillon()}
+
+// ─── IMPORT D'UN QUIZ WORD OU PDF ──────────────────────────────────────────
+// Un gacheur depose son quiz au format Word (.docx) ou PDF. Le fichier est lu
+// dans le navigateur (aucun service exterieur) : les questions, les reponses
+// attendues et les images sont reperees puis versees dans l'editeur habituel,
+// ou le gacheur relit tout avant de creer le quiz.
+// Forme reconnue : un titre de partie (« 1. Les pompes »), « Question ... »,
+// la ou les images, puis « Réponse : ... » ; ou des propositions a) b) c).
+
+// Lecture d'une archive zip (un .docx est un zip) sans bibliotheque exterieure
+async function lireZip(buf){
+  const v=new DataView(buf),u8=new Uint8Array(buf),fichiers={}
+  let fin=-1
+  for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-70000);i--){if(v.getUint32(i,true)===0x06054b50){fin=i;break}}
+  if(fin<0) throw new Error('fichier illisible (ce n’est pas un .docx)')
+  const nb=v.getUint16(fin+10,true)
+  let p=v.getUint32(fin+16,true)
+  const dec=new TextDecoder()
+  for(let k=0;k<nb;k++){
+    if(v.getUint32(p,true)!==0x02014b50) break
+    const methode=v.getUint16(p+10,true),taille=v.getUint32(p+20,true)
+    const ln=v.getUint16(p+28,true),le=v.getUint16(p+30,true),lc=v.getUint16(p+32,true)
+    const local=v.getUint32(p+42,true)
+    const nom=dec.decode(u8.subarray(p+46,p+46+ln))
+    fichiers[nom]={methode:methode,taille:taille,local:local}
+    p+=46+ln+le+lc
+  }
+  return {
+    noms:Object.keys(fichiers),
+    lire:async function(nom){
+      const f=fichiers[nom];if(!f) return null
+      const debut=f.local+30+v.getUint16(f.local+26,true)+v.getUint16(f.local+28,true)
+      const brut=u8.slice(debut,debut+f.taille)
+      if(f.methode===0) return brut
+      if(typeof DecompressionStream==='undefined') throw new Error('navigateur trop ancien pour lire un .docx')
+      const flux=new Blob([brut]).stream().pipeThrough(new DecompressionStream('deflate-raw'))
+      return new Uint8Array(await new Response(flux).arrayBuffer())
+    }
+  }
+}
+
+// Word : liste ordonnee de blocs {texte, gras, marque, images:[{nom,octets}]}
+async function lireWordQuiz(fichier){
+  const zip=await lireZip(await fichier.arrayBuffer())
+  const dec=new TextDecoder()
+  const docXml=await zip.lire('word/document.xml')
+  if(!docXml) throw new Error('document Word introuvable dans le fichier')
+  const rels={}
+  const relsXml=await zip.lire('word/_rels/document.xml.rels')
+  if(relsXml){
+    const rd=new DOMParser().parseFromString(dec.decode(relsXml),'application/xml')
+    Array.from(rd.getElementsByTagName('Relationship')).forEach(function(r){rels[r.getAttribute('Id')]=r.getAttribute('Target')})
+  }
+  const doc=new DOMParser().parseFromString(dec.decode(docXml),'application/xml')
+  const enfants=function(el,nom){return Array.from(el.getElementsByTagName('*')).filter(function(x){return x.localName===nom})}
+  const attr=function(el,nom){if(!el)return null;for(const a of Array.from(el.attributes)){if(a.localName===nom)return a.value}return null}
+  const actif=function(el){if(!el)return false;const val=attr(el,'val');return val===null||!/^(0|false|none)$/i.test(val)}
+  const corps=enfants(doc,'body')[0]
+  if(!corps) throw new Error('document Word vide')
+  const paras=enfants(corps,'p')
+  const blocs=[]
+  for(const p of paras){
+    const pPr=Array.from(p.children).find(function(x){return x.localName==='pPr'})
+    const style=pPr?attr(enfants(pPr,'pStyle')[0],'val')||'':''
+    let texte='',nGras=0,nTexte=0,aDuTexte=false,marque=false
+    const images=[]
+    for(const r of enfants(p,'r')){
+      const rPr=Array.from(r.children).find(function(x){return x.localName==='rPr'})
+      let morceau=''
+      for(const c of Array.from(r.children)){
+        if(c.localName==='t') morceau+=c.textContent
+        else if(c.localName==='tab') morceau+=' '
+        else if(c.localName==='br') morceau+=' '
+        else if(c.localName==='sym') morceau+=attr(c,'char')==='F0FE'||attr(c,'char')==='F0FD'?'☑':'☐'
+      }
+      enfants(r,'blip').forEach(function(bl){const id=attr(bl,'embed');if(id&&rels[id])images.push(rels[id])})
+      enfants(r,'imagedata').forEach(function(im){const id=attr(im,'id');if(id&&rels[id])images.push(rels[id])})
+      if(morceau.trim()){
+        aDuTexte=true
+        const gras=rPr&&actif(enfants(rPr,'b')[0])
+        const lg=morceau.replace(/\s/g,'').length
+        nTexte+=lg;if(gras) nGras+=lg
+        if(rPr&&(enfants(rPr,'highlight').length||enfants(rPr,'shd').some(function(s){const f=attr(s,'fill');return f&&!/^(auto|FFFFFF)$/i.test(f)})||enfants(rPr,'color').some(function(c){const v=attr(c,'val');return v&&!/^(auto|000000)$/i.test(v)}))) marque=true
+      }
+      texte+=morceau
+    }
+    const titre=/heading|titre/i.test(style)
+    // Paragraphe « en gras » : au moins 60 % de ses lettres
+    const bloc={texte:texte.replace(/\s+/g,' ').trim(),gras:aDuTexte&&(titre||(nTexte>0&&nGras/nTexte>=0.6)),titre:titre,marque:marque,images:[]}
+    for(const cible of images){
+      const nom=cible.replace(/^\/?(word\/)?/,'')
+      const oct=await zip.lire('word/'+nom)
+      if(oct) bloc.images.push({nom:nom.split('/').pop(),octets:oct})
+    }
+    if(bloc.texte||bloc.images.length) blocs.push(bloc)
+  }
+  return blocs
+}
+
+// PDF : texte seulement (les images d'un PDF ne se decoupent pas une par une)
+function chargerScript(src){
+  return new Promise(function(ok,ko){const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=function(){ko(new Error('chargement impossible'))};document.head.appendChild(s)})
+}
+async function lirePdfQuiz(fichier){
+  const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/'
+  if(!window.pdfjsLib) await chargerScript(base+'pdf.min.js')
+  if(!window.pdfjsLib) throw new Error('lecteur PDF indisponible (vérifie la connexion)')
+  pdfjsLib.GlobalWorkerOptions.workerSrc=base+'pdf.worker.min.js'
+  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await fichier.arrayBuffer())}).promise
+  const blocs=[]
+  for(let n=1;n<=pdf.numPages;n++){
+    const page=await pdf.getPage(n)
+    const c=await page.getTextContent()
+    const lignes=[]
+    c.items.forEach(function(it){
+      if(!it.str||!it.str.trim()) return
+      const y=Math.round(it.transform[5])
+      let l=lignes.find(function(x){return Math.abs(x.y-y)<=2})
+      if(!l){l={y:y,morceaux:[]};lignes.push(l)}
+      const st=c.styles&&c.styles[it.fontName]
+      l.morceaux.push({x:it.transform[4],t:it.str,gras:/bold|black|heavy|semibold/i.test((it.fontName||'')+' '+((st&&st.fontFamily)||''))})
+    })
+    lignes.sort(function(a,b){return b.y-a.y}).forEach(function(l){
+      l.morceaux.sort(function(a,b){return a.x-b.x})
+      const texte=l.morceaux.map(function(m){return m.t}).join(' ').replace(/\s+/g,' ').trim()
+      const pleins=l.morceaux.filter(function(m){return m.t.trim()})
+      if(texte) blocs.push({texte:texte,gras:pleins.length>0&&pleins.every(function(m){return m.gras}),titre:false,marque:false,images:[]})
+    })
+  }
+  return blocs
+}
+
+// Repere les questions dans la suite de blocs
+const RE_IMP_QUESTION=/^(question|q)\s*\.?\s*[0-9ivx]+[0-9a-z.]*\s*[.):–-]?\s*/i
+const RE_IMP_REPONSE=/^(r[ée]ponses?|corrig[ée]|solution)(\s+attendues?)?\s*[:：]\s*/i
+const RE_IMP_SECTION=/^([0-9]{1,2}|[ivx]{1,4})\s*[.)–-]\s+\S/i
+const RE_IMP_OPTION=/^(\(?([a-h])\s*[).]|([a-h])\s*[–-]\s|[☐☑☒□■▢✓✔✗•]|\[\s*[xX✓ ]?\s*\])\s*/i
+function analyserQuizImporte(blocs){
+  const questions=[],avert=[]
+  let section='',consigne='',courante=null,legende='',titreQuiz='',imagesEnAttente=[]
+  const fermer=function(){if(courante){questions.push(courante);courante=null}}
+  const nouvelle=function(enonce){
+    fermer()
+    courante={enonce:enonce,options:[],reponse:'',images:imagesEnAttente.slice(),section:section,enReponse:false}
+    imagesEnAttente=[]
+  }
+  const estLabel=function(b){return b.gras&&b.texte.length<=70&&!/[?:]\s*$/.test(b.texte)&&!RE_IMP_REPONSE.test(b.texte)}
+  for(let i=0;i<blocs.length;i++){
+    const b=blocs[i],t=b.texte
+    if(!t){
+      const imgs=b.images.map(function(im){return Object.assign({legende:legende},im)});legende=''
+      if(courante) courante.images=courante.images.concat(imgs); else imagesEnAttente=imagesEnAttente.concat(imgs)
+      continue
+    }
+    if(RE_IMP_REPONSE.test(t)){
+      if(courante){courante.reponse+=(courante.reponse?' ':'')+t.replace(RE_IMP_REPONSE,'').trim();courante.enReponse=true}
+      else avert.push('Réponse sans question : « '+t.slice(0,60)+' »')
+    } else if(RE_IMP_QUESTION.test(t)){
+      // « Question ... » en debut de paragraphe ouvre toujours une question,
+      // avec son propre enonce (la consigne de partie ne vaut que pour les
+      // etiquettes du type « Distributeur 1 »)
+      const reste=t.replace(RE_IMP_QUESTION,'').trim()
+      nouvelle(reste||t);consigne=''
+    } else if((b.titre||b.gras)&&RE_IMP_SECTION.test(t)&&t.length<=80&&!/\?\s*$/.test(t)){
+      fermer();section=t.replace(/^([0-9]{1,2}|[ivx]{1,4})\s*[.)–-]\s*/i,'').trim();consigne=''
+    } else if(courante&&!courante.enReponse&&RE_IMP_OPTION.test(t)){
+      const coche=/^[☑☒✓✔]|^\[\s*[xX✓]\s*\]/.test(t)
+      courante.options.push({texte:t.replace(RE_IMP_OPTION,'').trim(),marque:coche||b.marque,lettre:(t.match(/^\(?([a-h])\s*[).–-]/i)||[])[1]||''})
+    } else if(b.gras&&/\?\s*$/.test(t)&&t.length>12){
+      nouvelle(t);consigne=''
+    } else if(estLabel(b)&&!questions.length&&!courante&&!section){
+      if(!titreQuiz) titreQuiz=t
+    } else if(estLabel(b)){
+      // Une etiquette (« Distributeur 1 », « Schéma A ») ouvre une question si une
+      // reponse la suit avant la prochaine etiquette ; sinon c'est une legende.
+      let reponseSuit=false
+      for(let j=i+1;j<blocs.length;j++){
+        const s=blocs[j]
+        if(!s.texte) continue
+        if(RE_IMP_REPONSE.test(s.texte)){reponseSuit=true;break}
+        if(s.gras||RE_IMP_QUESTION.test(s.texte)) break
+      }
+      if(reponseSuit) nouvelle((consigne?consigne+' — ':'')+t)
+      else legende=t
+      if(b.images.length){const imgs=b.images.map(function(im){return Object.assign({legende:legende||t},im)});legende='';if(courante)courante.images=courante.images.concat(imgs);else imagesEnAttente=imagesEnAttente.concat(imgs)}
+      continue
+    } else if(courante&&courante.enReponse){
+      courante.reponse+=' '+t
+    } else if(courante){
+      courante.enonce+=' '+t
+    } else {
+      consigne+=(consigne?' ':'')+t
+    }
+    if(b.images.length){
+      const imgs=b.images.map(function(im){return Object.assign({legende:legende},im)});legende=''
+      if(courante) courante.images=courante.images.concat(imgs); else imagesEnAttente=imagesEnAttente.concat(imgs)
+    }
+  }
+  fermer()
+  // Mise au format de l'editeur
+  const res=questions.map(function(q){
+    const o={type:'libre',enonce:q.enonce.trim(),options:['','','',''],bonne:0,competence:q.section||'',reponse_type:q.reponse.trim(),points:2,imageUrl:'',medias:[],_images:q.images}
+    if(q.options.length>=2){
+      const opts=q.options.map(function(x){return x.texte})
+      let bonnes=[]
+      q.options.forEach(function(x,j){if(x.marque)bonnes.push(j)})
+      if(!bonnes.length&&q.reponse){
+        const lettres=(q.reponse.match(/\b[a-h]\b/gi)||[]).map(function(l){return 'abcdefgh'.indexOf(l.toLowerCase())}).filter(function(j){return j>=0&&j<opts.length})
+        if(lettres.length&&q.reponse.replace(/[^a-z]/gi,'').length<=lettres.length*2) bonnes=lettres
+        else{const r=q.reponse.toLowerCase();opts.forEach(function(x,j){if(x&&r.indexOf(x.toLowerCase())>=0)bonnes.push(j)})}
+      }
+      bonnes=bonnes.filter(function(j,k,a){return a.indexOf(j)===k}).sort(function(a,b){return a-b})
+      o.type=bonnes.length>1?'multi':'qcm'
+      o.options=opts;o.bonne=bonnes[0]||0;o.bonnes=bonnes.length?bonnes:[0]
+      o.reponse_type=q.reponse?'Réponse : '+q.reponse.trim():''
+      if(!bonnes.length) o._aCocher=true
+    }
+    return o
+  }).filter(function(q){return q.enonce})
+  return {questions:res,avertissements:avert,titre:titreQuiz}
+}
+
+// Questions d'identification (« Identifiez... » + reponse courte) en QCM :
+// les propositions fausses sont les reponses des autres questions du quiz.
+const RE_IMP_IDENTIF=/identifi|nommez|reconna|d[ée]signation|\bnom\b|quel(le)?s?\s+(est|sont)\s+(ce|cet|cette|ces|le|la|les)\s+(composant|[ée]l[ée]ment|appareil|organe|pi[èe]ce|type|distributeur|valve|pompe|moteur)|^\s*(distributeur|sch[ée]ma)\b/i
+function estIdentification(q){
+  const r=(q.reponse_type||'').trim()
+  return q.type==='libre'&&!!r&&r.length<=70&&!/[;=·\n]/.test(r)&&!/^\d+\s/.test(r)&&RE_IMP_IDENTIF.test(q.enonce||'')
+}
+function versQcmIdentification(questions){
+  const courte=estIdentification
+  const norm=function(s){return String(s||'').toLowerCase().replace(/\s+/g,' ').replace(/[().]/g,'').trim()}
+  // Reponses courtes relevees AVANT toute transformation
+  const courtes=questions.filter(courte).map(function(q){return {q:q,r:q.reponse_type.trim().replace(/\s*\.$/,''),section:q.competence}})
+  let n=0
+  courtes.forEach(function(c){
+    const q=c.q,bonne=c.r
+    const vues=[norm(bonne)]
+    const candidats=[]
+    const ajouter=function(liste){liste.forEach(function(x){if(x.q===q)return;if(vues.indexOf(norm(x.r))<0){vues.push(norm(x.r));candidats.push(x.r)}})}
+    // D'abord les reponses de la meme partie (pompes avec pompes), puis celles
+    // des parties voisines
+    const rangs=[];courtes.forEach(function(x){if(rangs.indexOf(x.section)<0)rangs.push(x.section)})
+    const ecart=function(x){return Math.abs(rangs.indexOf(x.section)-rangs.indexOf(c.section))}
+    ajouter(courtes.slice().sort(function(a,b){return ecart(a)-ecart(b)}))
+    if(candidats.length<3) return
+    const opts=[bonne].concat(candidats.slice(0,3))
+    for(let k=opts.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));const t=opts[k];opts[k]=opts[j];opts[j]=t}
+    q.type='qcm';q.options=opts;q.bonne=opts.indexOf(bonne);q.bonnes=[q.bonne]
+    q.reponse_type='Réponse : '+bonne
+    n++
+  })
+  return n
+}
+
+// Depot des images dans le stockage, puis ajout dans l'editeur
+const TYPES_IMG_IMPORT={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',bmp:'image/bmp',webp:'image/webp'}
+async function deposerImagesImport(questions,suivi){
+  const dossier='questions/import-'+Date.now()
+  let nOk=0,nKo=0,nIllisibles=0,k=0
+  for(const q of questions){
+    for(const im of (q._images||[])){
+      k++
+      const ext=(im.nom.split('.').pop()||'').toLowerCase()
+      const type=TYPES_IMG_IMPORT[ext]
+      if(!type){nIllisibles++;continue}   // EMF/WMF : format Windows non affichable
+      let corps=new Blob([im.octets],{type:type}),nomFinal=k+'_'+im.nom.replace(/[^a-zA-Z0-9._-]/g,'-')
+      if(corps.size>2*1024*1024){const red=await reduireImage(corps,1800,0.85);if(red&&red.blob){corps=red.blob;nomFinal=nomFinal.replace(/\.[a-z0-9]+$/i,'')+'.jpg'}}
+      if(suivi) suivi(k)
+      const chemin=dossier+'/'+nomFinal
+      let up=null
+      try{up=await db.storage.from('ressources').upload(chemin,corps,{contentType:corps.type||type})}catch(e){up={error:e}}
+      if(up&&up.error){nKo++;continue}
+      q.medias.push({t:'img',p:chemin,n:im.legende||'Image'})
+      nOk++
+    }
+    delete q._images
+  }
+  return {ok:nOk,ko:nKo,illisibles:nIllisibles}
+}
+
+async function choisirFichierImport(input){
+  const f=input.files&&input.files[0]
+  input.value=''
+  if(!f) return
+  if(!G.admin){toast('Réservé aux gâcheurs','err');return}
+  const nom=(f.name||'').toLowerCase()
+  if(/\.doc$/.test(nom)){toast('Ancien format Word : enregistre le fichier en .docx puis recommence','err');return}
+  if(!/\.(docx|pdf)$/.test(nom)){toast('Choisis un fichier Word (.docx) ou PDF','err');return}
+  if(f.size>40*1024*1024){toast('Fichier trop lourd (40 Mo maximum)','err');return}
+  toast('Lecture du fichier...','def')
+  let blocs
+  try{blocs=/\.pdf$/.test(nom)?await lirePdfQuiz(f):await lireWordQuiz(f)}
+  catch(e){toast('Lecture impossible : '+(e.message||e),'err');return}
+  const an=analyserQuizImporte(blocs)
+  if(!an.questions.length){toast('Aucune question reconnue dans ce fichier','err');return}
+  _importEnCours={questions:an.questions,titre:an.titre,pdf:/\.pdf$/.test(nom),avertissements:an.avertissements}
+  afficherApercuImport()
+}
+let _importEnCours=null
+
+function afficherApercuImport(){
+  const x=_importEnCours;if(!x) return
+  const qs=x.questions
+  const nImg=qs.reduce(function(a,q){return a+(q._images||[]).length},0)
+  const sansRep=qs.filter(function(q){return q.type==='libre'&&!q.reponse_type}).length
+  const aCocher=qs.filter(function(q){return q._aCocher}).length
+  const nQcm=qs.filter(function(q){return q.type!=='libre'}).length
+  const identifiables=qs.filter(estIdentification).length
+  const old=document.getElementById('modal-import-quiz');if(old) old.remove()
+  const m=document.createElement('div');m.id='modal-import-quiz'
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center'
+  m.innerHTML='<div style="background:var(--card);border-radius:22px 22px 0 0;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:1.2rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom))">'
+    +'<div style="font-size:1.05rem;font-weight:700;margin-bottom:.3rem">Quiz lu dans le fichier</div>'
+    +'<div style="font-size:.82rem;color:var(--t2);line-height:1.5;margin-bottom:.8rem">'
+      +'<b>'+qs.length+'</b> question'+(qs.length>1?'s':'')+(nQcm?' (dont '+nQcm+' à choix)':'')+' · <b>'+nImg+'</b> image'+(nImg>1?'s':'')
+      +(sansRep?'<br>'+sansRep+' sans réponse attendue (à corriger à la main, par exemple un symbole à dessiner)':'')
+      +(aCocher?'<br><span style="color:var(--r)">'+aCocher+' question(s) à choix sans bonne réponse repérée : coche-la dans l’éditeur</span>':'')
+      +(x.pdf?'<br><span style="color:var(--r)">PDF : les images ne sont pas reprises. Ajoute-les dans l’éditeur si besoin.</span>':'')
+    +'</div>'
+    +(identifiables>=4?'<label style="display:flex;gap:10px;align-items:flex-start;background:var(--bg);border:1px solid var(--bord);border-radius:12px;padding:.75rem;margin-bottom:.8rem;cursor:pointer"><input type="checkbox" id="imp-qcm" style="margin-top:3px;accent-color:var(--r);width:18px;height:18px;flex-shrink:0"/><span style="font-size:.8rem;line-height:1.45"><b>Transformer les '+identifiables+' questions d’identification en QCM</b><br><span style="color:var(--t3)">Les propositions fausses sont les réponses des autres questions du quiz. La correction devient automatique. Sans cette case, elles restent à réponse libre, corrigées par un gâcheur.</span></span></label>':'')
+    +'<div style="max-height:34vh;overflow-y:auto;border:1px solid var(--bord);border-radius:12px;margin-bottom:.9rem">'
+    +qs.map(function(q,i){return '<div style="padding:.55rem .75rem;border-top:'+(i?'1px solid var(--bord)':'none')+';font-size:.78rem"><b style="color:var(--r)">Q'+(i+1)+'</b> '+_escC(q.enonce.slice(0,110))+((q._images||[]).length?' <i class="ti ti-photo" style="color:var(--t3)"></i>'+((q._images||[]).length>1?'×'+q._images.length:''):'')+'<div style="color:var(--t3);margin-top:2px">'+(q.type==='libre'?(q.reponse_type?'Réponse : '+_escC(q.reponse_type.slice(0,90)):'Sans réponse attendue'):q.options.length+' propositions')+'</div></div>'}).join('')
+    +'</div>'
+    +'<div style="display:flex;gap:8px"><button class="btn btn-ghost" style="flex:1" onclick="document.getElementById(\'modal-import-quiz\').remove();_importEnCours=null">Annuler</button>'
+    +'<button class="btn btn-r" style="flex:2" id="imp-valider" onclick="validerImport()"><i class="ti ti-file-import"></i> Mettre dans l’éditeur</button></div>'
+    +'</div>'
+  document.body.appendChild(m)
+}
+
+async function validerImport(){
+  const x=_importEnCours;if(!x) return
+  const btn=document.getElementById('imp-valider')
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Envoi des images...'}
+  const enQcm=document.getElementById('imp-qcm')&&document.getElementById('imp-qcm').checked
+  if(enQcm) versQcmIdentification(x.questions)
+  const nImg=x.questions.reduce(function(a,q){return a+(q._images||[]).length},0)
+  const bilan=await deposerImagesImport(x.questions,function(k){if(btn)btn.innerHTML='<i class="ti ti-loader spin"></i> Image '+k+' / '+nImg})
+  if(mqQuestions.length&&!confirm('L’éditeur contient déjà '+mqQuestions.length+' question(s).\n\nOK : ajouter les questions importées à la suite.\nAnnuler : remplacer par les questions importées.')) mqQuestions=[]
+  x.questions.forEach(function(q){delete q._aCocher;mqQuestions.push(q)})
+  if(x.titre&&$('mq-titre')&&!$('mq-titre').value.trim()) $('mq-titre').value=x.titre
+  const m=document.getElementById('modal-import-quiz');if(m) m.remove()
+  _importEnCours=null
+  renderQuestions();sauverBrouillon()
+  const msgs=[x.questions.length+' question(s) ajoutée(s) : relis-les avant de créer le quiz']
+  if(bilan.ko) msgs.push(bilan.ko+' image(s) non envoyée(s)')
+  if(bilan.illisibles) msgs.push(bilan.illisibles+' image(s) au format Windows non reprise(s)')
+  toast(msgs.join(' · '),(bilan.ko||bilan.illisibles)?'err':'ok')
+  const l=$('mq-questions-list');if(l) l.scrollIntoView({behavior:'smooth',block:'start'})
+}
 
 function renderQuestions() {
   const total=mqQuestions.length,totalPts=mqQuestions.reduce((a,q)=>a+(parseFloat(q.points)||2),0)
@@ -4388,10 +4742,11 @@ function renderQuestions() {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;margin-bottom:.8rem">
         <div><label class="field-label">Type</label><select class="fselect" onchange="mqQuestions[${i}].type=this.value;renderQuestions()"><option value="qcm" ${q.type==='qcm'?'selected':''}>QCM — 1 bonne réponse</option><option value="multi" ${q.type==='multi'?'selected':''}>Choix multiples</option><option value="vf" ${q.type==='vf'?'selected':''}>Vrai/Faux</option><option value="libre" ${q.type==='libre'?'selected':''}>Réponse libre</option></select></div>
-        <div><label class="field-label">Compétence</label><input class="finput" value="${q.competence}" placeholder="C2, S3..." onchange="mqQuestions[${i}].competence=this.value"/></div>
+        <div><label class="field-label">Compétence</label><input class="finput" value="${_escC(q.competence||'')}" placeholder="C2, S3..." onchange="mqQuestions[${i}].competence=this.value"/></div>
         <div><label class="field-label">Points</label><input class="finput" type="number" min="0.5" max="20" step="0.5" value="${q.points||2}" onchange="mqQuestions[${i}].points=parseFloat(this.value)||2;renderQuestions()" style="text-align:center"/></div>
       </div>
-      <div style="margin-bottom:.7rem"><label class="field-label">Énoncé</label><textarea class="ftextarea" rows="2" placeholder="Écrivez votre question..." onchange="mqQuestions[${i}].enonce=this.value;sauverBrouillon()">${q.enonce}</textarea></div>
+      <div style="margin-bottom:.7rem"><label class="field-label">Énoncé</label><textarea class="ftextarea" rows="2" placeholder="Écrivez votre question..." onchange="mqQuestions[${i}].enonce=this.value;sauverBrouillon()">${_escC(q.enonce)}</textarea></div>
+      ${(q.medias||[]).length?`<div style="margin-bottom:.7rem"><label class="field-label">Images</label><div style="display:flex;flex-wrap:wrap;gap:10px">${q.medias.map((m,k)=>`<div style="position:relative;width:84px"><img data-img="${echapAttr(m.p)}" style="width:84px;height:84px;object-fit:contain;background:#fff;border:1px solid var(--bord);border-radius:10px"/><button onclick="retirerMediaQuestion(${i},${k})" title="Retirer cette image" style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:none;background:var(--r);color:#fff;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center"><i class="ti ti-x"></i></button>${m.n?`<div style="font-size:.62rem;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escC(m.n)}</div>`:''}</div>`).join('')}</div></div>`:''}
       <div style="margin-bottom:.7rem"><label class="field-label">Image (optionnel)</label>
         <div style="display:flex;align-items:center;gap:8px">
           <input class="finput" value="${q.imageUrl||''}" placeholder="URL image..." onchange="mqQuestions[${i}].imageUrl=this.value;renderQuestions()" style="flex:1"/>
@@ -4402,8 +4757,8 @@ function renderQuestions() {
       ${q.type==='vf'?`<div><label class="field-label">Bonne réponse</label><div style="display:flex;gap:8px">
         <label style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:600;${q.bonne===0?'background:var(--vl);border-color:var(--v);color:var(--v)':''}"><input type="radio" name="vf_${i}" ${q.bonne===0?'checked':''} onchange="mqQuestions[${i}].bonne=0;renderQuestions()" style="accent-color:var(--v)"/> VRAI</label>
         <label style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:600;${q.bonne===1?'background:var(--rl);border-color:var(--r);color:var(--r)':''}"><input type="radio" name="vf_${i}" ${q.bonne===1?'checked':''} onchange="mqQuestions[${i}].bonne=1;renderQuestions()" style="accent-color:var(--r)"/> FAUX</label>
-      </div></div>`:q.type==='libre'?`<div><label class="field-label">Réponse attendue</label><textarea class="ftextarea" rows="2" placeholder="Réponse attendue..." onchange="mqQuestions[${i}].reponse_type=this.value">${q.reponse_type||''}</textarea><p class="field-hint">L'admin notera manuellement</p></div>`:`<div><label class="field-label">Options — cochez la bonne réponse</label></div>
-      ${q.options.map((opt,j)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="${q.type==='multi'?'checkbox':'radio'}" name="bonne_${i}" ${q.type==='multi'?((q.bonnes||[]).indexOf(j)>=0?'checked':''):(q.bonne===j?'checked':'')} onchange="majBonneReponse(${i},${j},this.checked,'${q.type}')" style="flex-shrink:0;accent-color:var(--r)"/><input class="finput" value="${opt}" placeholder="Option ${j+1}" onchange="mqQuestions[${i}].options[${j}]=this.value" style="border-color:${q.bonne===j?'var(--r)':'var(--bord2)'}"/></div>`).join('')}`}
+      </div></div>`:q.type==='libre'?`<div><label class="field-label">Réponse attendue</label><textarea class="ftextarea" rows="2" placeholder="Réponse attendue..." onchange="mqQuestions[${i}].reponse_type=this.value;sauverBrouillon()">${_escC(q.reponse_type||'')}</textarea><p class="field-hint">L'admin notera manuellement</p></div>`:`<div><label class="field-label">Options — cochez la bonne réponse</label></div>
+      ${q.options.map((opt,j)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="${q.type==='multi'?'checkbox':'radio'}" name="bonne_${i}" ${q.type==='multi'?((q.bonnes||[]).indexOf(j)>=0?'checked':''):(q.bonne===j?'checked':'')} onchange="majBonneReponse(${i},${j},this.checked,'${q.type}')" style="flex-shrink:0;accent-color:var(--r)"/><input class="finput" value="${_escC(opt)}" placeholder="Option ${j+1}" onchange="mqQuestions[${i}].options[${j}]=this.value" style="border-color:${q.bonne===j?'var(--r)':'var(--bord2)'}"/></div>`).join('')}`}
     </div>`).join('')
 }
 
@@ -4447,6 +4802,12 @@ async function pubQuizManuel() {
       ordre:i
     }
     if(q.type==='multi'&&q.bonnes) o.bonnes_reponses=q.bonnes
+    // Images importees ou ajoutees : chemins du stockage
+    if(Array.isArray(q.medias)&&q.medias.length){
+      o.medias=q.medias
+      const prem=q.medias.find(function(m){return m.t==='img'})
+      if(prem&&!o.image_url) o.image_url=prem.p
+    }
     return o
   })
   let {error:errQ}=await db.from('questions').insert(lignes)
