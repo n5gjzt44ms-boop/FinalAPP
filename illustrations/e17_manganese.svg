@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 350" font-family="Arial, Helvetica, sans-serif">
+<defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#141414"/></marker>
+<marker id="flr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C13B3A"/></marker>
+<marker id="flb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#185FA5"/></marker></defs>
+<rect width="900" height="350" fill="#fff"/>
+<text x="450" y="38" text-anchor="middle" font-size="24" font-weight="bold" fill="#141414">Dent au manganèse en cours de rechargement</text>
+<path d="M110,130 L410,150 L580,200 L580,230 L410,280 L110,300 Z" fill="#D6D6D2" stroke="#141414" stroke-width="2.5"/><path d="M560,92 L470,170" stroke="#141414" stroke-width="7" stroke-linecap="round"/><path d="M466,175 l-8,10" stroke="#C13B3A" stroke-width="4"/><text x="575" y="82" font-size="16" fill="#141414" text-anchor="start">électrode</text><rect x="690" y="150" width="150" height="60" rx="8" fill="#fff" stroke="#C13B3A" stroke-width="2"/><text x="765" y="178" font-size="15" fill="#C13B3A" text-anchor="middle">T entre passes</text><text x="765" y="200" font-size="18" fill="#C13B3A" text-anchor="middle" font-weight="bold">?</text><text x="330" y="335" font-size="16" fill="#141414" text-anchor="middle">dent de godet, acier à 12-14 % de manganèse</text>
+</svg>

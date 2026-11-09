@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Arial, Helvetica, sans-serif">
+<defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#141414"/></marker>
+<marker id="flr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C13B3A"/></marker>
+<marker id="flb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#185FA5"/></marker></defs>
+<rect width="900" height="340" fill="#fff"/>
+<text x="450" y="38" text-anchor="middle" font-size="24" font-weight="bold" fill="#141414">Test à l'aimant</text>
+<path d="M120,110 L420,130 L590,180 L590,210 L420,260 L120,280 Z" fill="#D6D6D2" stroke="#141414" stroke-width="2.5"/><path d="M640,90 L700,90 L700,170 A30,30 0 0,0 760,170 L760,90 L820,90 L820,170 A90,90 0 0,1 640,170 Z" fill="#C13B3A" stroke="#141414" stroke-width="2"/><rect x="640" y="90" width="60" height="30" rx="0" fill="#185FA5" stroke="#141414" stroke-width="2"/><rect x="760" y="90" width="60" height="30" rx="0" fill="#185FA5" stroke="#141414" stroke-width="2"/><text x="730" y="300" font-size="18" fill="#141414" text-anchor="middle">aimant</text><text x="330" y="320" font-size="18" fill="#141414" text-anchor="middle">dent de godet</text><text x="605" y="220" font-size="40" fill="#C13B3A" text-anchor="middle" font-weight="bold">?</text>
+</svg>
