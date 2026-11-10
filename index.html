@@ -1188,7 +1188,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.11.09-1930'
+const VERSION_APP = '2026.11.10-1330'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1931,6 +1931,8 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden)setT
 let _envoisPJ=[]          // envois en cours
 const _apercusPJ={}       // apercus en memoire (non enregistres)
 const _fichiersPJ={}      // fichiers d'origine, pour reessayer
+// Taille maximale d'une piece jointe (limite des fichiers du stockage Supabase)
+let TAILLE_MAX_PJ_MO=50
 function estImageNom(n){return /\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(String(n||''))}
 function estImageFichier(f){return !!f&&((f.type&&f.type.indexOf('image/')===0)||estImageNom(f.name))}
 function piecesJointes(v){
@@ -2071,6 +2073,12 @@ async function traiterPiece(qid,piece,fichier){
 }
 async function traiterPieceInterne(qid,piece,fichier){
   piece.etat='envoi';piece.erreur=null;afficherPiecesJointes(qid)
+  // Limite du stockage : au-dela, le depot serait refuse apres une longue attente
+  if(piece.type!=='photo'&&fichier&&fichier.size>TAILLE_MAX_PJ_MO*1024*1024){
+    piece.etat='erreur'
+    piece.erreur='fichier trop lourd ('+(fichier.size/1024/1024).toFixed(0)+' Mo, '+TAILLE_MAX_PJ_MO+' Mo maximum) : compresse-le en .zip ou envoie un PDF'
+    sauverCopieEnCours();afficherPiecesJointes(qid);return
+  }
   let blob=fichier,ct=fichier.type,dataUrl=null
   if(piece.type==='photo'){
     const red=await reduireImage(fichier,1600,0.72)
@@ -2693,7 +2701,7 @@ async function loadDashboardAdmin(){
       const nbq=nbQuestionsExo[q.id]||0
       const dep=q.created_at?new Date(q.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):''
       return '<div class="adm-row clic" data-quiz="'+echapAttr(q.id)+'" onclick="previsualiserQuiz(this.dataset.quiz)">'
-        +'<div class="adm-date"><b>'+(q.niveau!=null?Number(q.niveau):'–')+'</b><span>niveau</span></div>'
+        +(function(){const m=MODULES.find(function(x){return x.id===Number(q.module_id)})||{};return '<div class="adm-ic" style="background:'+(m.bg||'var(--field)')+';color:'+(m.ic||'var(--t2)')+'"><i class="ti '+(m.icon||'ti-help-circle')+'"></i></div>'})()
         +'<div class="adm-tx"><div class="adm-t1">'+echapAttr(q.titre||'Sans titre')+'</div>'
         +'<div class="adm-t2">'+nomMod(q.module_id)+' · '+nbq+' question'+(nbq>1?'s':'')+(dep?' · déposé le '+dep:'')+'</div></div>'
         +'<button class="btn btn-r btn-sm" style="flex-shrink:0" data-quiz="'+echapAttr(q.id)+'" onclick="event.stopPropagation();publierExercice(this.dataset.quiz)">Publier</button>'
@@ -3624,6 +3632,17 @@ function showQ() {
       imgWrap.style.display=''
       imgWrap.innerHTML=''
       medias.forEach(function(m,k){
+        if(m.t==='lien'){
+          // Document du fabricant a consulter pour repondre : ouvert dans un
+          // onglet separe, la copie en cours reste en place
+          const b=document.createElement('button')
+          b.className='btn btn-ghost btn-sm'
+          b.style.cssText='width:100%;justify-content:flex-start;margin-bottom:6px;gap:8px;text-align:left;white-space:normal'
+          b.innerHTML='<i class="ti ti-file-search" style="color:var(--b);font-size:1.1rem;flex-shrink:0"></i> <span style="flex:1;min-width:0">'+echapAttr(m.n||'Document à consulter')+'</span> <span style="font-size:.7rem;color:var(--t3);flex-shrink:0">Ouvrir</span>'
+          b.onclick=function(){sauverCopieEnCours();try{window.open(m.p,'_blank','noopener')}catch(e){}}
+          imgWrap.appendChild(b)
+          return
+        }
         if(m.t==='pdf'){
           const b=document.createElement('button')
           b.className='btn btn-ghost btn-sm'
@@ -3683,10 +3702,10 @@ function showQ() {
         </label>
         <label style="position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 10px;border:1.5px dashed var(--bord2);border-radius:12px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--t1);background:var(--bg);text-align:center">
           <i class="ti ti-photo" style="font-size:1.2rem;color:var(--r)"></i> Galerie ou fichier
-          <input type="file" id="fichier-libre" multiple accept="image/*,.pdf,.doc,.docx,.sldprt,.dwg" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0" onclick="avantChoixFichier()" oncancel="choixFichierAnnule()" onchange="uploaderFichierLibre(this)"/>
+          <input type="file" id="fichier-libre" multiple style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0" onclick="avantChoixFichier()" oncancel="choixFichierAnnule()" onchange="uploaderFichierLibre(this)"/>
         </label>
       </div>
-      <div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.45"><i class="ti ti-bulb"></i> Si la photo en direct ne revient pas, prends-la avec l'appareil photo de ton téléphone, puis choisis-la avec Galerie. Tu peux en ajouter plusieurs.</div>
+      <div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.45"><i class="ti ti-paperclip"></i> Tous les fichiers sont acceptés : photo, PDF, Word, Excel, SolidWorks, Automation Studio, DWG, STEP… (${TAILLE_MAX_PJ_MO} Mo maximum par fichier). Tu peux en ajouter plusieurs.<br><i class="ti ti-bulb"></i> Si la photo en direct ne revient pas, prends-la avec l'appareil photo de ton téléphone, puis choisis-la avec Galerie.</div>
       <div id="fichier-statut" style="font-size:.72rem;color:var(--v);margin-top:4px"></div>`
     afficherPiecesJointes(q.id)
     $('btn-valider').disabled=false
@@ -4793,7 +4812,7 @@ function renderQuestions() {
         <button onclick="supprimerQuestion(${i})" style="background:none;border:none;cursor:pointer;color:var(--t3)"><i class="ti ti-trash"></i></button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;margin-bottom:.8rem">
-        <div><label class="field-label">Type</label><select class="fselect" onchange="mqQuestions[${i}].type=this.value;renderQuestions()"><option value="qcm" ${q.type==='qcm'?'selected':''}>QCM — 1 bonne réponse</option><option value="multi" ${q.type==='multi'?'selected':''}>Choix multiples</option><option value="vf" ${q.type==='vf'?'selected':''}>Vrai/Faux</option><option value="libre" ${q.type==='libre'?'selected':''}>Réponse libre</option></select></div>
+        <div><label class="field-label">Type</label><select class="fselect" onchange="mqQuestions[${i}].type=this.value;renderQuestions()"><option value="qcm" ${q.type==='qcm'?'selected':''}>QCM — 1 bonne réponse</option><option value="multi" ${q.type==='multi'?'selected':''}>Choix multiples</option><option value="vf" ${q.type==='vf'?'selected':''}>Vrai/Faux</option><option value="libre" ${q.type==='libre'?'selected':''}>Réponse libre (texte, photo ou fichier)</option></select></div>
         <div><label class="field-label">Compétence</label><input class="finput" value="${_escC(q.competence||'')}" placeholder="C2, S3..." onchange="mqQuestions[${i}].competence=this.value"/></div>
         <div><label class="field-label">Points</label><input class="finput" type="number" min="0.5" max="20" step="0.5" value="${q.points||2}" onchange="mqQuestions[${i}].points=parseFloat(this.value)||2;renderQuestions()" style="text-align:center"/></div>
       </div>
@@ -5059,6 +5078,7 @@ async function previsualiserQuiz(id){
     // Schemas et documents de la question (toutes les pieces, pas seulement la premiere)
     const mds=Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url}]:[])
     const blocMedias=mds.map(function(m){
+      if(m.t==='lien') return '<a class="btn btn-ghost btn-sm" style="margin-top:8px;white-space:normal;text-align:left" href="'+echapAttr(m.p)+'" target="_blank" rel="noopener"><i class="ti ti-file-search" style="color:var(--b)"></i> '+echapAttr(m.n||'Document à consulter')+'</a>'
       if(m.t==='pdf') return '<button class="btn btn-ghost btn-sm" style="margin-top:8px" data-p="'+echapAttr(m.p)+'" onclick="ouvrirMediaPrevisu(this.dataset.p)"><i class="ti ti-file-type-pdf" style="color:var(--r)"></i> '+echapAttr(m.n||'Document')+'</button>'
       return '<img data-img="'+echapAttr(m.p)+'" onclick="if(this.src)agrandirImage(this.src)" style="display:block;max-width:100%;max-height:320px;object-fit:contain;border-radius:10px;margin-top:8px;background:#fff;border:1px solid var(--bord);cursor:zoom-in"/>'
     }).join('')
@@ -5082,7 +5102,7 @@ async function previsualiserQuiz(id){
   modal.innerHTML='<div style="background:var(--card);border-radius:20px;width:100%;max-width:640px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
     +'<div style="background:var(--dark);padding:1.1rem 1.3rem;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'
       +'<div style="min-width:0"><div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">'+qz.titre+'</div>'
-      +'<div style="font-size:.72rem;color:#888;margin-top:3px">'+(mod?mod.nom:'')+' — '+(qz.niveau!=null?'niveau '+Number(qz.niveau)+' — ':'')+questions.length+' question'+(questions.length>1?'s':'')+' — '+totalPts+' points'+(qz.mode_examen?' — EXAMEN':'')+(qz.actif?'':' — PRIVÉ')+'</div></div>'
+      +'<div style="font-size:.72rem;color:#888;margin-top:3px">'+(mod?mod.nom:'')+' — '+questions.length+' question'+(questions.length>1?'s':'')+' — '+totalPts+' points'+(qz.mode_examen?' — EXAMEN':'')+(qz.actif?'':' — PRIVÉ')+'</div></div>'
       +'<button onclick="document.getElementById(\'modal-previsu\').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem;flex-shrink:0"><i class="ti ti-x"></i></button>'
     +'</div>'
     +'<div style="padding:0 1.3rem;overflow-y:auto;flex:1">'
@@ -7758,7 +7778,7 @@ async function editerQuiz(quizId) {
         } else {
           const ic=document.createElement('div')
           ic.style.cssText='width:54px;height:54px;border-radius:8px;background:var(--rl);display:flex;align-items:center;justify-content:center;flex-shrink:0'
-          ic.innerHTML='<i class="ti ti-file-type-pdf" style="color:var(--r);font-size:1.3rem"></i>'
+          ic.innerHTML=m.t==='lien'?'<i class="ti ti-file-search" style="color:var(--b);font-size:1.3rem"></i>':'<i class="ti ti-file-type-pdf" style="color:var(--r);font-size:1.3rem"></i>'
           bloc.appendChild(ic)
         }
         const nm=document.createElement('div')
