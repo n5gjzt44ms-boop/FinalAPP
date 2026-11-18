@@ -295,6 +295,44 @@ button,input,select,textarea{font-family:var(--ff)}
 .acc-tuile b{font-size:.95rem;line-height:1.25;font-weight:700}
 .acc-tuile span{font-size:.82rem;color:var(--t2)}
 .acc-tuile.mien span{font-weight:600;color:var(--r2)}
+/* Parcours ludique : serie, objectif de la semaine, points, insignes */
+.acc-jeu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;width:100%;margin-bottom:1rem;padding:12px 8px;border:none;border-radius:18px;background:var(--card);color:var(--t1);font-family:var(--ff);cursor:pointer;text-align:center;box-sizing:border-box}
+.acc-jeu-bloc{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.acc-jeu-bloc+.acc-jeu-bloc{border-left:1px solid var(--bord)}
+.acc-jeu-val{display:flex;align-items:center;gap:5px;font-size:1.2rem;font-weight:700;line-height:1.2}
+.acc-jeu-val .ti{font-size:1.1rem}
+.acc-jeu-sur{font-size:.8rem;font-weight:600;color:var(--t3);margin-left:-4px}
+.acc-jeu-pts{display:inline-flex;gap:3px;margin-left:4px}
+.acc-jeu-pts i{width:9px;height:9px;border-radius:50%;background:var(--bord2)}
+.acc-jeu-pts i.on{background:var(--v)}
+.acc-jeu small{font-size:.68rem;color:var(--t2);line-height:1.25;padding:0 2px}
+.ins-grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.ins{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 8px;border-radius:14px;background:var(--field);text-align:center}
+.ins:not(.ok) b{color:var(--t2)}
+.ins.ok{background:var(--amberl)}
+.ins-ico{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--card);color:var(--t3);font-size:1.25rem}
+.ins.ok .ins-ico,.fete-insigne .ins-ico{background:var(--amber);color:#fff}
+body.dark .ins.ok .ins-ico,body.dark .fete-insigne .ins-ico{color:#141414}
+.ins b{font-size:.78rem;line-height:1.25}
+.ins small{font-size:.66rem;color:var(--t2);line-height:1.3}
+.fete{padding:14px 16px 4px;border-bottom:1px solid var(--bord)}
+.fete-puces{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.fete-puce{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:20px;background:var(--field);font-size:.76rem;font-weight:600}
+.fete-insigne{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;border-radius:14px;background:var(--amberl);text-align:left;animation:fete-pop .5s ease}
+.fete-insigne b{display:block;font-size:.84rem}
+.fete-insigne small{font-size:.7rem;color:var(--t2)}
+.fete-groupe{margin-top:10px;font-size:.76rem;color:var(--t2);text-align:center;line-height:1.5}
+.fete .acc-btn{margin-bottom:12px}
+@keyframes fete-pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
+.confettis{position:fixed;inset:0;pointer-events:none;z-index:9990;overflow:hidden}
+.confettis i{position:absolute;top:-14px;width:8px;height:14px;border-radius:2px;animation:confetti-chute 2.2s linear forwards}
+@keyframes confetti-chute{0%{top:-14px;opacity:1}100%{top:105vh;opacity:.9}}
+/* Dessin de la reponse et images de la bonne reponse */
+.annot-outils{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.annot-coul{width:30px;height:30px;border-radius:50%;border:3px solid var(--card);box-shadow:0 0 0 1px var(--bord2);cursor:pointer;padding:0;flex-shrink:0}
+.annot-coul.on{box-shadow:0 0 0 3px var(--t1)}
+.rep-images{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.rep-images img{max-width:100%;max-height:260px;object-fit:contain;border-radius:10px;border:1px solid var(--bord);background:#fff;cursor:zoom-in}
 .ch-champ{cursor:text}
 .ch-champ input{flex:1;min-width:0;border:none;outline:none;background:none;font:600 1.05rem var(--ff);color:var(--t1)}
 .ch-filtres{display:flex;gap:8px;margin-bottom:1rem}
@@ -704,6 +742,7 @@ button,input,select,textarea{font-family:var(--ff)}
       <div id="d-rappel"></div>
       <div id="d-admin"></div>
       <div id="d-etape"></div>
+      <div id="d-jeu"></div>
       <div id="d-examen"></div>
       <div id="annonces-dashboard" style="margin-bottom:1rem"></div>
       <div id="d-email-perso"></div>
@@ -816,6 +855,7 @@ button,input,select,textarea{font-family:var(--ff)}
             <p style="font-size:.82rem;color:var(--t2);max-width:320px;margin:0 auto 10px" id="r-msg">—</p>
             <span style="font-size:.68rem;padding:4px 12px;border-radius:20px;background:var(--bg);border:1px solid var(--bord2);color:var(--t3);font-weight:600"></span>
           </div>
+          <div id="r-fete"></div>
           <div class="card-body" id="r-comps"></div>
         </div>
         <div class="card hidden" id="r-revisions"></div>
@@ -1188,7 +1228,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.11.09-1930'
+const VERSION_APP = '2026.11.18-1606'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1272,6 +1312,7 @@ function sauverCopieEnCours(){
       titre:G.quizActif.titre||'',
       reponses:G.reponses||{},
       fichiersLibres:G.fichiersLibres||{},
+      dessins:G.dessins||{},
       etape:G.etape||0,
       secondes:(typeof _secondesQuiz!=='undefined'?_secondesQuiz:0),
       finExamen:G.finExamen?new Date(G.finExamen).getTime():null,
@@ -1454,7 +1495,7 @@ async function reprendreCopie(){
   const q=rq.data,qs=rqs.data
   if(!q||!qs||!qs.length){toast('Examen introuvable','err');effacerCopieEnCours();return}
   G.quizActif=q;G.questions=qs;_copiePartie=false
-  G.reponses=b.reponses||{};G.fichiersLibres=nettoyerPieces(b.fichiersLibres||{})
+  G.reponses=b.reponses||{};G.fichiersLibres=nettoyerPieces(b.fichiersLibres||{});G.dessins=b.dessins||{}
   G.etape=Math.min(b.etape||0,qs.length-1)
   G.finExamen=b.finExamen?new Date(b.finExamen):calculerFinExamen(q)
   G.debutCopie=b.debut||Date.now()
@@ -1763,38 +1804,120 @@ async function urlImage(val){
     }
     return val
   }
-  if(_cacheImg[val]) return _cacheImg[val]
+  // Un lien signe vaut 8 h : au-dela de 6 h on en redemande un. Sans cela, une
+  // page restee ouverte toute la journee n'affichait plus ses images.
+  const garde=_cacheImg[val]
+  if(garde&&Date.now()-garde.quand<6*60*60*1000) return garde.u
   try{
     const {data,error}=await db.storage.from('ressources').createSignedUrl(val,60*60*8)
-    if(!error&&data&&data.signedUrl){_cacheImg[val]=data.signedUrl;return data.signedUrl}
+    if(!error&&data&&data.signedUrl){_cacheImg[val]={u:data.signedUrl,quand:Date.now()};return data.signedUrl}
   }catch(e){}
   return null
 }
 // Place l'image dans un element <img> des que son lien est pret
 // Branche toutes les images marquees data-img presentes dans la page
-// ─── ANNOTATION D'IMAGE (flèches, repères sur un schéma) ───────────────────
-// Permet a l'aspirant de dessiner sur la photo de la question.
-let _annot={canvas:null,ctx:null,dessine:false,vide:true,fond:null}
+// ─── DESSIN DANS LA REPONSE ────────────────────────────────────────────────
+// L'aspirant dessine au doigt ou a la souris : sur la photo de la question
+// (reperes, fleches) ou sur une feuille blanche (schema a dessiner).
+// Les traits sont gardes avec la copie (G.dessins) : un rechargement ou une
+// fermeture ne les efface pas. Le dessin part comme une piece jointe.
+let _annot={canvas:null,ctx:null,dessine:false,vide:true,fond:null,qid:null,aCapturer:false}
+const COULEURS_DESSIN=['#141414','#E24B4A','#185FA5']
 
+function traitsDe(qid){
+  if(!G.dessins) G.dessins={}
+  if(!Array.isArray(G.dessins[qid])) G.dessins[qid]=[]
+  return G.dessins[qid]
+}
+function redessiner(){
+  const a=_annot;if(!a.ctx) return
+  a.ctx.clearRect(0,0,a.canvas.width,a.canvas.height)
+  const traits=traitsDe(a.qid)
+  traits.forEach(function(t){
+    const p=t.p||[];if(p.length<2) return
+    a.ctx.strokeStyle=t.c||COULEURS_DESSIN[0];a.ctx.lineWidth=t.l||a.epaisseur
+    a.ctx.beginPath();a.ctx.moveTo(p[0],p[1])
+    if(p.length===2) a.ctx.lineTo(p[0]+.1,p[1]+.1)
+    for(let i=2;i<p.length;i+=2) a.ctx.lineTo(p[i],p[i+1])
+    a.ctx.stroke()
+  })
+  a.vide=!traits.length
+  const et=document.getElementById('annot-etat');if(et)et.textContent=traits.length?'Dessin gardé avec ta copie':''
+}
+function monterZoneDessin(avecFond){
+  const zone=document.getElementById('zone-annot');if(!zone) return null
+  zone.style.display=''
+  zone.innerHTML='<div style="font-size:.74rem;color:var(--t2);margin-bottom:6px;display:flex;align-items:center;gap:6px">'
+    +'<i class="ti ti-pencil" style="color:var(--r)"></i> '+(avecFond?'Dessine directement sur la photo (doigt ou souris)':'Dessine ta réponse (doigt ou souris)')+'</div>'
+    +'<div id="annot-boite" style="position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--bord);background:#fff;touch-action:none">'
+    +(avecFond?'<img id="annot-fond" style="width:100%;display:block"/>':'<div id="annot-feuille" style="width:100%;aspect-ratio:4/3"></div>')
+    +'<canvas id="annot-canvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none"></canvas>'
+    +'</div>'
+    +'<div class="annot-outils">'
+      +COULEURS_DESSIN.map(function(c,k){return '<button type="button" class="annot-coul'+(k===(avecFond?1:0)?' on':'')+'" data-coul="'+c+'" style="background:'+c+'" onclick="couleurDessin(this)" aria-label="Couleur du trait"></button>'}).join('')
+      +'<button type="button" class="btn btn-ghost btn-sm" onclick="annulerTrait()"><i class="ti ti-arrow-back-up"></i> Annuler</button>'
+      +'<button type="button" class="btn btn-ghost btn-sm" onclick="effacerAnnotation()"><i class="ti ti-eraser"></i> Tout effacer</button>'
+      +(avecFond?'':'<button type="button" class="btn btn-ghost btn-sm" onclick="fermerDessinLibre()"><i class="ti ti-x"></i> Retirer</button>')
+    +'</div>'
+    +'<div style="font-size:.72rem;color:var(--t3);margin-top:4px;min-height:1em" id="annot-etat"></div>'
+  return document.getElementById('annot-canvas')
+}
+function initDessin(cv,questionId,fond,couleur){
+  const ctx=cv.getContext('2d')
+  ctx.lineCap='round';ctx.lineJoin='round'
+  _annot={canvas:cv,ctx:ctx,dessine:false,vide:true,fond:fond,qid:questionId,couleur:couleur,epaisseur:Math.max(3,Math.round(cv.width/180)),aCapturer:false}
+  redessiner()
+  // Traits revenus avec la copie (rechargement) : ils seront joints a la validation
+  _annot.aCapturer=!_annot.vide
+}
+function brancherDessin(cv,questionId){
+  let trait=null
+  function pos(e){
+    const r=cv.getBoundingClientRect()
+    return {x:Math.round((e.clientX-r.left)*(cv.width/r.width)),y:Math.round((e.clientY-r.top)*(cv.height/r.height))}
+  }
+  cv.addEventListener('pointerdown',function(e){
+    if(!_annot.ctx||_annot.canvas!==cv) return
+    e.preventDefault()
+    try{cv.setPointerCapture(e.pointerId)}catch(x){}
+    const p=pos(e)
+    trait={c:_annot.couleur,l:_annot.epaisseur,p:[p.x,p.y]}
+    traitsDe(questionId).push(trait)
+    _annot.dessine=true;_annot.vide=false
+    _annot.ctx.strokeStyle=trait.c;_annot.ctx.lineWidth=trait.l
+    // Un simple appui laisse un point
+    _annot.ctx.beginPath();_annot.ctx.moveTo(p.x,p.y);_annot.ctx.lineTo(p.x+.1,p.y+.1);_annot.ctx.stroke()
+    _annot.ctx.beginPath();_annot.ctx.moveTo(p.x,p.y)
+  })
+  cv.addEventListener('pointermove',function(e){
+    if(!_annot.dessine||!_annot.ctx||!trait) return
+    e.preventDefault()
+    const p=pos(e),n=trait.p.length
+    // Points trop proches ignores : le dessin reste leger dans la copie
+    if(Math.abs(p.x-trait.p[n-2])+Math.abs(p.y-trait.p[n-1])<3) return
+    trait.p.push(p.x,p.y)
+    _annot.ctx.lineTo(p.x,p.y);_annot.ctx.stroke()
+  })
+  const fin=function(){
+    if(!_annot.dessine) return
+    _annot.dessine=false;trait=null;_annot.aCapturer=true
+    const et=document.getElementById('annot-etat');if(et)et.textContent='Dessin gardé avec ta copie'
+    sauverCopieEnCours()
+  }
+  cv.addEventListener('pointerup',fin)
+  cv.addEventListener('pointercancel',fin)
+  cv.addEventListener('pointerleave',fin)
+}
+// Dessin sur la photo de la question
 async function preparerAnnotation(questionId,valImage){
   const zone=document.getElementById('zone-annot')
   if(!zone) return
   const u=await urlImage(valImage)
   if(!u){zone.style.display='none';return}
-  zone.style.display=''
-  zone.innerHTML='<div style="font-size:.74rem;color:var(--t2);margin-bottom:6px;display:flex;align-items:center;gap:6px">'
-    +'<i class="ti ti-pencil" style="color:var(--r)"></i> Dessine directement sur la photo (doigt ou souris)</div>'
-    +'<div id="annot-boite" style="position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--bord);background:#fff;touch-action:none">'
-    +'<img id="annot-fond" style="width:100%;display:block"/>'
-    +'<canvas id="annot-canvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair"></canvas>'
-    +'</div>'
-    +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'
-      +'<button type="button" class="btn btn-ghost btn-sm" onclick="effacerAnnotation()"><i class="ti ti-eraser"></i> Effacer</button>'
-      +'<span style="font-size:.72rem;color:var(--t3);align-self:center" id="annot-etat"></span>'
-    +'</div>'
-
+  // L'aspirant a pu changer de question pendant l'attente du lien
+  if(!G.questions||!G.questions[G.etape]||G.questions[G.etape].id!==questionId) return
+  const cv=monterZoneDessin(true);if(!cv) return
   const img=document.getElementById('annot-fond')
-  const cv=document.getElementById('annot-canvas')
   // Indispensable : sans cela le navigateur interdit d'exporter le dessin
   // puisque la photo provient d'un autre domaine.
   img.crossOrigin='anonymous'
@@ -1803,53 +1926,58 @@ async function preparerAnnotation(questionId,valImage){
     if(et){et.style.color='var(--r)';et.textContent='Image indisponible'}
   }
   img.onload=function(){
-    cv.width=img.naturalWidth
-    cv.height=img.naturalHeight
-    const ctx=cv.getContext('2d')
-    ctx.strokeStyle='#E24B4A'
-    ctx.lineWidth=Math.max(3,Math.round(img.naturalWidth/180))
-    ctx.lineCap='round';ctx.lineJoin='round'
-    _annot={canvas:cv,ctx:ctx,dessine:false,vide:true,fond:img}
+    cv.width=img.naturalWidth||1200
+    cv.height=img.naturalHeight||900
+    initDessin(cv,questionId,img,COULEURS_DESSIN[1])
   }
   img.src=u
-
-  function pos(e){
-    const r=cv.getBoundingClientRect()
-    const x=(e.clientX-r.left)*(cv.width/r.width)
-    const y=(e.clientY-r.top)*(cv.height/r.height)
-    return {x:x,y:y}
-  }
-  cv.addEventListener('pointerdown',function(e){
-    if(!_annot.ctx) return
-    cv.setPointerCapture(e.pointerId)
-    _annot.dessine=true;_annot.vide=false
-    const p=pos(e);_annot.ctx.beginPath();_annot.ctx.moveTo(p.x,p.y)
-    const et=document.getElementById('annot-etat');if(et)et.textContent='Annotation en cours'
-  })
-  cv.addEventListener('pointermove',function(e){
-    if(!_annot.dessine||!_annot.ctx) return
-    e.preventDefault()
-    const p=pos(e);_annot.ctx.lineTo(p.x,p.y);_annot.ctx.stroke()
-  })
-  cv.addEventListener('pointerup',function(){_annot.dessine=false})
-  cv.addEventListener('pointerleave',function(){_annot.dessine=false})
+  brancherDessin(cv,questionId)
 }
-
+// Dessin sur une feuille blanche (question sans photo)
+function ouvrirDessinLibre(questionId){
+  const q=G.questions&&G.questions[G.etape];if(!q) return
+  const qid=questionId||q.id
+  const cv=monterZoneDessin(false);if(!cv) return
+  cv.width=1200;cv.height=900
+  initDessin(cv,qid,null,COULEURS_DESSIN[0])
+  brancherDessin(cv,qid)
+  const b=document.getElementById('btn-dessiner');if(b)b.style.display='none'
+}
+function fermerDessinLibre(){
+  const qid=_annot.qid
+  if(qid&&traitsDe(qid).length&&!confirm('Retirer ton dessin ?')) return
+  if(qid&&G.dessins) delete G.dessins[qid]
+  if(qid&&G.fichiersLibres&&G.fichiersLibres[qid]){
+    G.fichiersLibres[qid]=piecesJointes(G.fichiersLibres[qid]).filter(function(p){return p.type!=='annotation'})
+    afficherPiecesJointes(qid)
+  }
+  _annot={canvas:null,ctx:null,dessine:false,vide:true,fond:null,qid:null,aCapturer:false}
+  const zone=document.getElementById('zone-annot');if(zone){zone.style.display='none';zone.innerHTML=''}
+  const b=document.getElementById('btn-dessiner');if(b)b.style.display=''
+  sauverCopieEnCours()
+}
+function couleurDessin(btn){
+  _annot.couleur=btn.dataset.coul
+  document.querySelectorAll('.annot-coul').forEach(function(x){x.classList.toggle('on',x===btn)})
+}
+function annulerTrait(){
+  if(!_annot.ctx) return
+  traitsDe(_annot.qid).pop();_annot.aCapturer=true
+  redessiner();sauverCopieEnCours()
+}
 function effacerAnnotation(){
   if(!_annot.ctx) return
-  _annot.ctx.clearRect(0,0,_annot.canvas.width,_annot.canvas.height)
-  _annot.vide=true
-  const et=document.getElementById('annot-etat');if(et)et.textContent=''
+  if(G.dessins) G.dessins[_annot.qid]=[]
+  _annot.aCapturer=true
+  redessiner();sauverCopieEnCours()
 }
 
-// Fusionne la photo et le dessin en une seule image, puis l'envoie
-// Le schema annote est enregistre AVEC la copie, sous forme d'image integree.
-// Aucune dependance au stockage : pas de risque de blocage par les droits.
-async function enregistrerAnnotation(questionId){
+// Fusionne le fond (photo ou feuille blanche) et les traits en une seule image
+function imageDuDessin(){
   if(!_annot.ctx||_annot.vide) return null
   try{
     const src=_annot.canvas
-    // Limiter a 1400 px de large : net a l'ecran, poids raisonnable
+    // 1100 px de large au plus : net a l'ecran, poids raisonnable
     const maxL=1100
     const ech=src.width>maxL?maxL/src.width:1
     const f=document.createElement('canvas')
@@ -1857,15 +1985,30 @@ async function enregistrerAnnotation(questionId){
     const fx=f.getContext('2d')
     fx.imageSmoothingEnabled=true;fx.imageSmoothingQuality='high'
     fx.fillStyle='#fff';fx.fillRect(0,0,f.width,f.height)
-    try{fx.drawImage(_annot.fond,0,0,f.width,f.height)}catch(e){}
+    if(_annot.fond){try{fx.drawImage(_annot.fond,0,0,f.width,f.height)}catch(e){}}
     fx.drawImage(src,0,0,f.width,f.height)
     const data=f.toDataURL('image/jpeg',0.72)
-    if(!data||data.length<200){toast('Schéma non enregistré','err');return null}
+    if(!data||data.length<200) return null
     return data
-  }catch(e){
-    toast('Schéma non enregistré : '+(e.message||'erreur'),'err')
-    return null
-  }
+  }catch(e){return null}
+}
+// Joint le dessin de la question affichee a la copie (une seule piece par
+// question, remplacee a chaque fois). Appele a la validation, au passage a la
+// question suivante et a l'envoi : un dessin non valide n'est jamais oublie.
+function capturerDessin(){
+  const a=_annot
+  if(!a.ctx||!a.qid||!a.aCapturer) return true
+  const qid=a.qid
+  const liste=piecesJointes(G.fichiersLibres[qid]).filter(function(p){return p.type!=='annotation'})
+  a.aCapturer=false
+  if(a.vide){G.fichiersLibres[qid]=liste;return true}
+  const img=imageDuDessin()
+  if(!img){a.aCapturer=true;toast('Le dessin n a pas pu être joint','err');return false}
+  const piece={id:'pj'+Date.now(),type:'annotation',nom:a.fond?'Schéma annoté':'Dessin',etat:'ok',image:img}
+  liste.push(piece);G.fichiersLibres[qid]=liste
+  // Depot en arriere-plan : la copie reste legere
+  suivreEnvoi((async function(){const b=dataUrlVersBlob(img);if(!b)return;const r=await envoyerAuStockage(b,a.fond?'schema-annote.jpg':'dessin.jpg','image/jpeg');if(r.path){piece.path=r.path;delete piece.image;sauverCopieEnCours()}})())
+  return true
 }
 
 // ─── MISE À JOUR AUTOMATIQUE ───────────────────────────────────────────────
@@ -1931,6 +2074,8 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden)setT
 let _envoisPJ=[]          // envois en cours
 const _apercusPJ={}       // apercus en memoire (non enregistres)
 const _fichiersPJ={}      // fichiers d'origine, pour reessayer
+// Taille maximale d'une piece jointe (limite des fichiers du stockage Supabase)
+let TAILLE_MAX_PJ_MO=50
 function estImageNom(n){return /\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(String(n||''))}
 function estImageFichier(f){return !!f&&((f.type&&f.type.indexOf('image/')===0)||estImageNom(f.name))}
 function piecesJointes(v){
@@ -2071,6 +2216,12 @@ async function traiterPiece(qid,piece,fichier){
 }
 async function traiterPieceInterne(qid,piece,fichier){
   piece.etat='envoi';piece.erreur=null;afficherPiecesJointes(qid)
+  // Limite du stockage : au-dela, le depot serait refuse apres une longue attente
+  if(piece.type!=='photo'&&fichier&&fichier.size>TAILLE_MAX_PJ_MO*1024*1024){
+    piece.etat='erreur'
+    piece.erreur='fichier trop lourd ('+(fichier.size/1024/1024).toFixed(0)+' Mo, '+TAILLE_MAX_PJ_MO+' Mo maximum) : compresse-le en .zip ou envoie un PDF'
+    sauverCopieEnCours();afficherPiecesJointes(qid);return
+  }
   let blob=fichier,ct=fichier.type,dataUrl=null
   if(piece.type==='photo'){
     const red=await reduireImage(fichier,1600,0.72)
@@ -2114,10 +2265,10 @@ function afficherPiecesJointes(qid){
       :'<div style="width:54px;height:54px;border-radius:10px;background:var(--field);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-file" style="color:var(--t2);font-size:1.3rem"></i></div>'
     const etat=p.etat==='envoi'?'<span style="color:var(--amber)"><i class="ti ti-loader spin"></i> Envoi en cours…</span>'
       :p.etat==='erreur'?'<span style="color:var(--r)"><i class="ti ti-alert-circle"></i> Échec : '+echapAttr(p.erreur||'')+'</span>'
-      :'<span style="color:var(--v)"><i class="ti ti-circle-check"></i> '+(p.type==='annotation'?'Schéma joint':'Jointe à ta copie')+'</span>'
+      :'<span style="color:var(--v)"><i class="ti ti-circle-check"></i> '+(p.type==='annotation'?(p.nom==='Dessin'?'Dessin joint':'Schéma joint'):'Jointe à ta copie')+'</span>'
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:12px;background:var(--card2);border:1px solid var(--bord);margin-bottom:6px">'
       +vignette
-      +'<div style="flex:1;min-width:0;font-size:.76rem"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+echapAttr(p.type==='annotation'?'Schéma annoté':p.nom)+'</div><div style="margin-top:2px">'+etat+'</div></div>'
+      +'<div style="flex:1;min-width:0;font-size:.76rem"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+echapAttr(p.type==='annotation'?(p.nom==='Dessin'?'Ton dessin':'Schéma annoté'):p.nom)+'</div><div style="margin-top:2px">'+etat+'</div></div>'
       +(p.etat==='erreur'&&_fichiersPJ[p.id]?'<button type="button" class="btn btn-ghost btn-sm" style="flex-shrink:0;padding:6px 10px" onclick="reessayerPiece(\''+qid+'\',\''+p.id+'\')">Réessayer</button>':'')
       +(p.type!=='annotation'?'<button type="button" class="btn btn-ghost btn-sm btn-icon" style="flex-shrink:0" title="Retirer" onclick="retirerPieceJointe(\''+qid+'\',\''+p.id+'\')"><i class="ti ti-x"></i></button>':'')
     +'</div>'
@@ -2377,7 +2528,8 @@ async function initAppInterne() {
     ;['b-corrections','b-aspirants'].forEach(id=>hi(id))
   }
   // Enregistrer la dernière connexion (fire and forget)
-  db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id)
+  // (sans .then() la requete ne partait jamais : la date restait vide pour tout le monde)
+  db.from('profils').update({derniere_connexion:new Date().toISOString()}).eq('id',user.id).then(function(){},function(){})
   hi('vue-login');$('vue-app').classList.add('on')
   initDark()
   demarrerAutoRefresh()
@@ -2537,6 +2689,21 @@ function allerCorrections(vue,mod){
 }
 let _admExams={}
 let _admExos={}
+// Aspirants et apprentis dont le navigateur fait tourner une ancienne version
+let _admAnciennes=[]
+function voirApplisAnciennes(){
+  const modal=document.createElement('div');modal.id='modal-anciennes'
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;display:flex;align-items:center;justify-content:center;padding:1rem'
+  modal.onclick=function(e){if(e.target===modal)modal.remove()}
+  modal.innerHTML='<div style="background:var(--card);border-radius:20px;width:100%;max-width:440px;padding:1.4rem 1.3rem;max-height:86vh;overflow-y:auto">'
+    +'<div style="font-family:var(--fg);font-size:1.05rem;font-weight:700">Appli pas à jour</div>'
+    +'<p style="font-size:.8rem;color:var(--t2);line-height:1.5;margin-top:8px">Leur dernière copie a été envoyée par une ancienne version restée dans leur navigateur. Elle n’a ni la mise à jour automatique ni les dernières protections des copies.</p>'
+    +'<div style="margin:.8rem 0">'+_admAnciennes.map(function(p){return '<div class="adm-row"><div class="adm-tx"><div class="adm-t1">Pays '+echapAttr((p.nom||'')+' '+(p.prenom||''))+'</div><div class="adm-t2">'+(p.role==='apprenti'?'Apprenti':'Aspirant')+'</div></div></div>'}).join('')+'</div>'
+    +'<div style="font-size:.8rem;line-height:1.55;background:var(--field);border-radius:12px;padding:10px 12px"><b>À leur demander :</b> fermer l’onglet de ProgMéca, le rouvrir, puis recharger la page (Ctrl + F5 sur un ordinateur ; sur un téléphone, fermer complètement l’appli et la rouvrir). Le numéro de version en haut de l’appli doit être <b>v'+VERSION_APP+'</b>.</div>'
+    +'<button class="btn btn-dark btn-full" style="margin-top:1rem" onclick="document.getElementById(\'modal-anciennes\').remove()">Fermer</button>'
+    +'</div>'
+  document.body.appendChild(modal)
+}
 // Publication d'un exercice relu (accueil gacheur ou fenetre de relecture)
 async function publierExercice(id){
   if(!G.admin) return
@@ -2570,13 +2737,13 @@ async function publierDepuisAccueil(id){
 }
 async function loadDashboardAdmin(){
   const zone=$('d-admin');if(!zone) return
-  ;['d-rappel','d-email-perso','d-modules','d-activite'].forEach(function(id){const e=$(id);if(e)e.innerHTML=''})
+  ;['d-rappel','d-email-perso','d-modules','d-activite','d-jeu','d-etape','d-examen'].forEach(function(id){const e=$(id);if(e)e.innerHTML=''})
   const titreEl=$('d-prenom')&&$('d-prenom').parentElement
   if(titreEl) titreEl.innerHTML='Bonjour <span id="d-prenom">'+echapAttr(G.profil.prenom||G.profil.nom||'')+'</span>'
   if(!zone.innerHTML) zone.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
   const [rQ,rT,rP,rR,rX]=await Promise.all([
     db.from('quiz').select('id,titre,module_id,date_debut,date_fin,actif,archive,mode_examen').eq('mode_examen',true),
-    db.from('tentatives').select('id,aspirant_id,quiz_id,note_admin,completed_at').limit(5000),
+    lireTout(function(){return db.from('tentatives').select('id,aspirant_id,quiz_id,note_admin,completed_at,version_app').order('completed_at',{ascending:false}).order('id')}),
     db.from('profils').select('id,prenom,nom,role,module_inscrit,metier,sans_module,modules_valides').in('role',['aspirant','apprenti']),
     db.from('rattrapages').select('*'),
     db.from('quiz').select('id,titre,module_id,niveau,actif,archive,mode_examen,created_at').eq('actif',false)
@@ -2609,6 +2776,23 @@ async function loadDashboardAdmin(){
   })}
   const aCorriger=copies.filter(estEnAttente)
   majPastilleCorr(aCorriger.length)
+  // Cette semaine : activite du groupe, exercices et examens confondus
+  const parId={};asp.forEach(function(p){parId[p.id]=p})
+  const lundi=new Date(lundiDe(n)+'T00:00:00').getTime()
+  const copiesSemaine=(rT.data||[]).filter(function(t){return parId[t.aspirant_id]&&t.completed_at&&new Date(t.completed_at).getTime()>=lundi})
+  const parPersonne={};copiesSemaine.forEach(function(t){parPersonne[t.aspirant_id]=(parPersonne[t.aspirant_id]||0)+1})
+  const actifs=Object.keys(parPersonne).sort(function(a,b){return parPersonne[b]-parPersonne[a]})
+  // Appli pas a jour : derniere copie des 14 derniers jours envoyee sans numero
+  // de version, donc par un code d'avant le 29/10 reste dans le navigateur.
+  // Ce code-la n'a pas la mise a jour automatique : il faut recharger la page.
+  const il14=n.getTime()-14*86400000,derniere={}
+  ;(rT.data||[]).forEach(function(t){
+    if(!parId[t.aspirant_id]||!t.completed_at) return
+    const d=new Date(t.completed_at).getTime()
+    if(d<il14) return
+    if(!derniere[t.aspirant_id]||d>derniere[t.aspirant_id].d) derniere[t.aspirant_id]={d:d,v:t.version_app}
+  })
+  _admAnciennes=Object.keys(derniere).filter(function(id){return !derniere[id].v}).map(function(id){return parId[id]})
   // Absents des examens termines (60 derniers jours), sans rattrapage ouvert
   let absents=0
   exams.forEach(function(q){
@@ -2635,8 +2819,15 @@ async function loadDashboardAdmin(){
   if(absents) aFaire.push(ligne({clic:"allerCorrections('absents',0)",ic:'ti-user-x',fond:'var(--amberl)',coul:'var(--amber)',t1:'Absents sans rattrapage',t2:'Examens terminés : rouvre l’accès ou crée la copie',nb:absents}))
   if(sansModule) aFaire.push(ligne({clic:"nav('aspirants')",ic:'ti-user-question',fond:'var(--bl)',coul:'var(--b)',t1:'Aspirants sans module',t2:'Ils ne peuvent passer aucun examen',nb:sansModule}))
   if(exos.length) aFaire.push(ligne({clic:"document.getElementById('adm-exos').scrollIntoView({behavior:'smooth',block:'start'})",ic:'ti-eye-check',fond:'var(--amberl)',coul:'var(--amber)',t1:'Exercices à relire',t2:'Nouveaux exercices privés : lis les réponses, puis publie',nb:exos.length}))
+  if(_admAnciennes.length) aFaire.push(ligne({clic:"voirApplisAnciennes()",ic:'ti-refresh-alert',fond:'var(--amberl)',coul:'var(--amber)',t1:'Appli pas à jour',t2:'Leur navigateur garde une ancienne version : à faire recharger',nb:_admAnciennes.length}))
   h+='<div class="adm-h">À faire</div>'
-  h+=aFaire.length?aFaire.join(''):'<div class="adm-row"><div class="adm-ic" style="background:var(--vl);color:var(--v)"><i class="ti ti-circle-check"></i></div><div class="adm-tx"><div class="adm-t1">Rien d’urgent</div><div class="adm-t2">Toutes les copies sont corrigées.</div></div></div>'
+  h+=aFaire.length?aFaire.join(''):'<div class="adm-row" id="adm-a-jour"><div class="adm-ic" style="background:var(--vl);color:var(--v)"><i class="ti ti-confetti"></i></div><div class="adm-tx"><div class="adm-t1">Tout est à jour</div><div class="adm-t2">Aucune copie à corriger, personne à relancer. Beau travail.</div></div></div>'
+  // ── Cette semaine ──
+  h+='<div class="adm-h">Cette semaine</div>'
+  h+='<div class="adm-row" id="adm-semaine"><div class="adm-ic" style="background:var(--bl);color:var(--b)"><i class="ti ti-activity"></i></div><div class="adm-tx">'
+    +'<div class="adm-t1">'+copiesSemaine.length+' copie'+(copiesSemaine.length>1?'s':'')+' rendue'+(copiesSemaine.length>1?'s':'')+' · '+actifs.length+' actif'+(actifs.length>1?'s':'')+' sur '+asp.length+'</div>'
+    +'<div class="adm-t2">'+(actifs.length?'Les plus actifs : '+actifs.slice(0,3).map(function(id){return 'Pays '+echapAttr(parId[id].nom||parId[id].prenom||'')+' ('+parPersonne[id]+')'}).join(', '):'Personne n’a encore rendu de copie cette semaine.')+'</div>'
+    +'</div></div>'
   // ── Examens du jour ──
   const memeJour=function(d){return d&&new Date(d).toDateString()===n.toDateString()}
   const duJour=exams.filter(function(q){
@@ -2693,7 +2884,7 @@ async function loadDashboardAdmin(){
       const nbq=nbQuestionsExo[q.id]||0
       const dep=q.created_at?new Date(q.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):''
       return '<div class="adm-row clic" data-quiz="'+echapAttr(q.id)+'" onclick="previsualiserQuiz(this.dataset.quiz)">'
-        +'<div class="adm-date"><b>'+(q.niveau!=null?Number(q.niveau):'–')+'</b><span>niveau</span></div>'
+        +(function(){const m=MODULES.find(function(x){return x.id===Number(q.module_id)})||{};return '<div class="adm-ic" style="background:'+(m.bg||'var(--field)')+';color:'+(m.ic||'var(--t2)')+'"><i class="ti '+(m.icon||'ti-help-circle')+'"></i></div>'})()
         +'<div class="adm-tx"><div class="adm-t1">'+echapAttr(q.titre||'Sans titre')+'</div>'
         +'<div class="adm-t2">'+nomMod(q.module_id)+' · '+nbq+' question'+(nbq>1?'s':'')+(dep?' · déposé le '+dep:'')+'</div></div>'
         +'<button class="btn btn-r btn-sm" style="flex-shrink:0" data-quiz="'+echapAttr(q.id)+'" onclick="event.stopPropagation();publierExercice(this.dataset.quiz)">Publier</button>'
@@ -2739,11 +2930,12 @@ async function loadDashboard() {
   // Accueil de l'aspirant : la recherche, la prochaine etape, puis les modules
   const zd=$('d-date');if(zd) zd.style.display='none'
   $('d-recherche').innerHTML='<button class="acc-rech" onclick="nav(\'chercher\')"><i class="ti ti-search"></i>Cours, exercice, mot-clé…</button>'
-  const {data:t}=await db.from('tentatives').select('*, quiz(module_id,titre)').eq('aspirant_id',G.profil.id).order('completed_at',{ascending:false})
+  const {data:t}=await db.from('tentatives').select('*, quiz(module_id,titre,mode_examen)').eq('aspirant_id',G.profil.id).order('completed_at',{ascending:false})
   const tents=t||[]
-  const {data:pd}=await db.from('profils').select('points_total,streak_semaines,streak_pause').eq('id',G.profil.id).single()
-  const sEl=document.getElementById('streak-topbar')
-  if(sEl){const s=pd?.streak_semaines||0;sEl.innerHTML=s>0?`<i class="ti ti-flame" style="color:${pd?.streak_pause?'var(--t3)':'var(--r)'}"></i>${s}`:''}
+  // Serie, objectif de la semaine et points : calcules a partir des copies
+  const jeu=parcoursLudique(tents,G.profil)
+  majSerieBarre(jeu)
+  const zj=$('d-jeu');if(zj) zj.innerHTML=G.aspirant?carteLudique(jeu):''
   const {data:qxD}=await db.from('quiz').select('id,module_id,titre,date_debut,date_fin').eq('actif',true).eq('mode_examen',true).or('archive.is.null,archive.eq.false')
   const allExD=qxD||[]
   // Rappel : adresse personnelle a remplacer par l'adresse Compagnons
@@ -3017,7 +3209,7 @@ async function loadDashboardAncien() {
   if($('da-ville')) $('da-ville').textContent=G.compagnon?'Compagnon itinérant':(p.ville_sedentaire?'Sédentaire à '+p.ville_sedentaire:'')
   const [{data:aspirants},{data:tents},{data:allQuiz}]=await Promise.all([
     db.from('profils').select('id,prenom,nom,role').in('role',['aspirant','apprenti']).order('nom'),
-    db.from('tentatives').select('aspirant_id,quiz_id,score,valide,quiz(module_id)'),
+    lireTout(function(){return db.from('tentatives').select('aspirant_id,quiz_id,score,valide,quiz(module_id)').order('completed_at',{ascending:false}).order('id')}),
     db.from('quiz').select('id,module_id').eq('actif',true)
   ])
   const el=$('da-aspirants');if(!el) return
@@ -3230,7 +3422,8 @@ async function ouvrirRes(id,path,url) {
     }
   }
   // L'enregistrement de la consultation ne doit jamais empecher l'ouverture
-  try{await db.from('consultations').upsert({aspirant_id:G.profil.id,ressource_id:id})}catch(e){}
+  // Cours deja ouvert : la ligne existe, on ne la recree pas (la base refusait le doublon)
+  try{await db.from('consultations').upsert({aspirant_id:G.profil.id,ressource_id:id},{onConflict:'aspirant_id,ressource_id',ignoreDuplicates:true})}catch(e){}
 
   let cible=url||null
   if(path){
@@ -3277,13 +3470,15 @@ async function renderEval(modId,quiz,tents) {
     // Bloquer examen si mauvais module ou pas inscrit
     const bonModule=G.admin||!isExamen||(suitLesModules()&&!G.profil.sans_module&&G.profil.module_inscrit===modId)
     const peutCommencer=!horsCreneaux&&(!isExamen||!t)&&bonModule
-    const bc=t?.valide?'var(--v)':t?'var(--r)':'var(--bord2)'
-    const ic=t?.valide?'ti-check':t?'ti-x':'ti-help'
-    const ibg=t?.valide?'var(--vl)':t?'var(--rl)':'var(--bg)'
+    // Copie pas encore corrigee : « en attente », jamais l'air d'un « non valide »
+    const att=!!t&&!t.valide&&(copieEnAttente(t)||(isExamen&&(t.note_admin===null||t.note_admin===undefined)))
+    const bc=att?'var(--amber)':t?.valide?'var(--v)':t?'var(--r)':'var(--bord2)'
+    const ic=att?'ti-hourglass':t?.valide?'ti-check':t?'ti-x':'ti-help'
+    const ibg=att?'var(--amberl)':t?.valide?'var(--vl)':t?'var(--rl)':'var(--bg)'
     const crd=compteARebours(q.date_debut,q.date_fin)
     h+=`<div class="quiz-row" style="border-color:${bc}">
       <div class="quiz-row-head">
-        <div class="quiz-row-ico" style="background:${ibg};color:${t?.valide?'var(--v)':t?'var(--r)':'var(--t3)'}"><i class="ti ${ic}"></i></div>
+        <div class="quiz-row-ico" style="background:${ibg};color:${att?'var(--amber)':t?.valide?'var(--v)':t?'var(--r)':'var(--t3)'}"><i class="ti ${ic}"></i></div>
         <div style="flex:1;min-width:0"><div class="quiz-row-name">${q.titre}</div>
         <div class="quiz-row-meta">${q.actif?'':'<span style="background:rgba(160,140,255,.14);color:#A08CFF;padding:1px 7px;border-radius:20px;font-weight:700;font-size:.62rem">PRIVÉ</span> '}${isExamen?'Examen'+crd:'Exercice repassable'}</div></div>
         <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">`
@@ -3403,7 +3598,7 @@ async function commencerEssai(){
   if(local&&(!local.uid||!G.profil||local.uid===G.profil.id)) return reprendreCopie()
   if(await miseAJourAvantExamen(ESSAI_ID,false)) return
   _copiePartie=false
-  G.quizActif=quizEssai();G.questions=questionsEssai();G.reponses={};G.fichiersLibres={};G.etape=0;G.choix=null;G.confirme=false
+  G.quizActif=quizEssai();G.questions=questionsEssai();G.reponses={};G.fichiersLibres={};G.dessins={};G.etape=0;G.choix=null;G.confirme=false
   G.finExamen=new Date(Date.now()+10*60*1000)
   G.debutCopie=Date.now()
   if(typeof _multiSelect!=='undefined') _multiSelect=new Set()
@@ -3433,7 +3628,7 @@ async function finEssai(){
   $('r-score').textContent=tout?'✓':'!';$('r-score').style.color=tout?'var(--v)':'var(--amber)';$('r-total').textContent=''
   $('r-verdict').textContent=tout?'Ton téléphone est prêt':'Encore un point à vérifier';$('r-verdict').style.color=tout?'var(--v)':'var(--amber)'
   $('r-msg').textContent="C'était un essai : aucune copie ni note n'a été créée."
-  $('r-comps').innerHTML='';hi('r-revisions')
+  $('r-comps').innerHTML='';hi('r-revisions');{const zf=$('r-fete');if(zf)zf.innerHTML=''}
   $('r-detail-titre').textContent='Ce qui a été vérifié'
   $('r-foot').style.display='none';$('r-historique').style.display='none'
   $('r-detail').innerHTML=ligneEssai(true,'Envoi','Le serveur a bien répondu à ton téléphone.')
@@ -3600,7 +3795,7 @@ async function commencer(qid,coursVus) {
     }
   }
   const [{data:q},{data:qs}]=await Promise.all([db.from('quiz').select('*').eq('id',qid).single(),db.from('questions').select('*').eq('quiz_id',qid).order('ordre')])
-  G.quizActif=q;G.questions=qs||[];G.reponses={};G.fichiersLibres={};G.etape=0;G.choix=null;G.confirme=false
+  G.quizActif=q;G.questions=qs||[];G.reponses={};G.fichiersLibres={};G.dessins={};G.etape=0;G.choix=null;G.confirme=false
   G.finExamen=calculerFinExamen(q)
   G.debutCopie=Date.now()
   nav('quiz');showQ();demarrerTimer();sauverCopieEnCours()
@@ -3624,6 +3819,17 @@ function showQ() {
       imgWrap.style.display=''
       imgWrap.innerHTML=''
       medias.forEach(function(m,k){
+        if(m.t==='lien'){
+          // Document du fabricant a consulter pour repondre : ouvert dans un
+          // onglet separe, la copie en cours reste en place
+          const b=document.createElement('button')
+          b.className='btn btn-ghost btn-sm'
+          b.style.cssText='width:100%;justify-content:flex-start;margin-bottom:6px;gap:8px;text-align:left;white-space:normal'
+          b.innerHTML='<i class="ti ti-file-search" style="color:var(--b);font-size:1.1rem;flex-shrink:0"></i> <span style="flex:1;min-width:0">'+echapAttr(m.n||'Document à consulter')+'</span> <span style="font-size:.7rem;color:var(--t3);flex-shrink:0">Ouvrir</span>'
+          b.onclick=function(){sauverCopieEnCours();try{window.open(m.p,'_blank','noopener')}catch(e){}}
+          imgWrap.appendChild(b)
+          return
+        }
         if(m.t==='pdf'){
           const b=document.createElement('button')
           b.className='btn btn-ghost btn-sm'
@@ -3657,10 +3863,13 @@ function showQ() {
     } else imgWrap.style.display='none'
   }
   // Question ouverte avec image : proposer d'annoter directement la photo
-  _annot={canvas:null,ctx:null,dessine:false,vide:true,fond:null}
+  _annot={canvas:null,ctx:null,dessine:false,vide:true,fond:null,qid:null,aCapturer:false}
+  let dessinLibre=false
   if((q.type_question||'qcm')==='libre'){
     const mds=Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url}]:[])
     const premiereImage=mds.find(function(m){return m.t==='img'})
+    // Sans photo : une feuille blanche pour dessiner sa reponse
+    dessinLibre=!premiereImage
     if(premiereImage){
       // La premiere photo passe dans la zone d'annotation ; les autres
       // pieces jointes restent consultables au-dessus.
@@ -3683,12 +3892,15 @@ function showQ() {
         </label>
         <label style="position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 10px;border:1.5px dashed var(--bord2);border-radius:12px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--t1);background:var(--bg);text-align:center">
           <i class="ti ti-photo" style="font-size:1.2rem;color:var(--r)"></i> Galerie ou fichier
-          <input type="file" id="fichier-libre" multiple accept="image/*,.pdf,.doc,.docx,.sldprt,.dwg" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0" onclick="avantChoixFichier()" oncancel="choixFichierAnnule()" onchange="uploaderFichierLibre(this)"/>
+          <input type="file" id="fichier-libre" multiple style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0" onclick="avantChoixFichier()" oncancel="choixFichierAnnule()" onchange="uploaderFichierLibre(this)"/>
         </label>
       </div>
-      <div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.45"><i class="ti ti-bulb"></i> Si la photo en direct ne revient pas, prends-la avec l'appareil photo de ton téléphone, puis choisis-la avec Galerie. Tu peux en ajouter plusieurs.</div>
-      <div id="fichier-statut" style="font-size:.72rem;color:var(--v);margin-top:4px"></div>`
+      <div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.45"><i class="ti ti-paperclip"></i> Tous les fichiers sont acceptés : photo, PDF, Word, Excel, SolidWorks, Automation Studio, DWG, STEP… (${TAILLE_MAX_PJ_MO} Mo maximum par fichier). Tu peux en ajouter plusieurs.<br><i class="ti ti-bulb"></i> Si la photo en direct ne revient pas, prends-la avec l'appareil photo de ton téléphone, puis choisis-la avec Galerie.</div>
+      <div id="fichier-statut" style="font-size:.72rem;color:var(--v);margin-top:4px"></div>
+      ${dessinLibre?`<button type="button" id="btn-dessiner" class="btn btn-ghost btn-full" style="margin-top:10px" onclick="ouvrirDessinLibre()"><i class="ti ti-pencil"></i> Dessiner ma réponse</button>`:''}`
     afficherPiecesJointes(q.id)
+    // Dessin deja commence (retour sur la question, rechargement) : il revient
+    if(dessinLibre&&G.dessins&&Array.isArray(G.dessins[q.id])&&G.dessins[q.id].length) ouvrirDessinLibre(q.id)
     $('btn-valider').disabled=false
   } else if(typeQ==='multi'){
     $('q-opts').innerHTML=`<div style="font-size:.72rem;color:var(--r);margin-bottom:.8rem;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;gap:6px"><i class="ti ti-checkbox"></i> Sélectionnez une ou plusieurs réponses</div>`+
@@ -3742,26 +3954,24 @@ function choisir(i) {
   sauverCopieEnCours()
 }
 
+// Explication et image de la bonne reponse, apres la reponse a un EXERCICE.
+// Jamais appele pendant un examen : valider() en sort avant.
+function afficherExplication(qr){
+  if(!qr||(G.quizActif&&G.quizActif.mode_examen)) return
+  if(!qr.reponse_type&&!imagesReponse(qr).length) return
+  const expDiv=document.createElement('div')
+  expDiv.id='q-explication'
+  expDiv.style.cssText='margin-top:.8rem;padding:10px 14px;background:var(--vl);border:1px solid var(--v);border-radius:10px;font-size:.78rem;color:var(--v);line-height:1.5'
+  expDiv.innerHTML=(qr.reponse_type?'<strong>Explication :</strong> '+qr.reponse_type:'<strong>Bonne réponse :</strong>')+htmlImagesReponse(qr)
+  $('q-opts').appendChild(expDiv)
+}
 async function valider() {
   const typeQ=G.questions[G.etape].type_question||'qcm'
   if(typeQ==='libre'){
     const qid=G.questions[G.etape].id
     const rep=document.getElementById('rep-libre')?.value?.trim()||''
-    // Enregistrer l'annotation dessinee sur la photo, si elle existe
-    if(_annot.ctx&&!_annot.vide){
-      const btn=document.getElementById('btn-valider')
-      if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Enregistrement du schéma...'}
-      const img=await enregistrerAnnotation(qid)
-      if(img){
-        const liste=piecesJointes(G.fichiersLibres[qid]).filter(function(p){return p.type!=='annotation'})
-        const piece={id:'pj'+Date.now(),type:'annotation',nom:'Schéma annoté',etat:'ok',image:img}
-        liste.push(piece);G.fichiersLibres[qid]=liste
-        // Depot en arriere-plan : la copie reste legere
-        suivreEnvoi((async function(){const b=dataUrlVersBlob(img);if(!b)return;const r=await envoyerAuStockage(b,'schema-annote.jpg','image/jpeg');if(r.path){piece.path=r.path;delete piece.image;sauverCopieEnCours()}})())
-      }
-      else toast('Le schéma n a pas pu être joint','err')
-      if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Valider'}
-    }
+    // Le dessin (sur la photo ou sur feuille blanche) est joint a la copie
+    if(_annot.qid===qid){capturerDessin();afficherPiecesJointes(qid)}
     G.reponses[qid]=rep;G.confirme=true;hi('btn-valider')
     sauverCopieEnCours()
     G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
@@ -3781,7 +3991,7 @@ async function valider() {
       hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
     }
     // Afficher la correction multi (exercices d'entrainement uniquement)
-    const {data:qr}=await db.from('questions').select('bonnes_reponses,reponse_type').eq('id',q.id).single()
+    const {data:qr}=await db.from('questions').select('*').eq('id',q.id).single()
     const bonnes=new Set((qr?.bonnes_reponses||[]).map(Number))
     q.options.forEach((_,j)=>{
       const b=$('o'+j)
@@ -3792,12 +4002,7 @@ async function valider() {
       }
     })
     // Afficher explication si disponible
-    if(qr?.reponse_type){
-      const expDiv=document.createElement('div')
-      expDiv.style.cssText='margin-top:.8rem;padding:10px 14px;background:var(--vl);border:1px solid var(--v);border-radius:10px;font-size:.78rem;color:var(--v);line-height:1.5'
-      expDiv.innerHTML='<strong>Explication :</strong> '+qr.reponse_type
-      $('q-opts').appendChild(expDiv)
-    }
+    afficherExplication(qr)
     hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
   }
   if(G.choix===null) return;G.confirme=true;G.reponses[G.questions[G.etape].id]=G.choix
@@ -3811,24 +4016,53 @@ async function valider() {
     sauverCopieEnCours()
     hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant');return
   }
-  const {data:qr}=await db.from('questions').select('bonne_reponse').eq('id',G.questions[G.etape].id).single()
+  const {data:qr}=await db.from('questions').select('*').eq('id',G.questions[G.etape].id).single()
   const bonne=qr?.bonne_reponse
   G.questions[G.etape].options.forEach((_,j)=>{const b=$('o'+j);b.disabled=true;if(j===bonne)b.classList.add('ok');else if(j===G.choix&&j!==bonne)b.classList.add('ko')})
+  afficherExplication(qr)
   hi('btn-valider');G.etape===G.questions.length-1?sh('btn-terminer'):sh('btn-suivant')
 }
 
-function suivant(){G.etape++;G.choix=null;G.confirme=false;_multiSelect=new Set();sauverCopieEnCours();showQ()}
+function suivant(){capturerDessin();G.etape++;G.choix=null;G.confirme=false;_multiSelect=new Set();sauverCopieEnCours();showQ()}
 
 // Reseau faible : on reessaie seul, avec un delai maximum par essai.
 // Seules les pannes reseau sont rejouees (un refus de la base ne changerait pas).
 function erreurReseau(err){return !!err&&/failed to fetch|fetch failed|load failed|networkerror|network request|réseau ne répond pas|timeout/i.test(err.message||String(err))}
+// La base renvoie au plus 1000 lignes par demande. Les lectures de TOUTES les
+// copies passaient donc a cote des suivantes sans rien dire, des la 1001e
+// copie (faux absents, copies introuvables). On lit page par page.
+async function lireTout(requete){
+  const pas=1000;let tout=[],debut=0
+  for(let i=0;i<30;i++){
+    const r=await avecReprises(function(){return requete().range(debut,debut+pas-1)},2,30000)
+    if(!r||r.error) return {data:tout.length?tout:null,error:(r&&r.error)||{message:'lecture impossible'}}
+    const lot=r.data||[]
+    tout=tout.concat(lot)
+    if(lot.length<pas) break
+    debut+=pas
+  }
+  return {data:tout,error:null}
+}
+// Session expiree (onglet reste ouvert, ordinateur en veille) : la base repond 401
+function erreurSession(r){
+  const e=r&&r.error
+  return !!e&&(r.status===401||e.status===401||e.code==='PGRST301'||/jwt expired|jwt.*expir|invalid jwt/i.test(e.message||''))
+}
 async function avecReprises(action,essais,delai){
-  let r=null
+  let r=null,sessionRefaite=false
   for(let i=0;i<(essais||3);i++){
     if(i) await new Promise(function(ok){setTimeout(ok,1500*i)})
     try{
       r=await Promise.race([action(),new Promise(function(ok){setTimeout(function(){ok({error:{message:'le réseau ne répond pas'}})},delai||30000)})])
     }catch(e){r={error:{message:(e&&e.message)||'erreur réseau'}}}
+    // Session expiree : on la renouvelle une fois, puis on rejoue la demande
+    if(erreurSession(r)&&!sessionRefaite){
+      sessionRefaite=true
+      try{await Promise.race([db.auth.refreshSession(),new Promise(function(ok){setTimeout(ok,8000)})])}catch(e){}
+      try{
+        r=await Promise.race([action(),new Promise(function(ok){setTimeout(function(){ok({error:{message:'le réseau ne répond pas'}})},delai||30000)})])
+      }catch(e){r={error:{message:(e&&e.message)||'erreur réseau'}}}
+    }
     if(!r||!r.error||!erreurReseau(r.error)) return r||{}
   }
   return r
@@ -3848,7 +4082,9 @@ function afficherEchecEnvoi(err){
   G.aEnvoyer=true;sauverCopieEnCours()
   $('r-detail').innerHTML='<div style="text-align:center;padding:1.5rem 1rem"><i class="ti ti-wifi-off" style="font-size:2rem;color:var(--amber)"></i>'
     +'<div style="font-family:var(--fg);font-size:1.05rem;font-weight:700;margin-top:.7rem">Ta copie n\'est pas encore partie</div>'
-    +'<p style="font-size:.82rem;color:var(--t2);line-height:1.5;margin-top:8px">Elle est gardée sur ce téléphone et repartira toute seule dès que possible, même si tu fermes l\'application. Rouvre-la quand tu auras du réseau.</p>'
+    +'<p style="font-size:.82rem;color:var(--t2);line-height:1.5;margin-top:8px">'+((err&&err.session)
+      ?'Ta session a expiré. Ta copie est gardée sur cet appareil : déconnecte-toi puis reconnecte-toi, elle repartira toute seule.'
+      :'Elle est gardée sur ce téléphone et repartira toute seule dès que possible, même si tu fermes l\'application. Rouvre-la quand tu auras du réseau.')+'</p>'
     +'<button class="btn btn-r btn-full" style="margin-top:1rem" onclick="renvoyerCopie()"><i class="ti ti-refresh"></i> Réessayer maintenant</button>'
     +'<p style="font-size:.68rem;color:var(--t3);margin-top:.8rem">Détail : '+echapAttr((err&&err.message)||'erreur inconnue')+'</p></div>'
   clearTimeout(_minuteurRenvoi);_minuteurRenvoi=setTimeout(renvoyerCopie,30000)
@@ -3865,8 +4101,11 @@ async function terminer() {
 async function envoyerCopie() {
   const tempsTotal=arreterTimer()
   brouillonLibre()
+  // Dessin trace mais pas encore valide (fin du temps) : il part avec la copie
+  capturerDessin()
   sauverCopieEnCours()
   nav('resultats')
+  {const zf=$('r-fete');if(zf)zf.innerHTML=''}
   $('r-detail').innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
   // Photos encore en cours d'envoi : on les attend avant d'envoyer la copie
   if(_envoisPJ.length){
@@ -3953,6 +4192,9 @@ async function envoyerCopie() {
   // Panne reseau : les replis ci-dessous ne serviraient a rien (et une copie
   // sans ses photos partirait des le retour du reseau). On attend le reseau.
   if(tentErr&&erreurReseau(tentErr)){afficherEchecEnvoi(tentErr);return}
+  // Session expiree et impossible a renouveler : la copie reste gardee et
+  // repartira a la reconnexion (les replis echoueraient de la meme facon)
+  if(tentErr&&erreurSession({error:tentErr})){afficherEchecEnvoi({message:'session expirée',session:true});return}
   let avertPhotos=false
   if(tentErr){
     // La copie ne doit JAMAIS etre perdue : on reessaie sans les pieces
@@ -3989,37 +4231,65 @@ async function envoyerCopie() {
   // Le rattrapage est à usage unique : on le retire une fois l'examen passé
   if(G.quizActif.mode_examen){await avecReprises(function(){return db.from('rattrapages').delete().eq('quiz_id',G.quizActif.id).eq('aspirant_id',G.profil.id)})}
   if(avertPhotos) alert('Ta copie est envoyée, mais certaines photos n ont pas pu être transmises.\n\nEnvoie-les directement à ton gâcheur.')
-  G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses}
-  if(!aDesLibres){await calculerEtAttribuerPoints(Math.round(sur20),20,G.quizActif.id);await mettreAJourStreak()}
+  G.tentResult={tent,questions:qr,parComp,score:Math.round(sur20),valide,aDesLibres,modId:G.quizActif.module_id,reps:G.reponses,examen:!!G.quizActif.mode_examen,finCreneau:G.quizActif.date_fin||null}
   afficheRes()
-  if(!G.quizActif.mode_examen&&!aDesLibres) setTimeout(()=>afficherClassementApresQuiz(G.quizActif.id,Math.round(sur20)),500)
+  // Points, serie et fin d'exercice : APRES l'affichage du resultat et jamais
+  // bloquants. Avant, une panne a ce moment laissait l'ecran sur « Envoi… »
+  // alors que la copie etait deja partie.
+  if(!G.quizActif.mode_examen) apresExercice(G.quizActif.id,Math.round(sur20),valide,aDesLibres,tent&&tent.id)
 }
 
 function calculerScore20(s,t){if(!t||t===0)return 0;return Math.round((s/t)*20)}
 
 async function voirRes(tentId) {
-  const {data:t}=await db.from('tentatives').select('*, quiz(module_id,titre,total_points)').eq('id',tentId).single()
-  const {data:qs}=await db.from('questions').select('*').eq('quiz_id',t.quiz_id)
-  G.tentResult={tent:t,questions:qs||[],parComp:t.resultats_par_competence||{},score:t.score,valide:t.valide,aDesLibres:(qs||[]).some(q=>q.type_question==='libre'),modId:t.quiz?.module_id,reps:t.reponses||{}}
+  const {data:t}=await db.from('tentatives').select('*, quiz(module_id,titre,total_points,mode_examen,date_fin)').eq('id',tentId).single()
+  if(!t){toast('Copie introuvable','err');return}
+  const {data:qs}=await db.from('questions').select('*').eq('quiz_id',t.quiz_id).order('ordre')
+  G.tentResult={tent:t,questions:qs||[],parComp:t.resultats_par_competence||{},score:(t.note_admin!==null&&t.note_admin!==undefined)?t.note_admin:t.score,valide:t.valide,aDesLibres:(qs||[]).some(q=>q.type_question==='libre'),modId:t.quiz?.module_id,reps:t.reponses||{},examen:!!(t.quiz&&t.quiz.mode_examen),finCreneau:(t.quiz&&t.quiz.date_fin)||null}
   nav('resultats');afficheRes()
 }
+
+// Images jointes a la bonne reponse d'une question (questions.reponse_medias).
+// Montrees a la correction, a la relecture et dans le corrige ; jamais avec la question.
+function imagesReponse(q){return (q&&Array.isArray(q.reponse_medias))?q.reponse_medias.filter(function(m){return m&&m.p}):[]}
+function htmlImagesReponse(q){
+  const l=imagesReponse(q);if(!l.length) return ''
+  return '<div class="rep-images">'+l.map(function(m){return '<img data-img="'+echapAttr(m.p)+'" alt="'+echapAttr(m.n||'Image de la bonne réponse')+'"/>'}).join('')+'</div>'
+}
+// Copie qui attend la correction d'un gacheur
+function copieEnAttente(t){return !!t&&t.notes_libres!==null&&t.notes_libres!==undefined&&(t.note_admin===null||t.note_admin===undefined)}
 
 function afficheRes() {
   const {tent,questions,parComp,score,valide,modId,reps}=G.tentResult
   $('r-detail-titre').textContent='Détail des réponses';$('r-foot').style.display=''
   const aDesLibres=G.tentResult?.aDesLibres||questions.some(q=>q.type_question==='libre')
-  const enAttente=aDesLibres&&(tent?.note_admin===null||tent?.note_admin===undefined)
+  const estExamen=!!G.tentResult.examen
+  // Un examen attend toujours la correction d'un gacheur, meme en QCM pur
+  const enAttente=(aDesLibres||estExamen)&&(tent?.note_admin===null||tent?.note_admin===undefined)
+  // Examen vu par l'aspirant : aucune correction tant que la copie n'est pas
+  // corrigee ou que le creneau est encore ouvert (d'autres passent l'examen).
+  const finCreneau=G.tentResult.finCreneau?new Date(G.tentResult.finCreneau).getTime():0
+  const masquerCorrige=estExamen&&!G.admin&&(enAttente||(finCreneau>0&&Date.now()<finCreneau))
   const c=$('r-circle')
   c.style.borderColor=enAttente?'var(--amber)':valide?'var(--v)':'var(--r)'
-  const afficherNote=G.admin
+  // La note s'affiche au gacheur, et a l'aspirant pour un exercice seulement :
+  // jamais de note chiffree pour un examen.
+  const afficherNote=G.admin||!estExamen
   $('r-score').textContent=enAttente?'?':(afficherNote?score:(valide?'✓':'✗'));$('r-score').style.color=enAttente?'var(--amber)':valide?'var(--v)':'var(--r)'
   $('r-total').textContent=enAttente?'en attente':(afficherNote?'/ 20':'')
-  $('r-verdict').textContent=enAttente?'En attente de correction':valide?'Quiz validé':'Non validé'
+  $('r-verdict').textContent=enAttente?'En attente de correction':valide?(estExamen?'Examen validé':'Exercice validé'):'Non validé'
   $('r-verdict').style.color=enAttente?'var(--amber)':valide?'var(--v)':'var(--r2)'
-  $('r-msg').textContent=enAttente?'Votre copie est transmise. Résultat affiché après correction.':valide?'Toutes vos réponses sont correctes !':'Certaines réponses sont incorrectes. Révisez les cours.'
+  $('r-msg').textContent=enAttente?'Ta copie est transmise. Le résultat s\'affichera après la correction de ton gâcheur.'
+    :valide?(estExamen?'Bravo, cet examen est validé.':'Bien joué ! Tu peux passer à la suite.')
+    :(estExamen?'Cet examen n\'est pas validé. Parles-en avec ton gâcheur.':'Pas encore validé : il faut '+SEUIL+' sur 20. Revois les cours, puis recommence.')
+  // L'historique affiche des notes : jamais pour un examen cote aspirant
+  const bh=document.querySelector('#r-foot button[onclick="voirHistorique()"]')
+  if(bh) bh.style.display=(estExamen&&!G.admin)?'none':''
+  const zh=$('r-historique');if(zh) zh.style.display='none'
+  const zf=$('r-fete');if(zf) zf.innerHTML=''
   const comps=Object.entries(parComp)
-  $('r-comps').innerHTML=comps.length?'<div class="section-label">Résultats par compétence</div>'+comps.map(([code,v])=>{const pct=Math.round(v.score/v.total*100);return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:.75rem;color:var(--t2);width:80px;flex-shrink:0;font-weight:600">${code}</span><div class="pbar" style="flex:1"><div class="pfill ${pct>=50?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div><span style="font-size:.72rem;font-weight:600;min-width:40px;text-align:right">${v.score}/${v.total}</span><span class="badge ${pct>=50?'badge-v':'badge-rl'}" style="font-size:.62rem">${pct>=50?'Acquis':'À revoir'}</span></div>`}).join(''):''
-  if(!valide&&modId&&!enAttente){
+  $('r-comps').innerHTML=(comps.length&&!masquerCorrige)?'<div class="section-label">Résultats par compétence</div>'+comps.map(([code,v])=>{const pct=Math.round(v.score/v.total*100);return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:.75rem;color:var(--t2);width:80px;flex-shrink:0;font-weight:600">${code}</span><div class="pbar" style="flex:1"><div class="pfill ${pct>=50?'pfill-v':'pfill-r'}" style="width:${pct}%"></div></div>${(estExamen&&!G.admin)?'':`<span style="font-size:.72rem;font-weight:600;min-width:40px;text-align:right">${v.score}/${v.total}</span>`}<span class="badge ${pct>=50?'badge-v':'badge-rl'}" style="font-size:.62rem">${pct>=50?'Acquis':'À revoir'}</span></div>`}).join(''):''
+  if(!valide&&modId&&!enAttente&&!masquerCorrige){
     db.from('ressources').select('*').eq('module_id',modId).then(({data:res})=>{
       if(!res?.length){hi('r-revisions');return}
 
@@ -4092,6 +4362,22 @@ function afficheRes() {
       sh('r-revisions')
     })
   } else hi('r-revisions')
+  if(masquerCorrige){
+    // L'aspirant relit ses reponses, sans aucune correction ni bonne reponse
+    $('r-detail-titre').textContent='Tes réponses'
+    $('r-detail').innerHTML=questions.map((q,i)=>{
+      const rep=reps[q.id]
+      let repTexte='—'
+      if(q.type_question==='libre') repTexte=(typeof rep==='string'&&rep)?_escC(rep):'—'
+      else if(Array.isArray(rep)) repTexte=rep.map(k=>q.options?.[k]).filter(Boolean).join(' · ')||'—'
+      else repTexte=q.options?.[rep]??'—'
+      return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid var(--bord)">
+      <i class="ti ti-circle-dot" style="color:var(--t3);font-size:1rem;flex-shrink:0;margin-top:2px"></i>
+      <div style="flex:1"><div style="font-size:.82rem;font-weight:500;margin-bottom:4px">${q.enonce}</div>
+      <div style="font-size:.72rem;color:var(--t2)"><strong>Ta réponse :</strong> ${repTexte}</div></div></div>`
+    }).join('')+'<div id="r-sans-corrige" style="font-size:.74rem;color:var(--t3);text-align:center;padding-top:.9rem;line-height:1.5"><i class="ti ti-lock"></i> La correction s\'affichera quand ton gâcheur aura corrigé ta copie et que l\'examen sera terminé.</div>'
+    return
+  }
   $('r-detail').innerHTML=questions.map((q,i)=>{
     const rep=reps[q.id],isLibre=q.type_question==='libre',isMulti=q.type_question==='multi'
     let ok=false
@@ -4115,7 +4401,7 @@ function afficheRes() {
     return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:${i<questions.length-1?'1px solid var(--bord)':'none'}">
       <i class="ti ${isLibre?'ti-pencil':ok?'ti-circle-check':'ti-circle-x'}" style="color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--r)'};font-size:1rem;flex-shrink:0;margin-top:2px"></i>
       <div style="flex:1"><div style="font-size:.82rem;font-weight:500;margin-bottom:4px">${q.enonce}</div>${q.image_url?`<img data-img="${q.image_url}" style="width:100%;max-height:80px;object-fit:contain;border-radius:8px;border:1px solid var(--bord);margin-bottom:4px"/>`:''}
-      ${isLibre?`<div style="font-size:.72rem;color:var(--b);margin-bottom:4px"><strong>Votre réponse :</strong> ${repTexte}</div>${q.reponse_type?`<div style="background:var(--vl);border:1px solid var(--v);border-radius:8px;padding:7px 10px;margin-top:4px"><div style="font-size:.65rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--v);margin-bottom:3px">Corrigé</div><div style="font-size:.75rem;color:var(--v);line-height:1.5">${q.reponse_type}</div></div>`:`<div style="font-size:.72rem;color:var(--amber);font-style:italic;margin-top:3px">En attente de correction par le formateur</div>`}`:!ok?`<div style="font-size:.72rem;color:var(--r)">Votre réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--v);font-weight:600">Bonne réponse : ${bonneTexte} ✓</div>`:''}
+      ${isLibre?`<div style="font-size:.72rem;color:var(--b);margin-bottom:4px"><strong>Ta réponse :</strong> ${repTexte}</div>${(q.reponse_type||imagesReponse(q).length)?`<div style="background:var(--vl);border:1px solid var(--v);border-radius:8px;padding:7px 10px;margin-top:4px"><div style="font-size:.65rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--v);margin-bottom:3px">Corrigé</div><div style="font-size:.75rem;color:var(--v);line-height:1.5">${q.reponse_type||''}</div>${htmlImagesReponse(q)}</div>`:`<div style="font-size:.72rem;color:var(--amber);font-style:italic;margin-top:3px">En attente de correction par ton gâcheur</div>`}`:!ok?`<div style="font-size:.72rem;color:var(--r)">Ta réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--v);font-weight:600">Bonne réponse : ${bonneTexte} ✓</div>${htmlImagesReponse(q)}`:''}
       </div>
       ${G.admin?`<span style="font-size:.72rem;font-weight:700;font-family:var(--fg);color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--t3)'};flex-shrink:0">${isLibre?noteQ:ok?'+'+q.points:'0'}pt</span>`:''}
     </div>`
@@ -4130,6 +4416,8 @@ async function voirHistorique() {
   el.style.display='block'
   el.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.2rem;color:var(--r)"></i></div>'
   const quizId=G.tentResult?.tent?.quiz_id
+  // Jamais de note chiffree pour un examen cote aspirant
+  if(G.tentResult?.examen&&!G.admin){el.style.display='none';return}
   const [{data:courant},{data:archive}]=await Promise.all([
     db.from('tentatives').select('*').eq('aspirant_id',G.profil.id).eq('quiz_id',quizId).order('completed_at',{ascending:false}),
     (async()=>{try{return await db.from('historique_tentatives').select('*').eq('aspirant_id',G.profil.id).eq('quiz_id',quizId).order('completed_at',{ascending:false})}catch(e){return {data:[]}}})()
@@ -4166,16 +4454,17 @@ async function loadSuivi() {
   const zl=$('suivi-liens')
   if(zl) zl.innerHTML=G.aspirant?'<div class="ch-mots" style="margin-bottom:1rem"><button class="ch-puce" onclick="nav(\'modules\')">Tous les modules</button><button class="ch-puce" onclick="nav(\'carnet\')">Carnet de bord</button><button class="ch-puce" onclick="nav(\'anciens\')">Contacts</button></div>':''
   const [{data:t},{data:aq}]=await Promise.all([
-    db.from('tentatives').select('*, quiz(module_id,titre,niveau)').eq('aspirant_id',G.profil.id).order('completed_at',{ascending:false}),
+    db.from('tentatives').select('*, quiz(module_id,titre,niveau,mode_examen)').eq('aspirant_id',G.profil.id).order('completed_at',{ascending:false}),
     db.from('quiz').select('*').eq('actif',true).or('archive.is.null,archive.eq.false').order('module_id').order('niveau')
   ])
   const tents=t||[],allQ=aq||[]
-  $('v-suivi-body').innerHTML=MODULES.map(m=>{
+  const jeu=parcoursLudique(tents,G.profil)
+  $('v-suivi-body').innerHTML=(G.aspirant?carteLudique(jeu)+carteInsignes(jeu):'')+MODULES.map(m=>{
     const qm=allQ.filter(q=>q.module_id===m.id)
     const exM=qm.filter(q=>q.mode_examen)
     const exVal=exM.filter(q=>tents.some(x=>x.quiz_id===q.id&&x.valide)).length
     const modValide=exVal>=examensRequis()
-    return `<div class="card"><div class="card-head"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span class="card-title">${m.nom}</span>${(modValide&&!G.profil.sans_module)?'<span class="badge badge-v" style="font-size:.6rem;font-weight:800">THÉORIE OK</span>':''}</div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${G.profil.sans_module?'—':(exM.length?exVal+'/'+exM.length+' examens':'—')}</span></div><div class="card-body">${qm.length?qm.map(q=>{const _tt=tents.filter(x=>x.quiz_id===q.id);const tent=_tt.find(x=>x.valide)||_tt.sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at))[0];const statut=tent?.valide?'Validé':tent?'Non validé':'—';return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)"><i class="ti ${tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:1rem;flex-shrink:0"></i><span style="flex:1;font-size:.82rem;font-weight:500">${q.titre}${q.mode_examen?' <span style="background:var(--rl);color:var(--r);padding:0 6px;border-radius:20px;font-weight:700;font-size:.6rem">EXAMEN</span>':''}</span><span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${statut}</span></div>`}).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'}</div></div>`}).join('')
+    return `<div class="card"><div class="card-head"><div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:${m.bg};display:flex;align-items:center;justify-content:center"><i class="ti ${m.icon}" style="color:${m.ic};font-size:.85rem"></i></div><span class="card-title">${m.nom}</span>${(modValide&&!G.profil.sans_module)?'<span class="badge badge-v" style="font-size:.6rem;font-weight:800">THÉORIE OK</span>':''}</div><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">${G.profil.sans_module?'—':(exM.length?exVal+'/'+exM.length+' examens':'—')}</span></div><div class="card-body">${qm.length?qm.map(q=>{const _tt=tents.filter(x=>x.quiz_id===q.id);const tent=_tt.find(x=>x.valide)||_tt.sort((a,b)=>new Date(b.completed_at)-new Date(a.completed_at))[0];const att=!!tent&&!tent.valide&&(copieEnAttente(tent)||(q.mode_examen&&(tent.note_admin===null||tent.note_admin===undefined)));const statut=att?'En attente':tent?.valide?'Validé':tent?'Non validé':'—';return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bord)"><i class="ti ${att?'ti-hourglass':tent?.valide?'ti-circle-check':tent?'ti-circle-x':'ti-circle'}" style="color:${att?'var(--amber)':tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'};font-size:1rem;flex-shrink:0"></i><span style="flex:1;font-size:.82rem;font-weight:500">${q.titre}${q.mode_examen?' <span style="background:var(--rl);color:var(--r);padding:0 6px;border-radius:20px;font-weight:700;font-size:.6rem">EXAMEN</span>':''}</span><span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${att?'var(--amber)':tent?.valide?'var(--v)':tent?'var(--r)':'var(--t3)'}">${statut}</span></div>`}).join(''):'<p style="font-size:.78rem;color:var(--t3)">Aucun quiz.</p>'}</div></div>`}).join('')
 }
 
 // ─── RÉVISION ──────────────────────────────────────────────────────────────
@@ -4793,7 +5082,7 @@ function renderQuestions() {
         <button onclick="supprimerQuestion(${i})" style="background:none;border:none;cursor:pointer;color:var(--t3)"><i class="ti ti-trash"></i></button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;margin-bottom:.8rem">
-        <div><label class="field-label">Type</label><select class="fselect" onchange="mqQuestions[${i}].type=this.value;renderQuestions()"><option value="qcm" ${q.type==='qcm'?'selected':''}>QCM — 1 bonne réponse</option><option value="multi" ${q.type==='multi'?'selected':''}>Choix multiples</option><option value="vf" ${q.type==='vf'?'selected':''}>Vrai/Faux</option><option value="libre" ${q.type==='libre'?'selected':''}>Réponse libre</option></select></div>
+        <div><label class="field-label">Type</label><select class="fselect" onchange="mqQuestions[${i}].type=this.value;renderQuestions()"><option value="qcm" ${q.type==='qcm'?'selected':''}>QCM — 1 bonne réponse</option><option value="multi" ${q.type==='multi'?'selected':''}>Choix multiples</option><option value="vf" ${q.type==='vf'?'selected':''}>Vrai/Faux</option><option value="libre" ${q.type==='libre'?'selected':''}>Réponse libre (texte, photo ou fichier)</option></select></div>
         <div><label class="field-label">Compétence</label><input class="finput" value="${_escC(q.competence||'')}" placeholder="C2, S3..." onchange="mqQuestions[${i}].competence=this.value"/></div>
         <div><label class="field-label">Points</label><input class="finput" type="number" min="0.5" max="20" step="0.5" value="${q.points||2}" onchange="mqQuestions[${i}].points=parseFloat(this.value)||2;renderQuestions()" style="text-align:center"/></div>
       </div>
@@ -4806,6 +5095,12 @@ function renderQuestions() {
         </div>
         ${q.imageUrl?`<div style="margin-top:6px;border-radius:10px;overflow:hidden;max-height:100px;border:1px solid var(--bord)"><img src="${q.imageUrl}" style="width:100%;max-height:100px;object-fit:cover"/></div>`:''}
       </div>
+      <div style="margin-bottom:.7rem"><label class="field-label">Image de la bonne réponse (optionnel)</label>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">${(q.reponse_medias||[]).map((m,k)=>`<div style="position:relative;width:84px"><img data-img="${echapAttr(m.p)}" style="width:84px;height:84px;object-fit:contain;background:#fff;border:1px solid var(--v);border-radius:10px"/><button onclick="retirerImageReponse(${i},${k})" title="Retirer cette image" style="position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:none;background:var(--r);color:#fff;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center"><i class="ti ti-x"></i></button></div>`).join('')}
+          <label style="padding:7px 12px;background:var(--vl);color:var(--v);border:1.5px solid var(--v);border-radius:10px;font-size:.75rem;cursor:pointer;white-space:nowrap"><i class="ti ti-photo-check"></i> Ajouter<input type="file" accept="image/*" multiple style="display:none" onchange="ajouterImageReponse(${i},this)"/></label>
+        </div>
+        <p class="field-hint">Visible à la correction et dans le corrigé. Jamais pendant un examen.</p>
+      </div>
       ${q.type==='vf'?`<div><label class="field-label">Bonne réponse</label><div style="display:flex;gap:8px">
         <label style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:600;${q.bonne===0?'background:var(--vl);border-color:var(--v);color:var(--v)':''}"><input type="radio" name="vf_${i}" ${q.bonne===0?'checked':''} onchange="mqQuestions[${i}].bonne=0;renderQuestions()" style="accent-color:var(--v)"/> VRAI</label>
         <label style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:600;${q.bonne===1?'background:var(--rl);border-color:var(--r);color:var(--r)':''}"><input type="radio" name="vf_${i}" ${q.bonne===1?'checked':''} onchange="mqQuestions[${i}].bonne=1;renderQuestions()" style="accent-color:var(--r)"/> FAUX</label>
@@ -4814,6 +5109,31 @@ function renderQuestions() {
     </div>`).join('')
 }
 
+// Depose une image de bonne reponse dans le stockage (dossier du quiz)
+async function deposerImageReponse(fichier,quizId){
+  if(!fichier) return {erreur:'aucun fichier'}
+  if(fichier.size>15*1024*1024) return {erreur:'trop lourd (15 Mo max)'}
+  const nom=String(fichier.name||'image').replace(/[^a-zA-Z0-9._-]/g,'-').slice(-60)
+  const chemin='questions/'+(quizId||'nouveau')+'/reponse_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+nom
+  try{
+    const up=await db.storage.from('ressources').upload(chemin,fichier)
+    if(up&&up.error) return {erreur:up.error.message||'dépôt refusé'}
+    return {media:{t:'img',p:chemin,n:fichier.name||'Image'}}
+  }catch(e){return {erreur:(e&&e.message)||'erreur'}}
+}
+// Ecran Creer un quiz : image de la bonne reponse d'une question
+async function ajouterImageReponse(idx,input){
+  const fs=Array.from(input.files||[]);if(!fs.length||!mqQuestions[idx]) return
+  toast('Envoi de l’image...','def')
+  for(const f of fs){
+    const r=await deposerImageReponse(f,null)
+    if(r.erreur){toast(f.name+' : '+r.erreur,'err');continue}
+    if(!Array.isArray(mqQuestions[idx].reponse_medias)) mqQuestions[idx].reponse_medias=[]
+    mqQuestions[idx].reponse_medias.push(r.media)
+  }
+  renderQuestions();sauverBrouillon()
+}
+function retirerImageReponse(i,k){const q=mqQuestions[i];if(!q||!q.reponse_medias)return;q.reponse_medias.splice(k,1);renderQuestions();sauverBrouillon()}
 async function uploadImageQuestion(idx,input) {
   const fichier=input.files[0];if(!fichier) return;toast('Upload image...','def')
   const nomPropre=fichier.name.replace(/[^a-zA-Z0-9._-]/g,'-')
@@ -4854,6 +5174,7 @@ async function pubQuizManuel() {
       ordre:i
     }
     if(q.type==='multi'&&q.bonnes) o.bonnes_reponses=q.bonnes
+    if(Array.isArray(q.reponse_medias)&&q.reponse_medias.length) o.reponse_medias=q.reponse_medias
     // Images importees ou ajoutees : chemins du stockage
     if(Array.isArray(q.medias)&&q.medias.length){
       o.medias=q.medias
@@ -4871,6 +5192,12 @@ async function pubQuizManuel() {
     if(!errQ) toast('Quiz cree — les points ont ete arrondis a l entier','err')
   }
   // Si une colonne optionnelle manque en base, on retente sans elle
+  // Colonne reponse_medias absente (sql/reponse_medias.sql pas encore passe)
+  if(errQ&&/reponse_medias/i.test(errQ.message||'')){
+    const r1=await db.from('questions').insert(lignes.map(function(l){const o=Object.assign({},l);delete o.reponse_medias;return o}))
+    errQ=r1.error
+    if(!errQ) toast('Quiz créé — les images de bonne réponse n’ont pas pu être gardées','err')
+  }
   if(errQ&&/image_url|bonnes_reponses|competence|column/i.test(errQ.message||'')){
     const secours=lignes.map(function(l){
       return {quiz_id:l.quiz_id,enonce:l.enonce,options:l.options,bonne_reponse:l.bonne_reponse,points:l.points,type_question:l.type_question,reponse_type:l.reponse_type,ordre:l.ordre}
@@ -5059,6 +5386,7 @@ async function previsualiserQuiz(id){
     // Schemas et documents de la question (toutes les pieces, pas seulement la premiere)
     const mds=Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url}]:[])
     const blocMedias=mds.map(function(m){
+      if(m.t==='lien') return '<a class="btn btn-ghost btn-sm" style="margin-top:8px;white-space:normal;text-align:left" href="'+echapAttr(m.p)+'" target="_blank" rel="noopener"><i class="ti ti-file-search" style="color:var(--b)"></i> '+echapAttr(m.n||'Document à consulter')+'</a>'
       if(m.t==='pdf') return '<button class="btn btn-ghost btn-sm" style="margin-top:8px" data-p="'+echapAttr(m.p)+'" onclick="ouvrirMediaPrevisu(this.dataset.p)"><i class="ti ti-file-type-pdf" style="color:var(--r)"></i> '+echapAttr(m.n||'Document')+'</button>'
       return '<img data-img="'+echapAttr(m.p)+'" onclick="if(this.src)agrandirImage(this.src)" style="display:block;max-width:100%;max-height:320px;object-fit:contain;border-radius:10px;margin-top:8px;background:#fff;border:1px solid var(--bord);cursor:zoom-in"/>'
     }).join('')
@@ -5074,7 +5402,7 @@ async function previsualiserQuiz(id){
         +'<span style="font-size:.7rem;color:var(--t3);flex-shrink:0">'+(q.points||0)+' pt</span>'
       +'</div>'
       +'<div style="padding-left:24px">'+blocOpts
-      +(q.reponse_type?'<div style="font-size:.76rem;color:var(--t2);background:var(--field);border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.5"><b>'+titreRep+' :</b> '+q.reponse_type+'</div>':'')
+      +((q.reponse_type||imagesReponse(q).length)?'<div style="font-size:.76rem;color:var(--t2);background:var(--field);border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.5"><b>'+titreRep+' :</b> '+(q.reponse_type||'')+htmlImagesReponse(q)+'</div>':'')
       +(alerte.length?'<div style="font-size:.74rem;color:var(--r);margin-top:6px"><i class="ti ti-alert-triangle"></i> '+alerte.join(' · ')+'</div>':'')
       +'</div></div>'
   }).join('')
@@ -5082,7 +5410,7 @@ async function previsualiserQuiz(id){
   modal.innerHTML='<div style="background:var(--card);border-radius:20px;width:100%;max-width:640px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
     +'<div style="background:var(--dark);padding:1.1rem 1.3rem;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'
       +'<div style="min-width:0"><div style="font-family:var(--fg);font-size:1rem;font-weight:700;color:#fff">'+qz.titre+'</div>'
-      +'<div style="font-size:.72rem;color:#888;margin-top:3px">'+(mod?mod.nom:'')+' — '+(qz.niveau!=null?'niveau '+Number(qz.niveau)+' — ':'')+questions.length+' question'+(questions.length>1?'s':'')+' — '+totalPts+' points'+(qz.mode_examen?' — EXAMEN':'')+(qz.actif?'':' — PRIVÉ')+'</div></div>'
+      +'<div style="font-size:.72rem;color:#888;margin-top:3px">'+(mod?mod.nom:'')+' — '+questions.length+' question'+(questions.length>1?'s':'')+' — '+totalPts+' points'+(qz.mode_examen?' — EXAMEN':'')+(qz.actif?'':' — PRIVÉ')+'</div></div>'
       +'<button onclick="document.getElementById(\'modal-previsu\').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem;flex-shrink:0"><i class="ti ti-x"></i></button>'
     +'</div>'
     +'<div style="padding:0 1.3rem;overflow-y:auto;flex:1">'
@@ -5220,9 +5548,9 @@ async function chargerCorrections(){
   const [rT,rQ,rP,rR]=await Promise.all([
     (async function(){
       const cols='id,aspirant_id,quiz_id,completed_at,notes_libres,note_admin,score,valide,reponses'
-      const r=await db.from('tentatives').select(cols+',commence_le,version_app').order('completed_at',{ascending:false}).limit(5000)
+      const r=await lireTout(function(){return db.from('tentatives').select(cols+',commence_le,version_app').order('completed_at',{ascending:false}).order('id')})
       if(!r.error) return r
-      return db.from('tentatives').select(cols).order('completed_at',{ascending:false}).limit(5000)
+      return lireTout(function(){return db.from('tentatives').select(cols).order('completed_at',{ascending:false}).order('id')})
     })(),
     db.from('quiz').select('id,titre,module_id,mode_examen,date_debut,actif').limit(2000),
     db.from('profils').select('*').limit(5000),
@@ -5519,14 +5847,14 @@ async function ouvrirCorrectionAdmin(tentId) {
       corps=`<div style="background:var(--bl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--b);white-space:pre-wrap"><strong>Réponse :</strong><br>${sansRep?(pjs.length?'<em>Pas de texte — voir la pièce jointe ci-dessous</em>':'<em>Aucune réponse</em>'):_escC(rep)}</div>`
         +pjs.map(function(p){
           const estImg=p.type==='photo'||p.type==='annotation'||estImageNom(p.nom||p.path)
-          const titre=p.type==='annotation'?'Schéma annoté par l\'aspirant':(estImg?'Photo jointe par l\'aspirant':'Fichier joint')
+          const titre=p.type==='annotation'?(p.nom==='Dessin'?'Dessin fait par l\'aspirant':'Schéma annoté par l\'aspirant'):(estImg?'Photo jointe par l\'aspirant':'Fichier joint')
           if(estImg){
             const src=p.image?`src="${p.image}" onclick="agrandirImage(this.src)"`:`data-img="${_escC(p.path||'')}"`
             return `<div style="margin-bottom:.6rem"><div style="font-size:.72rem;color:var(--v);font-weight:600;margin-bottom:4px"><i class="ti ${p.type==='annotation'?'ti-pencil':'ti-photo'}"></i> ${titre}</div><img ${src} style="width:100%;border-radius:10px;border:1px solid var(--bord);cursor:zoom-in;background:#fff"/>${p.path?`<button class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="telechargerSujet('${_escC(p.path)}')"><i class="ti ti-download"></i> Télécharger</button>`:''}</div>`
           }
           return `<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--vl);border-radius:8px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)"><i class="ti ti-paperclip"></i> ${_escC(p.nom||'Fichier')}${p.path?`<button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${_escC(p.path)}')"><i class="ti ti-download"></i></button>`:(p.image?`<a class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" href="${p.image}" download="${_escC(p.nom||'piece')}"><i class="ti ti-download"></i></a>`:'')}</div>`
         }).join('')
-        +(q.reponse_type?`<div style="background:var(--vl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--v)"><strong>Attendu :</strong><br>${_escC(q.reponse_type)}</div>`:'')
+        +((q.reponse_type||imagesReponse(q).length)?`<div style="background:var(--vl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--v)"><strong>Attendu :</strong><br>${_escC(q.reponse_type||'')}${htmlImagesReponse(q)}</div>`:'')
         +`<div style="display:flex;align-items:center;gap:8px"><label style="font-size:.78rem;color:var(--t2);white-space:nowrap;font-weight:600">Points :</label>
           <input type="number" min="0" max="${pts}" step="0.5" value="${noteExist}" style="width:70px;padding:6px 8px;border:1.5px solid var(--bord2);border-radius:8px;font-size:.9rem;text-align:center;font-family:var(--fg);font-weight:700" onchange="majNoteCorr('${q.id}',parseFloat(this.value)||0)"/>
           <span style="font-size:.78rem;color:var(--t3)">/ ${pts}</span></div>`
@@ -5887,7 +6215,7 @@ async function ouvrirRattrapage(quizId,aspirantId){
 async function loadAspirants() {
   const [{data:asp},{data:tents},{data:allQ},{data:ratt}]=await Promise.all([
     db.from('profils').select('*').in('role',['aspirant','apprenti']).order('nom'),
-    db.from('tentatives').select('*'),
+    lireTout(function(){return db.from('tentatives').select('*').order('completed_at',{ascending:false}).order('id')}),
     db.from('quiz').select('*').eq('actif',true).or('archive.is.null,archive.eq.false'),
     db.from('rattrapages').select('*')
   ])
@@ -6468,53 +6796,158 @@ async function voirInscritsModule(periodeId, moduleId, moduleNom) {
 function copierEmails(){const emails=(window._inscritsModal||[]).map(x=>x.profils?.email).filter(Boolean).join('\n');navigator.clipboard.writeText(emails).then(()=>toast('Emails copiés !','ok'))}
 function exporterInscritsCSV(inscrits,moduleNom){const sep=';',bom='\uFEFF',lignes=[['Nom','Prénom','Email','Ville'].join(sep),...inscrits.map(x=>[x.profils?.nom||'',x.profils?.prenom||'',x.profils?.email||'',x.ville||''].join(sep))];const blob=new Blob([bom+lignes.join('\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='inscrits_'+moduleNom.replace(/[^a-zA-Z0-9]/g,'-')+'.csv';a.click();URL.revokeObjectURL(url);toast('CSV téléchargé !','ok')}
 
-// ─── STREAK & POINTS ───────────────────────────────────────────────────────
-async function mettreAJourStreak() {
-  const now=new Date(),annee=now.getFullYear(),semaine=Math.ceil((now-new Date(annee,0,1))/604800000),cleActuelle=annee+'-S'+semaine
-  const {data:p}=await db.from('profils').select('streak_semaines,streak_derniere_semaine,streak_pause').eq('id',G.profil.id).single()
-  if(!p) return;const derniere=p.streak_derniere_semaine,semPrecedente=annee+'-S'+(semaine-1)
-  let newStreak=p.streak_semaines||0,newPause=p.streak_pause||false
-  if(derniere===cleActuelle) return
-  if(derniere===semPrecedente||!derniere){newStreak++;newPause=false}else{newPause=true;newStreak++}
-  await db.from('profils').update({streak_semaines:newStreak,streak_derniere_semaine:cleActuelle,streak_pause:newPause}).eq('id',G.profil.id)
-  G.profil.streak_semaines=newStreak;G.profil.streak_pause=newPause
+// ─── PARCOURS LUDIQUE : serie, objectif de la semaine, points, insignes ────
+// Tout est calcule a partir des copies deja rendues : rien d'autre a
+// enregistrer, donc rien a perdre ni a fausser. Un examen ne donne jamais sa
+// note : seulement « valide » (200 points).
+const OBJECTIF_SEMAINE=2
+function lundiDe(d){
+  const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7))
+  return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')
 }
-
-async function calculerEtAttribuerPoints(score,totalPts,quizId) {
-  const pts=Math.round((score/20)*100)
-  const {data:profil}=await db.from('profils').select('points_total').eq('id',G.profil.id).single()
-  const nouveauTotal=(profil?.points_total||0)+pts
-  await db.from('profils').update({points_total:nouveauTotal}).eq('id',G.profil.id)
-  await db.from('tentatives').update({points_gagnes:pts}).eq('aspirant_id',G.profil.id).eq('quiz_id',quizId)
-  G.profil.points_total=nouveauTotal;return pts
+function parcoursLudique(tents,profil){
+  const tous=(tents||[]).filter(function(t){return t&&t.quiz})
+  const exos=tous.filter(function(t){return !t.quiz.mode_examen})
+  const exams=tous.filter(function(t){return t.quiz.mode_examen})
+  // Serie : semaines d'affilee avec au moins une copie. La semaine en cours
+  // ne casse pas la serie tant qu'elle n'est pas terminee.
+  const semaines={};tous.forEach(function(t){if(t.completed_at)semaines[lundiDe(t.completed_at)]=true})
+  let serie=0;const j=new Date()
+  if(!semaines[lundiDe(j)]) j.setDate(j.getDate()-7)
+  while(semaines[lundiDe(j)]&&serie<520){serie++;j.setDate(j.getDate()-7)}
+  const cette=lundiDe(new Date())
+  const faitsSemaine={};exos.forEach(function(t){if(t.completed_at&&lundiDe(t.completed_at)===cette)faitsSemaine[t.quiz_id]=true})
+  // Meilleure note de chaque exercice : le refaire ameliore, sans cumuler
+  const meilleur={}
+  exos.forEach(function(t){
+    const s=Number((t.note_admin!==null&&t.note_admin!==undefined)?t.note_admin:t.score)||0
+    if(meilleur[t.quiz_id]===undefined||s>meilleur[t.quiz_id]) meilleur[t.quiz_id]=s
+  })
+  const notes=Object.keys(meilleur).map(function(k){return meilleur[k]})
+  const examsValides={},parModule={}
+  exams.forEach(function(t){
+    if(!t.valide||examsValides[t.quiz_id]) return
+    examsValides[t.quiz_id]=true
+    const m=Number(t.quiz.module_id);parModule[m]=(parModule[m]||0)+1
+  })
+  const nbExamsValides=Object.keys(examsValides).length
+  const modulesTouches={};exos.forEach(function(t){modulesTouches[Number(t.quiz.module_id)]=true})
+  const nbTouches=Object.keys(modulesTouches).length
+  const acquis=((profil&&profil.modules_valides)||[]).map(Number)
+  const modulesValides=MODULES.filter(function(m){return acquis.indexOf(m.id)>=0||(parModule[m.id]||0)>=examensRequis()}).length
+  const p={
+    serie:serie,
+    semaine:Object.keys(faitsSemaine).length,
+    objectif:OBJECTIF_SEMAINE,
+    exercices:notes.length,
+    points:notes.reduce(function(a,s){return a+Math.round(s/20*100)},0)+nbExamsValides*200
+  }
+  const I=function(id,nom,ico,ok,aide){return {id:id,nom:nom,ico:ico,ok:!!ok,aide:aide}}
+  const sur=function(v,max){return ' ('+Math.min(v,max)+'/'+max+')'}
+  p.insignes=[
+    I('premier','Premier pas','ti-shoe',p.exercices>=1,'Termine un premier exercice'),
+    I('cinq','Régulier','ti-tool',p.exercices>=5,'Termine 5 exercices'+sur(p.exercices,5)),
+    I('quinze','Assidu','ti-hammer',p.exercices>=15,'Termine 15 exercices'+sur(p.exercices,15)),
+    I('trente','Acharné','ti-engine',p.exercices>=30,'Termine 30 exercices'+sur(p.exercices,30)),
+    I('sansfaute','Sans faute','ti-target-arrow',notes.some(function(s){return s>=20}),'Obtiens 20 sur 20 à un exercice'),
+    I('serie3','3 semaines d’affilée','ti-flame',serie>=3,'Au moins une copie par semaine, 3 semaines de suite'+sur(serie,3)),
+    I('serie6','6 semaines d’affilée','ti-bolt',serie>=6,'Au moins une copie par semaine, 6 semaines de suite'+sur(serie,6)),
+    I('modules','Touche-à-tout','ti-layout-grid',nbTouches>=MODULES.length,'Fais un exercice dans chacun des '+MODULES.length+' modules'+sur(nbTouches,MODULES.length)),
+    I('examen','Premier examen validé','ti-certificate',nbExamsValides>=1,'Valide un premier examen'),
+    I('module','Module validé','ti-trophy',modulesValides>=1,'Valide la théorie d’un module')
+  ]
+  return p
 }
-
-async function chargerClassementExercice(quizId,monScore) {
-  const {data:tents}=await db.from('tentatives').select('score,aspirant_id,profils(prenom,nom)').eq('quiz_id',quizId).order('score',{ascending:false}).limit(50)
-  if(!tents?.length) return null
-  const monRang=tents.findIndex(t=>t.aspirant_id===G.profil.id)+1
-  const moyenne=Math.round(tents.reduce((a,t)=>a+t.score,0)/tents.length)
-  return {tents,monRang,moyenne,meilleur:tents[0]?.score||0,total:tents.length}
+// Bandeau de l'accueil : la serie, l'objectif de la semaine et les points
+function carteLudique(p){
+  const pts=[];for(let i=0;i<p.objectif;i++) pts.push('<i class="'+(i<p.semaine?'on':'')+'"></i>')
+  return '<button class="acc-jeu" onclick="nav(\'suivi\')" aria-label="Voir mon parcours et mes insignes">'
+    +'<span class="acc-jeu-bloc"><span class="acc-jeu-val"><i class="ti ti-flame" style="color:'+(p.serie?'var(--r)':'var(--t3)')+'"></i>'+p.serie+'</span><small>semaine'+(p.serie>1?'s':'')+' d’affilée</small></span>'
+    +'<span class="acc-jeu-bloc"><span class="acc-jeu-val">'+p.semaine+'<span class="acc-jeu-sur">/'+p.objectif+'</span><span class="acc-jeu-pts">'+pts.join('')+'</span></span><small>'+(p.semaine>=p.objectif?'objectif atteint':'exercices cette semaine')+'</small></span>'
+    +'<span class="acc-jeu-bloc"><span class="acc-jeu-val"><i class="ti ti-star" style="color:var(--amber)"></i>'+p.points.toLocaleString('fr-FR')+'</span><small>points</small></span>'
+    +'</button>'
 }
-
-async function afficherClassementApresQuiz(quizId,monScore) {
-  const cl=await chargerClassementExercice(quizId,monScore);if(!cl) return
-  const el=$('r-comps');if(!el) return
-  el.innerHTML=(el.innerHTML||'')+`<div style="margin-top:1rem"><div class="section-label">Classement du groupe</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
-      <div class="kpi"><div class="kpi-val" style="color:var(--r)">${monScore}<span style="font-size:1rem">/20</span></div><div class="kpi-lbl">Votre score</div></div>
-      <div class="kpi"><div class="kpi-val">${cl.moyenne}<span style="font-size:1rem">/20</span></div><div class="kpi-lbl">Moyenne</div></div>
-      <div class="kpi"><div class="kpi-val" style="color:var(--v)">${cl.meilleur}<span style="font-size:1rem">/20</span></div><div class="kpi-lbl">Meilleur</div></div>
-    </div>
-    <div style="background:var(--bg);border-radius:10px;padding:9px 12px;font-size:.78rem;color:var(--t2);text-align:center;margin-bottom:10px;font-weight:600">
-      Vous êtes <span style="color:var(--r);font-family:var(--fg);font-weight:700">${cl.monRang}ème</span> sur ${cl.total} participant${cl.total>1?'s':''}
-    </div>
-    ${cl.tents.slice(0,5).map((t,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bord);${t.aspirant_id===G.profil.id?'background:var(--rl);border-radius:8px;padding:6px 8px;margin:0 -8px':''}">
-      <span style="font-family:var(--fg);font-size:.75rem;font-weight:700;color:var(--t3);min-width:18px;text-align:center">${i+1}</span>
-      <span style="flex:1;font-size:.78rem;font-weight:${t.aspirant_id===G.profil.id?'700':'500'};color:${t.aspirant_id===G.profil.id?'var(--r2)':'var(--t1)'}">Pays ${t.profils?.nom||'—'}${t.aspirant_id===G.profil.id?' (vous)':''}</span>
-      <span style="font-family:var(--fg);font-size:.78rem;font-weight:700;color:${t.aspirant_id===G.profil.id?'var(--r)':'var(--t2)'}">${t.score}/20</span>
-    </div>`).join('')}
-  </div>`
+// Carte « Tes insignes » de Mon parcours
+function carteInsignes(p){
+  const nb=p.insignes.filter(function(x){return x.ok}).length
+  return '<div class="card" id="carte-insignes"><div class="card-head"><span class="card-title">Tes insignes</span><span style="font-family:var(--fg);font-size:.82rem;font-weight:700">'+nb+' / '+p.insignes.length+'</span></div>'
+    +'<div class="card-body"><div class="ins-grille">'+p.insignes.map(function(x){
+      return '<div class="ins'+(x.ok?' ok':'')+'"><span class="ins-ico"><i class="ti '+x.ico+'"></i></span><b>'+echapAttr(x.nom)+'</b><small>'+(x.ok?'Obtenu':echapAttr(x.aide))+'</small></div>'
+    }).join('')+'</div></div></div>'
+}
+function majSerieBarre(p){
+  const sEl=document.getElementById('streak-topbar')
+  if(sEl) sEl.innerHTML=p&&p.serie>0?'<i class="ti ti-flame" style="color:var(--r)"></i>'+p.serie:''
+}
+// Petite pluie de confettis (rien si l'appareil demande moins d'animations)
+function lancerConfettis(){
+  try{
+    if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const z=document.createElement('div');z.className='confettis';z.setAttribute('aria-hidden','true')
+    const coul=['#E24B4A','#3B6D11','#F0B23C','#185FA5','#141414']
+    for(let i=0;i<44;i++){
+      const c=document.createElement('i')
+      c.style.cssText='left:'+Math.round(Math.random()*100)+'%;background:'+coul[i%coul.length]+';animation-delay:'+(Math.random()*.5).toFixed(2)+'s;animation-duration:'+(1.6+Math.random()*1.2).toFixed(2)+'s;transform:rotate('+Math.round(Math.random()*360)+'deg)'
+      z.appendChild(c)
+    }
+    document.body.appendChild(z)
+    setTimeout(function(){z.remove()},3400)
+  }catch(e){}
+}
+// Ou l'aspirant se situe dans le groupe pour un exercice : moyenne, meilleur
+// score et rang, sans aucun nom (fonction stats_exercice, sql/stats_exercice.sql)
+async function chargerClassementExercice(quizId){
+  try{
+    const r=await avecReprises(function(){return db.rpc('stats_exercice',{p_quiz:quizId})},1,6000)
+    if(!r||r.error||!r.data||!(r.data.participants>1)) return null
+    return r.data
+  }catch(e){return null}
+}
+// Fin d'un exercice : ce que l'aspirant vient de gagner, puis la suite.
+// Rien ici n'est indispensable : la copie est deja envoyee et affichee.
+async function apresExercice(quizId,score,valide,enAttente,tentId){
+  try{
+    if(G.admin||!G.profil) return
+    if(!enAttente&&tentId) db.from('tentatives').update({points_gagnes:Math.round(score/20*100)}).eq('id',tentId).then(function(){},function(){})
+    const r=await avecReprises(function(){return db.from('tentatives').select('id,quiz_id,score,valide,note_admin,notes_libres,completed_at, quiz(module_id,mode_examen)').eq('aspirant_id',G.profil.id)},2,8000)
+    if(r.error||!r.data) return
+    const apres=parcoursLudique(r.data,G.profil)
+    const avant=parcoursLudique(r.data.filter(function(t){return t.id!==tentId}),G.profil)
+    // Les autres ecrans (gacheurs, anciens) lisent ces compteurs dans le profil
+    db.from('profils').update({points_total:apres.points,streak_semaines:apres.serie,streak_derniere_semaine:lundiDe(new Date()),streak_pause:false}).eq('id',G.profil.id).then(function(){},function(){})
+    G.profil.points_total=apres.points;G.profil.streak_semaines=apres.serie
+    majSerieBarre(apres)
+    const z=$('r-fete')
+    // L'aspirant a pu quitter l'ecran de resultat entre-temps
+    if(!z||!G.tentResult||!G.tentResult.tent||G.tentResult.tent.id!==tentId) return
+    const gagnes=Math.max(0,apres.points-avant.points)
+    const nouveaux=apres.insignes.filter(function(x){const y=avant.insignes.find(function(a){return a.id===x.id});return x.ok&&!(y&&y.ok)})
+    const [groupe,rq]=await Promise.all([
+      enAttente?null:chargerClassementExercice(quizId),
+      G.tentResult.modId?avecReprises(function(){return db.from('quiz').select('id,titre,mode_examen,niveau').eq('module_id',G.tentResult.modId).eq('actif',true).or('archive.is.null,archive.eq.false').order('niveau')},1,6000):{data:[]}
+    ])
+    const faits={};r.data.forEach(function(t){faits[t.quiz_id]=true})
+    const suivant=((rq&&rq.data)||[]).find(function(q){return !q.mode_examen&&!faits[q.id]})
+    const puces=[]
+    if(gagnes) puces.push('<span class="fete-puce"><i class="ti ti-star" style="color:var(--amber)"></i>+'+gagnes+' points</span>')
+    else if(!enAttente&&avant.exercices===apres.exercices) puces.push('<span class="fete-puce"><i class="ti ti-star" style="color:var(--t3)"></i>Ton meilleur score est gardé</span>')
+    if(apres.serie) puces.push('<span class="fete-puce"><i class="ti ti-flame" style="color:var(--r)"></i>'+apres.serie+' semaine'+(apres.serie>1?'s':'')+' d’affilée</span>')
+    puces.push('<span class="fete-puce"><i class="ti ti-calendar-week" style="color:var(--b)"></i>Semaine : '+apres.semaine+'/'+apres.objectif+(apres.semaine>=apres.objectif?' · objectif atteint':'')+'</span>')
+    let h='<div class="fete"><div class="fete-puces">'+puces.join('')+'</div>'
+    nouveaux.forEach(function(x){
+      h+='<div class="fete-insigne"><span class="ins-ico"><i class="ti '+x.ico+'"></i></span><div><b>Nouvel insigne : '+echapAttr(x.nom)+'</b><small>Retrouve tous tes insignes dans Mon parcours</small></div></div>'
+    })
+    if(groupe){
+      const rang=Number(groupe.rang)||0
+      h+='<div class="fete-groupe" id="fete-groupe"><b>Dans le groupe</b> · moyenne '+groupe.moyenne+'/20 · meilleur score '+groupe.meilleur+'/20'
+        +(rang?' · tu es '+rang+(rang===1?'er':'e')+' sur '+groupe.participants:'')+'</div>'
+    }
+    if(suivant) h+='<button class="acc-btn" style="margin-top:12px" data-quiz="'+echapAttr(suivant.id)+'" onclick="commencer(this.dataset.quiz)">Exercice suivant</button>'
+    else if(!valide&&!enAttente) h+='<button class="acc-btn" style="margin-top:12px" data-quiz="'+echapAttr(quizId)+'" onclick="commencer(this.dataset.quiz)">Recommencer cet exercice</button>'
+    h+='</div>'
+    z.innerHTML=h
+    if(valide||nouveaux.length) lancerConfettis()
+  }catch(e){}
 }
 
 // ─── PROFIL ASPIRANT VUE ANCIEN ────────────────────────────
@@ -7462,7 +7895,7 @@ async function chargerStatsAdmin() {
   el.innerHTML='<div class="loader"><i class="ti ti-loader spin" style="font-size:1.5rem;color:var(--r)"></i></div>'
   const [{data:profils},{data:tents},{data:quiz}]=await Promise.all([
     db.from('profils').select('role').neq('role',null),
-    db.from('tentatives').select('valide,score,quiz(module_id)'),
+    lireTout(function(){return db.from('tentatives').select('valide,score,quiz(module_id)').order('completed_at',{ascending:false}).order('id')}),
     db.from('quiz').select('id,module_id').eq('actif',true)
   ])
   const t=tents||[],p=profils||[]
@@ -7758,7 +8191,7 @@ async function editerQuiz(quizId) {
         } else {
           const ic=document.createElement('div')
           ic.style.cssText='width:54px;height:54px;border-radius:8px;background:var(--rl);display:flex;align-items:center;justify-content:center;flex-shrink:0'
-          ic.innerHTML='<i class="ti ti-file-type-pdf" style="color:var(--r);font-size:1.3rem"></i>'
+          ic.innerHTML=m.t==='lien'?'<i class="ti ti-file-search" style="color:var(--b);font-size:1.3rem"></i>':'<i class="ti ti-file-type-pdf" style="color:var(--r);font-size:1.3rem"></i>'
           bloc.appendChild(ic)
         }
         const nm=document.createElement('div')
@@ -7821,6 +8254,62 @@ async function editerQuiz(quizId) {
     const explTa=document.createElement('textarea'); explTa.id='eq-ex-'+i; explTa.value=q.reponse_type||''
     explTa.style.cssText='width:100%;padding:6px 10px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.78rem;resize:vertical;min-height:40px;font-family:var(--ff)'
     div.appendChild(explTa)
+    // ── Image(s) de la bonne reponse : montrees a la correction, a la relecture
+    //    et dans le corrige, jamais avec la question ──
+    if(!Array.isArray(questions[i].reponse_medias)) questions[i].reponse_medias=[]
+    const zoneRep=document.createElement('div')
+    zoneRep.id='eq-rep-zone-'+i
+    zoneRep.style.cssText='margin-top:.5rem'
+    function rendreImagesReponse(){
+      const liste=questions[i].reponse_medias
+      zoneRep.innerHTML=''
+      liste.forEach(function(m,k){
+        const bloc=document.createElement('div')
+        bloc.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 9px;background:var(--vl);border-radius:10px;margin-bottom:5px'
+        const img=document.createElement('img')
+        brancherImage(img,m.p)
+        img.style.cssText='width:54px;height:54px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:zoom-in;background:#fff'
+        img.onclick=function(){if(img.src)agrandirImage(img.src)}
+        bloc.appendChild(img)
+        const nm=document.createElement('div')
+        nm.style.cssText='flex:1;min-width:0;font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'
+        nm.textContent=m.n||'Image de la bonne réponse'
+        bloc.appendChild(nm)
+        const sup=document.createElement('button')
+        sup.className='btn btn-ghost btn-sm btn-icon'
+        sup.style.cssText='color:var(--r);flex-shrink:0'
+        sup.innerHTML='<i class="ti ti-trash"></i>'
+        sup.onclick=function(){questions[i].reponse_medias.splice(k,1);rendreImagesReponse()}
+        bloc.appendChild(sup)
+        zoneRep.appendChild(bloc)
+      })
+      const lab=document.createElement('label')
+      lab.style.cssText='display:flex;align-items:center;gap:8px;padding:9px 11px;border:1.5px dashed var(--v);border-radius:10px;cursor:pointer;font-size:.76rem;color:var(--v)'
+      lab.innerHTML='<i class="ti ti-photo-check" style="font-size:1rem"></i> Ajouter une image de la bonne réponse'
+      const inp=document.createElement('input')
+      inp.type='file';inp.accept='image/*';inp.multiple=true;inp.style.display='none'
+      inp.className='eq-rep-fichier'
+      inp.onchange=async function(){
+        const fs=Array.from(inp.files||[]);if(!fs.length) return
+        lab.innerHTML='<i class="ti ti-loader spin"></i> Envoi en cours...'
+        let nbOk=0
+        for(const f of fs){
+          const r=await deposerImageReponse(f,quizId)
+          if(r.erreur){toast(f.name+' : '+r.erreur,'err');continue}
+          questions[i].reponse_medias.push(r.media);nbOk++
+        }
+        rendreImagesReponse()
+        if(nbOk===fs.length) toast('Image de la bonne réponse ajoutée','ok')
+      }
+      lab.appendChild(inp)
+      zoneRep.appendChild(lab)
+      const aide=document.createElement('div')
+      aide.style.cssText='font-size:.66rem;color:var(--t3);margin-top:3px'
+      aide.textContent='Visible à la correction et dans le corrigé. Jamais pendant un examen.'
+      zoneRep.appendChild(aide)
+    }
+    rendreImagesReponse()
+    div.appendChild(zoneRep)
     const hi=document.createElement('input'); hi.type='hidden'; hi.id='eq-pt-'+i; hi.value=q.points||4; div.appendChild(hi)
     const ht=document.createElement('input'); ht.type='hidden'; ht.id='eq-tp-'+i; ht.value=q.type_question||'multi'; div.appendChild(ht)
     return div
@@ -7923,6 +8412,8 @@ async function editerQuiz(quizId) {
         const prem=q.medias.find(function(m){return m.t==='img'})
         if(prem) o.image_url=prem.p   // compatibilite avec l'affichage existant
       } else if(q.image_url) o.image_url=q.image_url
+      // Images de la bonne reponse (colonne a part : jamais affichee avec la question)
+      o.reponse_medias=(Array.isArray(q.reponse_medias)&&q.reponse_medias.length)?q.reponse_medias:null
       return o
     })
     // ── Mise a jour EN PLACE ──
@@ -7936,18 +8427,23 @@ async function editerQuiz(quizId) {
         btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Enregistrer';return
       }
     }catch(e){}
-    const sansOptionnels=function(l){const x=Object.assign({},l);delete x.image_url;delete x.medias;delete x.bonnes_reponses;return x}
+    const sansOptionnels=function(l){const x=Object.assign({},l);delete x.image_url;delete x.medias;delete x.bonnes_reponses;delete x.reponse_medias;return x}
     const idsConserves=[]
     let erreur=null,imagesPerdues=false
     for(let k=0;k<questions.length;k++){
       const q=questions[k],ligne=qsToSave[k]
       if(q.id){
         idsConserves.push(q.id)
-        let r=await db.from('questions').update(ligne).eq('id',q.id)
-        if(r.error&&/image_url|bonnes_reponses|medias|competence|column/i.test(r.error.message||'')){r=await db.from('questions').update(sansOptionnels(ligne)).eq('id',q.id);imagesPerdues=true}
+        let r=await db.from('questions').update(ligne).eq('id',q.id).select('id')
+        // Colonne reponse_medias absente (sql/reponse_medias.sql pas encore passe) : tout le reste est garde
+        if(r.error&&/reponse_medias/i.test(r.error.message||'')){const l2=Object.assign({},ligne);delete l2.reponse_medias;r=await db.from('questions').update(l2).eq('id',q.id).select('id');if(ligne.reponse_medias)imagesPerdues=true}
+        if(r.error&&/image_url|bonnes_reponses|medias|competence|column/i.test(r.error.message||'')){r=await db.from('questions').update(sansOptionnels(ligne)).eq('id',q.id).select('id');imagesPerdues=true}
+        // Refus silencieux de la base (0 ligne touchee) : ne pas annoncer « enregistre »
+        if(!r.error&&Array.isArray(r.data)&&!r.data.length) r={error:{message:'question '+(k+1)+' refusée par la base'}}
         if(r.error){erreur=r.error;break}
       } else {
         let r=await db.from('questions').insert(ligne).select('id').single()
+        if(r.error&&/reponse_medias/i.test(r.error.message||'')){const l2=Object.assign({},ligne);delete l2.reponse_medias;r=await db.from('questions').insert(l2).select('id').single();if(ligne.reponse_medias)imagesPerdues=true}
         if(r.error&&/image_url|bonnes_reponses|medias|competence|column/i.test(r.error.message||'')){r=await db.from('questions').insert(sansOptionnels(ligne)).select('id').single();imagesPerdues=true}
         if(r.error){erreur=r.error;break}
         if(r.data){q.id=r.data.id;idsConserves.push(r.data.id)}
