@@ -1228,7 +1228,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.11.19-1100'
+const VERSION_APP = '2026.11.19-1500'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -3813,8 +3813,11 @@ function showQ() {
   const imgWrap=$('q-image-wrap')
   if(imgWrap){if(q.image_url){imgWrap.style.display='';imgWrap.innerHTML=`<img id="img-q-live" style="width:100%;max-height:min(46vh,420px);object-fit:contain;cursor:zoom-in;border-radius:12px;border:1px solid var(--bord)"/>`}else{imgWrap.style.display='none';imgWrap.innerHTML=''}}
   // Pieces jointes : photos et PDF, affichees en pleine qualite
+  const schemasQ=(q.type_question||'qcm')==='libre'?schemasDe(q):[]
   if(imgWrap){
-    const medias=Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url,n:'Image'}]:[])
+    let medias=Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url,n:'Image'}]:[])
+    // Une reponse par schema : les schemas sont affiches plus bas, chacun avec sa case
+    if(schemasQ.length) medias=medias.filter(function(m){return !(m&&m.t==='img'&&m.rep)})
     if(medias.length){
       imgWrap.style.display=''
       imgWrap.innerHTML=''
@@ -3867,9 +3870,9 @@ function showQ() {
   let dessinLibre=false
   if((q.type_question||'qcm')==='libre'){
     const mds=Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url}]:[])
-    const premiereImage=mds.find(function(m){return m.t==='img'})
+    const premiereImage=schemasQ.length?null:mds.find(function(m){return m.t==='img'})
     // Sans photo : une feuille blanche pour dessiner sa reponse
-    dessinLibre=!premiereImage
+    dessinLibre=!premiereImage&&!schemasQ.length
     if(premiereImage){
       // La premiere photo passe dans la zone d'annotation ; les autres
       // pieces jointes restent consultables au-dessus.
@@ -3882,8 +3885,12 @@ function showQ() {
   }
   const typeQ=q.type_question||'qcm'
   if(typeQ==='libre'){
-    $('q-opts').innerHTML=`<div id="zone-annot" style="display:none;margin-bottom:.9rem"></div>
-      <textarea id="rep-libre" class="ftextarea" rows="4" placeholder="Rédige ta réponse ici..." style="width:100%;margin-bottom:.8rem" oninput="brouillonLibreSaisie()">${echapAttr(G.reponses[q.id]||'')}</textarea>
+    const decoupe=schemasQ.length?decouperParSchema(G.reponses[q.id]||'',schemasQ.map(function(x){return x.label})):null
+    // Ancienne reponse sans libelles (telephone pas a jour) : elle revient dans la premiere case
+    if(decoupe&&decoupe.reste){decoupe.parts[0]=(decoupe.reste+(decoupe.parts[0]?'\n'+decoupe.parts[0]:''));decoupe.reste=''}
+    const blocsSchemas=schemasQ.map(function(x,j){return '<div class="schema-rep" style="margin-bottom:1rem"><div style="font-weight:700;font-size:.9rem;margin-bottom:6px">'+_escC(x.label)+'</div><img data-schema="'+j+'" style="width:100%;max-height:min(46vh,420px);object-fit:contain;border-radius:12px;border:1px solid var(--bord);margin-bottom:6px;cursor:zoom-in;background:#fff"/><textarea id="rep-schema-'+j+'" class="ftextarea" rows="2" placeholder="Ta réponse pour : '+echapAttr(x.label)+'" style="width:100%" oninput="saisieSchema()">'+echapAttr(decoupe.parts[j]||'')+'</textarea></div>'}).join('')
+    $('q-opts').innerHTML=`<div id="zone-annot" style="display:none;margin-bottom:.9rem"></div>${blocsSchemas}
+      <textarea id="rep-libre" class="ftextarea" rows="4" placeholder="Rédige ta réponse ici..." style="width:100%;margin-bottom:.8rem;${schemasQ.length?'display:none':''}" oninput="brouillonLibreSaisie()">${echapAttr(schemasQ.length?assemblerParSchema(schemasQ.map(function(x){return x.label}),decoupe.parts,''):(G.reponses[q.id]||''))}</textarea>
       <div id="pj-liste"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <label style="position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 10px;border:1.5px dashed var(--bord2);border-radius:12px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--t1);background:var(--bg);text-align:center">
@@ -3898,6 +3905,8 @@ function showQ() {
       <div style="font-size:.7rem;color:var(--t3);margin-top:6px;line-height:1.45"><i class="ti ti-paperclip"></i> Tous les fichiers sont acceptés : photo, PDF, Word, Excel, SolidWorks, Automation Studio, DWG, STEP… (${TAILLE_MAX_PJ_MO} Mo maximum par fichier). Tu peux en ajouter plusieurs.<br><i class="ti ti-bulb"></i> Si la photo en direct ne revient pas, prends-la avec l'appareil photo de ton téléphone, puis choisis-la avec Galerie.</div>
       <div id="fichier-statut" style="font-size:.72rem;color:var(--v);margin-top:4px"></div>
       ${dessinLibre?`<button type="button" id="btn-dessiner" class="btn btn-ghost btn-full" style="margin-top:10px" onclick="ouvrirDessinLibre()"><i class="ti ti-pencil"></i> Dessiner ma réponse</button>`:''}`
+    // Images des schemas, chacune au-dessus de sa case
+    schemasQ.forEach(function(x,j){const im=document.querySelector('#q-opts img[data-schema="'+j+'"]');if(im){brancherImage(im,x.m.p);im.onclick=function(){if(im.src)agrandirImage(im.src)}}})
     afficherPiecesJointes(q.id)
     // Dessin deja commence (retour sur la question, rechargement) : il revient
     if(dessinLibre&&G.dessins&&Array.isArray(G.dessins[q.id])&&G.dessins[q.id].length) ouvrirDessinLibre(q.id)
@@ -4256,6 +4265,111 @@ function htmlImagesReponse(q){
   const l=imagesReponse(q);if(!l.length) return ''
   return '<div class="rep-images">'+l.map(function(m){return '<img data-img="'+echapAttr(m.p)+'" alt="'+echapAttr(m.n||'Image de la bonne réponse')+'"/>'}).join('')+'</div>'
 }
+// ── Question a plusieurs schemas : une reponse par schema ──
+// Une image de la question marquee rep:1 demande sa propre reponse.
+// La reponse de l'aspirant et la reponse attendue restent un seul texte, lu par
+// toutes les versions de l'appli : une ligne « Schéma A : ... » par schema.
+// (Une ancienne version affiche simplement les images et une seule case.)
+function nomGeneriqueSchema(n){n=String(n||'').trim();return !n||/^image\s*\d*$/i.test(n)||/\.(png|jpe?g|gif|webp|svg|bmp|heic|heif|tiff?)$/i.test(n)}
+function schemasDe(q){
+  const mds=(q&&Array.isArray(q.medias))?q.medias:[]
+  const l=[];mds.forEach(function(m,k){if(m&&m.t==='img'&&m.rep)l.push({m:m,k:k})})
+  const noms=l.map(function(x){return String(x.m.n||'').trim()})
+  const distincts=noms.every(function(n,i){return !nomGeneriqueSchema(n)&&noms.indexOf(n)===i})
+  l.forEach(function(x,i){x.label=distincts?noms[i]:'Schéma '+_lettre(i)})
+  return l
+}
+// Decoupe un texte « Schéma A : ... / Schéma B : ... » selon les libelles, dans l'ordre.
+// reste : texte place avant le premier libelle (ancienne reponse, commentaire).
+function decouperParSchema(texte,labels){
+  texte=String(texte||'')
+  const pos=[];let depuis=0
+  labels.forEach(function(lb){
+    const re=new RegExp('(^|\\n)[ \\t]*'+String(lb).replace(/[.*+?^\${}()|[\]\\]/g,'\\$&')+'[ \\t]*[:=][ \\t]*','i')
+    const m=re.exec(texte.slice(depuis))
+    if(m){const debut=depuis+m.index+m[1].length,contenu=depuis+m.index+m[0].length;pos.push({debut:debut,contenu:contenu});depuis=contenu}
+    else pos.push(null)
+  })
+  const parts=labels.map(function(_,i){
+    const p=pos[i];if(!p) return ''
+    let fin=texte.length;for(let j=i+1;j<pos.length;j++){if(pos[j]){fin=pos[j].debut;break}}
+    return texte.slice(p.contenu,fin).trim()
+  })
+  const premier=pos.find(Boolean)
+  return {parts:parts,reste:(premier?texte.slice(0,premier.debut):texte).trim()}
+}
+function assemblerParSchema(labels,parts,reste){
+  const lignes=labels.map(function(lb,i){const t=String(parts[i]||'').trim();return t?lb+' : '+t:''}).filter(Boolean)
+  return ((reste&&String(reste).trim())?String(reste).trim()+(lignes.length?'\n':''):'')+lignes.join('\n')
+}
+// Reponse attendue pour chaque schema. Accepte aussi l'ancien format sur une
+// ligne venu de l'import Word : « A = ... · B = ... ».
+function attenduParSchema(q){
+  const sch=schemasDe(q),labels=sch.map(function(x){return x.label}),t=String((q&&q.reponse_type)||'')
+  const d=decouperParSchema(t,labels)
+  if(d.parts.some(Boolean)) return d
+  const parts=labels.map(function(){return ''});let trouve=false
+  t.split(/\s*(?:·|\n)\s*/).forEach(function(mc){
+    const m=/^([A-Za-z0-9]{1,2})\s*[=:]\s*(.+)$/.exec(mc.trim());if(!m) return
+    const j=labels.findIndex(function(lb){return new RegExp('(^|\\s)'+m[1]+'$','i').test(lb)})
+    if(j>=0&&!parts[j]){parts[j]=m[2].trim();trouve=true}
+  })
+  return trouve?{parts:parts,reste:''}:d
+}
+// Active ou retire le mode « une reponse par schema » sur une question (editeur, creation, import).
+// Les images aux noms generiques (Image, photo.png...) deviennent Schéma A, B, C...
+function appliquerParSchema(q,on){
+  const imgs=((q&&q.medias)||[]).filter(function(m){return m&&m.t==='img'})
+  if(!on){imgs.forEach(function(m){delete m.rep});return q}
+  // Reponse attendue lue AVANT de renommer (les anciens libelles servent a la decouper)
+  const avantLabels=schemasDe(q).map(function(x){return x.label})
+  const avant=avantLabels.length?decouperParSchema(q.reponse_type,avantLabels):null
+  imgs.forEach(function(m){m.rep=1})
+  const pris=imgs.map(function(m){return String(m.n||'').trim()})
+  imgs.forEach(function(m,i){
+    if(nomGeneriqueSchema(pris[i])||pris.indexOf(pris[i])!==i){
+      let j=i,nom;do{nom='Schéma '+_lettre(j);j++}while(pris.indexOf(nom)>=0&&j<40)
+      m.n=nom;pris[i]=nom
+    }
+  })
+  const labels=schemasDe(q).map(function(x){return x.label})
+  let a
+  if(avant&&avant.parts.some(Boolean)){
+    // Schemas deja en place : on garde chaque reponse en face de sa propre image
+    const parts=labels.map(function(){return ''})
+    avantLabels.forEach(function(lb,i){const k=imgs.filter(function(m){return m.rep}).findIndex(function(m,ix){return ix===i});if(k>=0)parts[k]=avant.parts[i]})
+    a={parts:parts,reste:avant.reste}
+  } else a=attenduParSchema(q)
+  q.reponse_type=assemblerParSchema(labels,a.parts,a.reste)||null
+  return q
+}
+// Vue par schema pour le gacheur : image, reponse de l'aspirant, reponse attendue
+function htmlParSchema(q,reponse,opt){
+  const sch=schemasDe(q);if(!sch.length) return ''
+  opt=opt||{}
+  const labels=sch.map(function(x){return x.label}),r=decouperParSchema(reponse,labels),a=attenduParSchema(q)
+  // Ancienne reponse sans libelles (telephone pas a jour) : montree a part
+  return '<div class="par-schema">'+sch.map(function(x,j){
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px;background:var(--card);border:1px solid var(--bord);border-radius:10px;margin-bottom:6px">'
+      +'<img data-img="'+echapAttr(x.m.p)+'" onclick="if(this.src)agrandirImage(this.src)" style="width:72px;height:72px;object-fit:contain;background:#fff;border:1px solid var(--bord);border-radius:8px;flex-shrink:0;cursor:zoom-in"/>'
+      +'<div style="flex:1;min-width:0;font-size:.78rem;line-height:1.45;white-space:pre-wrap"><b style="color:var(--t1)">'+_escC(x.label)+'</b>'
+      +(opt.reponse?'<div style="color:var(--b)"><span style="color:var(--t3)">Réponse :</span> '+(r.parts[j]?_escC(r.parts[j]):'<em style="color:var(--t3)">—</em>')+'</div>':'')
+      +(opt.attendu?'<div style="color:var(--v)"><span style="color:var(--t3)">Attendu :</span> '+(a.parts[j]?_escC(a.parts[j]):'<em style="color:var(--t3)">non renseigné</em>')+'</div>':'')
+      +'</div></div>'
+  }).join('')
+  +(opt.reponse&&r.reste?'<div style="font-size:.76rem;color:var(--b);white-space:pre-wrap;margin-bottom:6px"><span style="color:var(--t3)">Réponse écrite sans case par schéma :</span> '+_escC(r.reste)+'</div>':'')
+  +(opt.attendu&&a.reste?'<div style="font-size:.76rem;color:var(--v);white-space:pre-wrap;margin-bottom:6px"><span style="color:var(--t3)">Remarque :</span> '+_escC(a.reste)+'</div>':'')
+  +'</div>'
+}
+// Passage du quiz : chaque case de schema recompose la reponse de la question
+function saisieSchema(){
+  const q=G.questions&&G.questions[G.etape],ta=document.getElementById('rep-libre')
+  if(!q||!ta) return
+  const sch=schemasDe(q),parts=sch.map(function(_,j){const e=document.getElementById('rep-schema-'+j);return e?e.value:''})
+  ta.value=assemblerParSchema(sch.map(function(x){return x.label}),parts,'')
+  brouillonLibreSaisie()
+}
+
 // Copie qui attend la correction d'un gacheur
 function copieEnAttente(t){return !!t&&t.notes_libres!==null&&t.notes_libres!==undefined&&(t.note_admin===null||t.note_admin===undefined)}
 
@@ -4741,7 +4855,36 @@ function majBonneReponse(i,j,coche,type){
 }
 
 function supprimerQuestion(idx){mqQuestions.splice(idx,1);renderQuestions();sauverBrouillon()}
-function retirerMediaQuestion(i,k){const q=mqQuestions[i];if(!q||!q.medias)return;q.medias.splice(k,1);renderQuestions();sauverBrouillon()}
+function retirerMediaQuestion(i,k){
+  const q=mqQuestions[i];if(!q||!q.medias)return
+  // Une reponse par schema : chaque reponse attendue reste en face de son image
+  const sch=schemasDe(q),a=sch.length?attenduParSchema(q):null,parP={}
+  if(a) sch.forEach(function(x,j){parP[x.m.p]=a.parts[j]})
+  q.medias.splice(k,1)
+  if(a){const s2=schemasDe(q);q.reponse_type=assemblerParSchema(s2.map(function(x){return x.label}),s2.map(function(x){return parP[x.m.p]||''}),a.reste)||null}
+  renderQuestions();sauverBrouillon()
+}
+// Creer un quiz : question libre avec des images -> une reponse par schema possible
+function htmlSchemasCreation(i){
+  const q=mqQuestions[i];if(!q) return ''
+  const imgs=(q.medias||[]).filter(function(m){return m&&m.t==='img'});if(!imgs.length) return ''
+  const sch=schemasDe(q),on=sch.length>0
+  let h='<label style="display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:600;margin-bottom:.6rem;cursor:pointer"><input type="checkbox" id="mq-parsch-'+i+'" '+(on?'checked':'')+' onchange="basculerParSchemaCreation('+i+',this.checked)" style="width:16px;height:16px;accent-color:var(--r);flex-shrink:0"/> Une réponse par schéma : l’aspirant répond sous chaque image</label>'
+  if(!on) return h
+  const a=attenduParSchema(q)
+  return h+'<label class="field-label">Réponse attendue pour chaque schéma</label>'+sch.map(function(x,j){
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><img data-img="'+echapAttr(x.m.p)+'" style="width:48px;height:48px;object-fit:contain;background:#fff;border:1px solid var(--bord);border-radius:8px;flex-shrink:0"/>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:.74rem;font-weight:700;margin-bottom:2px">'+_escC(x.label)+'</div>'
+      +'<input class="finput" id="mq-sch-'+i+'-'+j+'" value="'+_escC(a.parts[j]||'')+'" placeholder="Réponse attendue pour '+_escC(x.label)+'" onchange="majAttenduSchemaCreation('+i+','+j+',this.value)"/></div></div>'
+  }).join('')+'<p class="field-hint" style="margin-bottom:.7rem">Le gâcheur note la question en entier ; il voit chaque réponse en face de son schéma.</p>'
+}
+function basculerParSchemaCreation(i,on){const q=mqQuestions[i];if(!q)return;appliquerParSchema(q,on);renderQuestions();sauverBrouillon()}
+function majAttenduSchemaCreation(i,j,val){
+  const q=mqQuestions[i];if(!q)return
+  const sch=schemasDe(q),a=attenduParSchema(q);a.parts[j]=val
+  q.reponse_type=assemblerParSchema(sch.map(function(x){return x.label}),a.parts,a.reste)||null
+  sauverBrouillon()
+}
 
 // ─── IMPORT D'UN QUIZ WORD OU PDF ──────────────────────────────────────────
 // Un gacheur depose son quiz au format Word (.docx) ou PDF. Le fichier est lu
@@ -5019,6 +5162,8 @@ async function deposerImagesImport(questions,suivi){
       nOk++
     }
     delete q._images
+    const imgsQ=(q.medias||[]).filter(function(m){return m.t==='img'})
+    if(q.type==='libre'&&imgsQ.length>=2&&imgsQ.every(function(m){return /^sch[ée]ma\s+[A-Z0-9]{1,3}$/i.test(String(m.n||'').trim())})) appliquerParSchema(q,true)
   }
   return {ok:nOk,ko:nKo,illisibles:nIllisibles}
 }
@@ -5125,7 +5270,7 @@ function renderQuestions() {
       ${q.type==='vf'?`<div><label class="field-label">Bonne réponse</label><div style="display:flex;gap:8px">
         <label style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:600;${q.bonne===0?'background:var(--vl);border-color:var(--v);color:var(--v)':''}"><input type="radio" name="vf_${i}" ${q.bonne===0?'checked':''} onchange="mqQuestions[${i}].bonne=0;renderQuestions()" style="accent-color:var(--v)"/> VRAI</label>
         <label style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid var(--bord2);border-radius:10px;cursor:pointer;font-size:.875rem;font-weight:600;${q.bonne===1?'background:var(--rl);border-color:var(--r);color:var(--r)':''}"><input type="radio" name="vf_${i}" ${q.bonne===1?'checked':''} onchange="mqQuestions[${i}].bonne=1;renderQuestions()" style="accent-color:var(--r)"/> FAUX</label>
-      </div></div>`:q.type==='libre'?`<div><label class="field-label">Réponse attendue</label><textarea class="ftextarea" rows="2" placeholder="Réponse attendue..." onchange="mqQuestions[${i}].reponse_type=this.value;sauverBrouillon()">${_escC(q.reponse_type||'')}</textarea><p class="field-hint">L'admin notera manuellement</p></div>`:`<div><label class="field-label">Options — cochez la bonne réponse</label></div>
+      </div></div>`:q.type==='libre'?`${htmlSchemasCreation(i)}<div style="${schemasDe(q).length?'display:none':''}"><label class="field-label">Réponse attendue</label><textarea class="ftextarea" rows="2" placeholder="Réponse attendue..." onchange="mqQuestions[${i}].reponse_type=this.value;sauverBrouillon()">${_escC(q.reponse_type||'')}</textarea><p class="field-hint">L'admin notera manuellement</p></div>`:`<div><label class="field-label">Options — cochez la bonne réponse</label></div>
       ${q.options.map((opt,j)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="${q.type==='multi'?'checkbox':'radio'}" name="bonne_${i}" ${q.type==='multi'?((q.bonnes||[]).indexOf(j)>=0?'checked':''):(q.bonne===j?'checked':'')} onchange="majBonneReponse(${i},${j},this.checked,'${q.type}')" style="flex-shrink:0;accent-color:var(--r)"/><input class="finput" value="${_escC(opt)}" placeholder="Option ${j+1}" onchange="mqQuestions[${i}].options[${j}]=this.value" style="border-color:${q.bonne===j?'var(--r)':'var(--bord2)'}"/></div>`).join('')}`}
     </div>`).join('')
 }
@@ -5404,8 +5549,10 @@ async function previsualiserQuiz(id){
     if(q.type_question!=='libre'&&opts.filter(function(o){return o&&o.trim()}).length<2) alerte.push('moins de 2 propositions')
     if(q.type_question!=='libre'&&!bonnes.length) alerte.push('aucune bonne réponse')
     if(q.type_question==='libre'&&!(q.reponse_type||'').trim()) alerte.push('pas de réponse attendue')
+    else if(q.type_question==='libre'&&schemasDe(q).length&&attenduParSchema(q).parts.some(function(p){return !p})) alerte.push('réponse attendue manquante pour un schéma')
     // Schemas et documents de la question (toutes les pieces, pas seulement la premiere)
-    const mds=Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url}]:[])
+    const schQ=q.type_question==='libre'?schemasDe(q):[]
+    const mds=(Array.isArray(q.medias)&&q.medias.length?q.medias:(q.image_url?[{t:'img',p:q.image_url}]:[])).filter(function(m){return !(schQ.length&&m&&m.t==='img'&&m.rep)})
     const blocMedias=mds.map(function(m){
       if(m.t==='lien') return '<a class="btn btn-ghost btn-sm" style="margin-top:8px;white-space:normal;text-align:left" href="'+echapAttr(m.p)+'" target="_blank" rel="noopener"><i class="ti ti-file-search" style="color:var(--b)"></i> '+echapAttr(m.n||'Document à consulter')+'</a>'
       if(m.t==='pdf') return '<button class="btn btn-ghost btn-sm" style="margin-top:8px" data-p="'+echapAttr(m.p)+'" onclick="ouvrirMediaPrevisu(this.dataset.p)"><i class="ti ti-file-type-pdf" style="color:var(--r)"></i> '+echapAttr(m.n||'Document')+'</button>'
@@ -5423,7 +5570,8 @@ async function previsualiserQuiz(id){
         +'<span style="font-size:.7rem;color:var(--t3);flex-shrink:0">'+(q.points||0)+' pt</span>'
       +'</div>'
       +'<div style="padding-left:24px">'+blocOpts
-      +((q.reponse_type||imagesReponse(q).length)?'<div style="font-size:.76rem;color:var(--t2);background:var(--field);border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.5"><b>'+titreRep+' :</b> '+(q.reponse_type||'')+htmlImagesReponse(q)+'</div>':'')
+      +(schQ.length?'<div style="margin-top:6px"><div style="font-size:.72rem;color:var(--t3);font-weight:700;margin-bottom:4px">Une réponse par schéma</div>'+htmlParSchema(q,'',{attendu:true})+htmlImagesReponse(q)+'</div>'
+        :((q.reponse_type||imagesReponse(q).length)?'<div style="font-size:.76rem;color:var(--t2);background:var(--field);border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.5"><b>'+titreRep+' :</b> '+(q.reponse_type||'')+htmlImagesReponse(q)+'</div>':''))
       +(alerte.length?'<div style="font-size:.74rem;color:var(--r);margin-top:6px"><i class="ti ti-alert-triangle"></i> '+alerte.join(' · ')+'</div>':'')
       +'</div></div>'
   }).join('')
@@ -5865,7 +6013,8 @@ async function ouvrirCorrectionAdmin(tentId) {
     let corps=''
     if(isLibre){
       const pjs=piecesJointes(tent.fichiers_libres&&tent.fichiers_libres[q.id])
-      corps=`<div style="background:var(--bl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--b);white-space:pre-wrap"><strong>Réponse :</strong><br>${sansRep?(pjs.length?'<em>Pas de texte — voir la pièce jointe ci-dessous</em>':'<em>Aucune réponse</em>'):_escC(rep)}</div>`
+      const parSchema=schemasDe(q).length>0
+      corps=(parSchema?`<div style="font-size:.72rem;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Réponse par schéma</div>${htmlParSchema(q,sansRep?'':rep,{reponse:true,attendu:true})}${sansRep&&!pjs.length?'<div style="font-size:.78rem;color:var(--b);margin-bottom:.5rem"><em>Aucune réponse</em></div>':''}`:`<div style="background:var(--bl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.82rem;color:var(--b);white-space:pre-wrap"><strong>Réponse :</strong><br>${sansRep?(pjs.length?'<em>Pas de texte — voir la pièce jointe ci-dessous</em>':'<em>Aucune réponse</em>'):_escC(rep)}</div>`)
         +pjs.map(function(p){
           const estImg=p.type==='photo'||p.type==='annotation'||estImageNom(p.nom||p.path)
           const titre=p.type==='annotation'?(p.nom==='Dessin'?'Dessin fait par l\'aspirant':'Schéma annoté par l\'aspirant'):(estImg?'Photo jointe par l\'aspirant':'Fichier joint')
@@ -5875,7 +6024,7 @@ async function ouvrirCorrectionAdmin(tentId) {
           }
           return `<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--vl);border-radius:8px;margin-bottom:.5rem;font-size:.75rem;color:var(--v)"><i class="ti ti-paperclip"></i> ${_escC(p.nom||'Fichier')}${p.path?`<button class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" onclick="telechargerSujet('${_escC(p.path)}')"><i class="ti ti-download"></i></button>`:(p.image?`<a class="btn btn-ghost btn-sm" style="padding:2px 7px;margin-left:auto" href="${p.image}" download="${_escC(p.nom||'piece')}"><i class="ti ti-download"></i></a>`:'')}</div>`
         }).join('')
-        +((q.reponse_type||imagesReponse(q).length)?`<div style="background:var(--vl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--v)"><strong>Attendu :</strong><br>${_escC(q.reponse_type||'')}${htmlImagesReponse(q)}</div>`:'')
+        +(parSchema?(imagesReponse(q).length?`<div style="background:var(--vl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--v)"><strong>Image de la bonne réponse :</strong>${htmlImagesReponse(q)}</div>`:''):((q.reponse_type||imagesReponse(q).length)?`<div style="background:var(--vl);border-radius:8px;padding:8px;margin-bottom:.5rem;font-size:.78rem;color:var(--v)"><strong>Attendu :</strong><br>${_escC(q.reponse_type||'')}${htmlImagesReponse(q)}</div>`:''))
         +`<div style="display:flex;align-items:center;gap:8px"><label style="font-size:.78rem;color:var(--t2);white-space:nowrap;font-weight:600">Points :</label>
           <input type="number" min="0" max="${pts}" step="0.5" value="${noteExist}" style="width:70px;padding:6px 8px;border:1.5px solid var(--bord2);border-radius:8px;font-size:.9rem;text-align:center;font-family:var(--fg);font-weight:700" onchange="majNoteCorr('${q.id}',parseFloat(this.value)||0)"/>
           <span style="font-size:.78rem;color:var(--t3)">/ ${pts}</span></div>`
@@ -8193,12 +8342,17 @@ async function editerQuiz(quizId) {
     const zoneImg=document.createElement('div')
     zoneImg.id='eq-img-zone-'+i
     zoneImg.style.cssText='margin-bottom:.6rem'
+    // Une reponse par schema : reponses attendues gardees par image (chemin), pour
+    // qu'elles restent en face de leur schema si on en retire un
+    let rendreSchemas=null,attP=null,attReste=''
+    const zoneSch=document.createElement('div');zoneSch.id='eq-sch-zone-'+i
     if(!Array.isArray(questions[i].medias)){
       // Reprendre une ancienne image unique
       questions[i].medias=questions[i].image_url?[{t:'img',p:questions[i].image_url,n:'Image'}]:[]
     }
     function rendreImage(){
       const liste=questions[i].medias||[]
+      const libelleDe={};schemasDe(questions[i]).forEach(function(x){libelleDe[x.k]=x.label})
       zoneImg.innerHTML=''
       liste.forEach(function(m,k){
         const bloc=document.createElement('div')
@@ -8217,7 +8371,7 @@ async function editerQuiz(quizId) {
         }
         const nm=document.createElement('div')
         nm.style.cssText='flex:1;min-width:0;font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'
-        nm.textContent=m.n||(m.t==='img'?'Image':'Document')
+        nm.textContent=libelleDe[k]||m.n||(m.t==='img'?'Image':'Document')
         bloc.appendChild(nm)
         const sup=document.createElement('button')
         sup.className='btn btn-ghost btn-sm btn-icon'
@@ -8245,12 +8399,22 @@ async function editerQuiz(quizId) {
           questions[i].medias.push({t:(f.type==='application/pdf'||/\.pdf$/i.test(f.name))?'pdf':'img',p:chemin,n:f.name})
           nbOk++
         }
+        // Une reponse par schema deja active : la nouvelle image demande aussi sa reponse
+        if(isLibre&&(questions[i].medias||[]).some(function(m){return m.t==='img'&&m.rep})){
+          const ex=document.getElementById('eq-ex-'+i)
+          if(rendreSchemas&&attP) composerSchemas()
+          if(ex) questions[i].reponse_type=ex.value
+          appliquerParSchema(questions[i],true)
+          if(ex) ex.value=questions[i].reponse_type||''
+          attP=null
+        }
         rendreImage()
         if(nbOk===fs.length) toast('Pièce(s) jointe(s) ajoutée(s)','ok')
         else toast((fs.length-nbOk)+' pièce(s) non ajoutée(s)','err')
       }
       lab.appendChild(inp)
       zoneImg.appendChild(lab)
+      if(rendreSchemas) rendreSchemas()
     }
     rendreImage()
     div.appendChild(zoneImg)
@@ -8270,11 +8434,61 @@ async function editerQuiz(quizId) {
       const lbl=document.createElement('div'); lbl.style.cssText='font-size:.72rem;color:var(--t3);font-style:italic;margin-bottom:.4rem'
       lbl.textContent='Question libre — corrigée manuellement par un admin'; div.appendChild(lbl)
     }
+    div.appendChild(zoneSch)
     const explLbl=document.createElement('div'); explLbl.style.cssText='font-size:.68rem;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;margin-top:.5rem'
     explLbl.textContent='Explication / Corrigé'; div.appendChild(explLbl)
     const explTa=document.createElement('textarea'); explTa.id='eq-ex-'+i; explTa.value=q.reponse_type||''
     explTa.style.cssText='width:100%;padding:6px 10px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.78rem;resize:vertical;min-height:40px;font-family:var(--ff)'
     div.appendChild(explTa)
+    // ── Une reponse par schema (question libre avec des images) ──
+    function composerSchemas(){
+      const sch=schemasDe(questions[i])
+      explTa.value=assemblerParSchema(sch.map(function(x){return x.label}),sch.map(function(x){return attP[x.m.p]||''}),attReste)
+    }
+    rendreSchemas=function(){
+      const q2=questions[i],imgs=(q2.medias||[]).filter(function(m){return m&&m.t==='img'})
+      zoneSch.innerHTML=''
+      if(!isLibre||!imgs.length){explLbl.style.display='';explTa.style.display='';return}
+      const on=imgs.some(function(m){return m.rep})
+      const lab=document.createElement('label')
+      lab.style.cssText='display:flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;color:var(--t1);margin:.3rem 0 .5rem;cursor:pointer'
+      const cb=document.createElement('input');cb.type='checkbox';cb.id='eq-parsch-'+i;cb.checked=on
+      cb.style.cssText='width:16px;height:16px;accent-color:var(--r);flex-shrink:0'
+      cb.onchange=function(){
+        if(attP) composerSchemas()
+        q2.reponse_type=explTa.value
+        appliquerParSchema(q2,cb.checked)
+        explTa.value=q2.reponse_type||''
+        attP=null
+        rendreImage()
+      }
+      lab.appendChild(cb);lab.appendChild(document.createTextNode('Une réponse par schéma : l’aspirant répond sous chaque image'))
+      zoneSch.appendChild(lab)
+      if(!on){explLbl.style.display='';explTa.style.display='';return}
+      explLbl.style.display='none';explTa.style.display='none'
+      const sch=schemasDe(q2)
+      if(!attP){
+        const a=attenduParSchema(Object.assign({},q2,{reponse_type:explTa.value}))
+        attP={};attReste=a.reste
+        sch.forEach(function(x,j){attP[x.m.p]=a.parts[j]||''})
+      }
+      const titre=document.createElement('div');titre.style.cssText=explLbl.style.cssText;titre.style.display=''
+      titre.textContent='Réponse attendue pour chaque schéma';zoneSch.appendChild(titre)
+      sch.forEach(function(x,j){
+        const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:6px'
+        const im=document.createElement('img');brancherImage(im,x.m.p)
+        im.style.cssText='width:44px;height:44px;object-fit:contain;background:#fff;border:1px solid var(--bord);border-radius:8px;flex-shrink:0;cursor:zoom-in'
+        im.onclick=function(){if(im.src)agrandirImage(im.src)}
+        const col=document.createElement('div');col.style.cssText='flex:1;min-width:0'
+        const nom=document.createElement('div');nom.style.cssText='font-size:.72rem;font-weight:700;color:var(--t1);margin-bottom:2px';nom.textContent=x.label
+        const inp=document.createElement('input');inp.id='eq-sch-'+i+'-'+j;inp.value=attP[x.m.p]||'';inp.placeholder='Réponse attendue pour '+x.label
+        inp.style.cssText='width:100%;padding:6px 10px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.8rem;font-family:var(--ff)'
+        inp.oninput=function(){attP[x.m.p]=inp.value;composerSchemas()}
+        col.appendChild(nom);col.appendChild(inp);row.appendChild(im);row.appendChild(col);zoneSch.appendChild(row)
+      })
+      composerSchemas()
+    }
+    rendreSchemas()
     // ── Image(s) de la bonne reponse : montrees a la correction, a la relecture
     //    et dans le corrige, jamais avec la question ──
     if(!Array.isArray(questions[i].reponse_medias)) questions[i].reponse_medias=[]
