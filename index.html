@@ -407,6 +407,7 @@ body.dark .ins.ok .ins-ico,body.dark .fete-insigne .ins-ico{color:#141414}
 .badge-rl{background:var(--rl);color:var(--r)}
 .badge-v{background:var(--vl);color:var(--v)}
 .badge-a{background:var(--amberl);color:var(--amber)}
+.num-q{display:inline-flex;align-items:center;background:var(--r);color:#fff;font-family:var(--fg);font-weight:800;font-size:.74rem;line-height:1.5;padding:1px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}
 .badge-g{background:var(--field);color:var(--t2)}
 .badge-dark{background:var(--dark);color:#fff}
 .badge-ancien{background:rgba(60,52,137,.10);color:#3C3489}
@@ -1228,7 +1229,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.11.19-1500'
+const VERSION_APP = '2026.11.19-1530'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -4343,22 +4344,30 @@ function appliquerParSchema(q,on){
   q.reponse_type=assemblerParSchema(labels,a.parts,a.reste)||null
   return q
 }
-// Vue par schema pour le gacheur : image, reponse de l'aspirant, reponse attendue
+// Vue par schema (correction, relecture, resultat) : chaque schema en grand a
+// gauche et, en face, la reponse de l'aspirant et la reponse attendue.
 function htmlParSchema(q,reponse,opt){
   const sch=schemasDe(q);if(!sch.length) return ''
   opt=opt||{}
   const labels=sch.map(function(x){return x.label}),r=decouperParSchema(reponse,labels),a=attenduParSchema(q)
+  const boite=function(titre,texte,fond,coul,vide){
+    return '<div style="background:'+fond+';border-radius:8px;padding:6px 8px;color:'+coul+'">'
+      +'<div style="font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;opacity:.8;margin-bottom:2px">'+titre+'</div>'
+      +'<div style="font-size:.84rem;font-weight:600;line-height:1.4;white-space:pre-wrap;word-break:break-word">'+(texte?_escC(texte):'<em style="font-weight:400;opacity:.75">'+vide+'</em>')+'</div></div>'
+  }
   // Ancienne reponse sans libelles (telephone pas a jour) : montree a part
   return '<div class="par-schema">'+sch.map(function(x,j){
-    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px;background:var(--card);border:1px solid var(--bord);border-radius:10px;margin-bottom:6px">'
-      +'<img data-img="'+echapAttr(x.m.p)+'" onclick="if(this.src)agrandirImage(this.src)" style="width:72px;height:72px;object-fit:contain;background:#fff;border:1px solid var(--bord);border-radius:8px;flex-shrink:0;cursor:zoom-in"/>'
-      +'<div style="flex:1;min-width:0;font-size:.78rem;line-height:1.45;white-space:pre-wrap"><b style="color:var(--t1)">'+_escC(x.label)+'</b>'
-      +(opt.reponse?'<div style="color:var(--b)"><span style="color:var(--t3)">Réponse :</span> '+(r.parts[j]?_escC(r.parts[j]):'<em style="color:var(--t3)">—</em>')+'</div>':'')
-      +(opt.attendu?'<div style="color:var(--v)"><span style="color:var(--t3)">Attendu :</span> '+(a.parts[j]?_escC(a.parts[j]):'<em style="color:var(--t3)">non renseigné</em>')+'</div>':'')
-      +'</div></div>'
+    return '<div class="ps-ligne" style="border:1px solid var(--bord);border-radius:12px;background:var(--card);margin-bottom:8px;overflow:hidden">'
+      +'<div style="padding:5px 10px;background:var(--field);border-bottom:1px solid var(--bord);font-size:.8rem;font-weight:800;color:var(--t1)">'+_escC(x.label)+'</div>'
+      +'<div style="display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:10px;padding:8px;align-items:start">'
+      +'<img class="ps-img" data-img="'+echapAttr(x.m.p)+'" onclick="if(this.src)agrandirImage(this.src)" title="Agrandir" style="display:block;width:100%;max-height:260px;object-fit:contain;background:#fff;border:1px solid var(--bord);border-radius:8px;cursor:zoom-in"/>'
+      +'<div class="ps-reps" style="display:flex;flex-direction:column;gap:6px;min-width:0">'
+      +(opt.reponse?boite(opt.libReponse||'Réponse de l’aspirant',r.parts[j],'var(--bl)','var(--b)','Pas de réponse'):'')
+      +(opt.attendu?boite('Réponse attendue',a.parts[j],'var(--vl)','var(--v)','Non renseignée'):'')
+      +'</div></div></div>'
   }).join('')
-  +(opt.reponse&&r.reste?'<div style="font-size:.76rem;color:var(--b);white-space:pre-wrap;margin-bottom:6px"><span style="color:var(--t3)">Réponse écrite sans case par schéma :</span> '+_escC(r.reste)+'</div>':'')
-  +(opt.attendu&&a.reste?'<div style="font-size:.76rem;color:var(--v);white-space:pre-wrap;margin-bottom:6px"><span style="color:var(--t3)">Remarque :</span> '+_escC(a.reste)+'</div>':'')
+  +(opt.reponse&&r.reste?'<div style="font-size:.78rem;color:var(--b);white-space:pre-wrap;margin-bottom:6px"><span style="color:var(--t3)">Réponse écrite sans case par schéma :</span> '+_escC(r.reste)+'</div>':'')
+  +(opt.attendu&&a.reste?'<div style="font-size:.78rem;color:var(--v);white-space:pre-wrap;margin-bottom:6px"><span style="color:var(--t3)">Remarque :</span> '+_escC(a.reste)+'</div>':'')
   +'</div>'
 }
 // Passage du quiz : chaque case de schema recompose la reponse de la question
@@ -4482,18 +4491,19 @@ function afficheRes() {
     $('r-detail').innerHTML=questions.map((q,i)=>{
       const rep=reps[q.id]
       let repTexte='—'
-      if(q.type_question==='libre') repTexte=(typeof rep==='string'&&rep)?_escC(rep):'—'
+      if(q.type_question==='libre') repTexte=(typeof rep==='string'&&rep)?(schemasDe(q).length?htmlParSchema(q,rep,{reponse:true,libReponse:'Ta réponse'}):_escC(rep)):'—'
       else if(Array.isArray(rep)) repTexte=rep.map(k=>q.options?.[k]).filter(Boolean).join(' · ')||'—'
       else repTexte=q.options?.[rep]??'—'
       return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid var(--bord)">
       <i class="ti ti-circle-dot" style="color:var(--t3);font-size:1rem;flex-shrink:0;margin-top:2px"></i>
-      <div style="flex:1"><div style="font-size:.82rem;font-weight:500;margin-bottom:4px">${q.enonce}</div>
+      <div style="flex:1"><div style="margin-bottom:4px"><span class="num-q">Question ${i+1}</span></div><div style="font-size:.82rem;font-weight:500;margin-bottom:4px">${q.enonce}</div>
       <div style="font-size:.72rem;color:var(--t2)"><strong>Ta réponse :</strong> ${repTexte}</div></div></div>`
     }).join('')+'<div id="r-sans-corrige" style="font-size:.74rem;color:var(--t3);text-align:center;padding-top:.9rem;line-height:1.5"><i class="ti ti-lock"></i> La correction s\'affichera quand ton gâcheur aura corrigé ta copie et que l\'examen sera terminé.</div>'
     return
   }
   $('r-detail').innerHTML=questions.map((q,i)=>{
     const rep=reps[q.id],isLibre=q.type_question==='libre',isMulti=q.type_question==='multi'
+    const parSch=isLibre&&schemasDe(q).length>0
     let ok=false
     if(isMulti){
       const bonnes=new Set((q.bonnes_reponses||[]).map(Number))
@@ -4514,8 +4524,8 @@ function afficheRes() {
     else{repTexte=q.options?.[rep]??'—';bonneTexte=q.options?.[q.bonne_reponse]??'—'}
     return `<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:${i<questions.length-1?'1px solid var(--bord)':'none'}">
       <i class="ti ${isLibre?'ti-pencil':ok?'ti-circle-check':'ti-circle-x'}" style="color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--r)'};font-size:1rem;flex-shrink:0;margin-top:2px"></i>
-      <div style="flex:1"><div style="font-size:.82rem;font-weight:500;margin-bottom:4px">${q.enonce}</div>${q.image_url?`<img data-img="${q.image_url}" style="width:100%;max-height:80px;object-fit:contain;border-radius:8px;border:1px solid var(--bord);margin-bottom:4px"/>`:''}
-      ${isLibre?`<div style="font-size:.72rem;color:var(--b);margin-bottom:4px"><strong>Ta réponse :</strong> ${repTexte}</div>${(q.reponse_type||imagesReponse(q).length)?`<div style="background:var(--vl);border:1px solid var(--v);border-radius:8px;padding:7px 10px;margin-top:4px"><div style="font-size:.65rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--v);margin-bottom:3px">Corrigé</div><div style="font-size:.75rem;color:var(--v);line-height:1.5">${q.reponse_type||''}</div>${htmlImagesReponse(q)}</div>`:`<div style="font-size:.72rem;color:var(--amber);font-style:italic;margin-top:3px">En attente de correction par ton gâcheur</div>`}`:!ok?`<div style="font-size:.72rem;color:var(--r)">Ta réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--v);font-weight:600">Bonne réponse : ${bonneTexte} ✓</div>${htmlImagesReponse(q)}`:''}
+      <div style="flex:1"><div style="margin-bottom:4px"><span class="num-q">Question ${i+1}</span></div><div style="font-size:.82rem;font-weight:500;margin-bottom:4px">${q.enonce}</div>${q.image_url?`<img data-img="${q.image_url}" style="width:100%;max-height:80px;object-fit:contain;border-radius:8px;border:1px solid var(--bord);margin-bottom:4px"/>`:''}
+      ${parSch?(htmlParSchema(q,typeof rep==='string'?rep:'',{reponse:true,attendu:!!q.reponse_type,libReponse:'Ta réponse'})+(q.reponse_type?htmlImagesReponse(q):'<div style="font-size:.72rem;color:var(--amber);font-style:italic;margin-top:3px">En attente de correction par ton gâcheur</div>')):isLibre?`<div style="font-size:.72rem;color:var(--b);margin-bottom:4px"><strong>Ta réponse :</strong> ${repTexte}</div>${(q.reponse_type||imagesReponse(q).length)?`<div style="background:var(--vl);border:1px solid var(--v);border-radius:8px;padding:7px 10px;margin-top:4px"><div style="font-size:.65rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--v);margin-bottom:3px">Corrigé</div><div style="font-size:.75rem;color:var(--v);line-height:1.5">${q.reponse_type||''}</div>${htmlImagesReponse(q)}</div>`:`<div style="font-size:.72rem;color:var(--amber);font-style:italic;margin-top:3px">En attente de correction par ton gâcheur</div>`}`:!ok?`<div style="font-size:.72rem;color:var(--r)">Ta réponse : ${repTexte}</div><div style="font-size:.72rem;color:var(--v);font-weight:600">Bonne réponse : ${bonneTexte} ✓</div>${htmlImagesReponse(q)}`:''}
       </div>
       ${G.admin?`<span style="font-size:.72rem;font-weight:700;font-family:var(--fg);color:${isLibre?'var(--amber)':ok?'var(--v)':'var(--t3)'};flex-shrink:0">${isLibre?noteQ:ok?'+'+q.points:'0'}pt</span>`:''}
     </div>`
@@ -5561,15 +5571,14 @@ async function previsualiserQuiz(id){
     const titreRep=q.type_question==='libre'?'Réponse attendue':'Explication'
 
     return '<div style="border-bottom:1px solid var(--bord);padding:14px 0">'
-      +'<div style="display:flex;gap:10px;margin-bottom:8px">'
-        +'<span style="font-family:var(--fg);font-weight:700;color:var(--t3);flex-shrink:0">'+(i+1)+'</span>'
-        +'<div style="flex:1;min-width:0">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="num-q">Question '+(i+1)+'</span><span style="font-size:.7rem;color:var(--t3);margin-left:auto">'+(q.points||0)+' pt</span></div>'
+      +'<div style="margin-bottom:8px">'
+        +'<div style="min-width:0">'
           +'<div style="font-size:.88rem;font-weight:500;line-height:1.5">'+(q.enonce||'<span style="color:var(--r)">Énoncé manquant</span>')+'</div>'
           +blocMedias
         +'</div>'
-        +'<span style="font-size:.7rem;color:var(--t3);flex-shrink:0">'+(q.points||0)+' pt</span>'
       +'</div>'
-      +'<div style="padding-left:24px">'+blocOpts
+      +'<div>'+blocOpts
       +(schQ.length?'<div style="margin-top:6px"><div style="font-size:.72rem;color:var(--t3);font-weight:700;margin-bottom:4px">Une réponse par schéma</div>'+htmlParSchema(q,'',{attendu:true})+htmlImagesReponse(q)+'</div>'
         :((q.reponse_type||imagesReponse(q).length)?'<div style="font-size:.76rem;color:var(--t2);background:var(--field);border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.5"><b>'+titreRep+' :</b> '+(q.reponse_type||'')+htmlImagesReponse(q)+'</div>':''))
       +(alerte.length?'<div style="font-size:.74rem;color:var(--r);margin-top:6px"><i class="ti ti-alert-triangle"></i> '+alerte.join(' · ')+'</div>':'')
@@ -6053,7 +6062,8 @@ async function ouvrirCorrectionAdmin(tentId) {
     }
     return `<div style="background:var(--bg);border:1px solid var(--bord);border-radius:12px;padding:.9rem;margin-bottom:.8rem">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:.6rem">
-        <span style="font-size:.68rem;color:var(--r);font-weight:700;text-transform:uppercase">Q${i+1} · ${isMulti?'CHOIX MULTIPLES':(q.type_question||'qcm').toUpperCase()}</span>
+        <span class="num-q">Question ${i+1}<span style="font-weight:600;opacity:.8">&nbsp;/ ${questions.length}</span></span>
+        <span style="font-size:.66rem;color:var(--t3);font-weight:700;text-transform:uppercase">${isMulti?'Choix multiples':(q.type_question||'qcm').toUpperCase()}</span>
         <span class="badge ${isLibre?'badge-a':'badge-g'}">${isLibre?'À corriger':'Auto'}</span>
         <span class="badge badge-rl">${pts}pt</span>
       </div>

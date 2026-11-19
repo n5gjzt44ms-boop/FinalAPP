@@ -2,7 +2,8 @@
 // - aspirant : chaque schema est suivi de sa propre case ; les reponses forment un seul texte
 //   « Schéma A : ... » (lu par toutes les versions), reprises au retour sur la question ;
 //   une ancienne reponse sans libelles revient dans la premiere case ; aucune reponse attendue affichee ;
-// - correction : chaque schema avec la reponse de l'aspirant et la reponse attendue ;
+// - correction : chaque schema en grand, avec en face la reponse de l'aspirant et la reponse attendue ;
+// - numero « Question N » visible dans la correction, la relecture et l'ecran de resultat ;
 // - relecture : reponse attendue par schema, alerte si une manque ;
 // - editeur : case a cocher, ancien format « A = ... · B = ... » repris, image retiree sans decaler ;
 // - Creer un quiz : meme chose, noms generiques renommes Schéma A, B... ;
@@ -76,14 +77,30 @@ const {chromium}=require('playwright');const fs=require('fs')
  const corr=await pg.evaluate(()=>{const z=document.querySelector('.par-schema');return z?{lignes:z.querySelectorAll('img[data-img]').length,texte:z.innerText.replace(/\n+/g,' | ')}:null})
  console.log('correction :',JSON.stringify(corr))
  verifie(corr&&corr.lignes===3,'correction : les 3 schémas avec leur image')
- verifie(corr&&/Schéma A \| Réponse : Pression constante \| Attendu : Pression constante/.test(corr.texte)&&/Schéma B \| Réponse : — \| Attendu : Load Sensing/.test(corr.texte)&&/Schéma C \| Réponse : Puissance \| Attendu : Régulation de puissance/.test(corr.texte),'correction : réponse et attendu en face de chaque schéma')
+ verifie(corr&&/Schéma A \| Réponse de l’aspirant \| Pression constante \| Réponse attendue \| Pression constante/i.test(corr.texte)&&/Schéma B \| Réponse de l’aspirant \| Pas de réponse \| Réponse attendue \| Load Sensing/i.test(corr.texte)&&/Schéma C \| Réponse de l’aspirant \| Puissance \| Réponse attendue \| Régulation de puissance/i.test(corr.texte),'correction : réponse de l’aspirant et réponse attendue pour chaque schéma')
+ const face=await pg.evaluate(()=>[...document.querySelectorAll('.par-schema .ps-ligne')].map(l=>{const i=l.querySelector('.ps-img').getBoundingClientRect(),r=l.querySelector('.ps-reps').getBoundingClientRect();return {imgL:Math.round(i.width),gauche:i.right<=r.left,haut:Math.abs(i.top-r.top)<4}}))
+ console.log('disposition :',JSON.stringify(face))
+ verifie(face.length===3&&face.every(x=>x.gauche&&x.haut&&x.imgL>=150),'correction : schéma en grand à gauche, réponses en face (même hauteur), sur téléphone')
+ const numC=await pg.evaluate(()=>[...document.querySelectorAll('#modal-correction .num-q')].map(e=>e.innerText.replace(/\s+/g,' ')))
+ console.log('numéros (correction) :',JSON.stringify(numC))
+ verifie(numC.length===1&&numC[0]==='Question 1 / 1','correction : numéro de la question affiché (« Question 1 / 1 »)')
  await pg.evaluate(()=>document.querySelectorAll('[id^="modal-"]').forEach(m=>m.remove()))
+
+ // 2b. Ecran de resultat d'un exercice corrige
+ await pg.evaluate(()=>{G.admin=false;nav('resultats');G.tentResult={tent:{id:'tS',note_admin:12,notes_libres:{s1:3}},questions:__DB.questions.filter(q=>q.id==='s1'),parComp:{},score:12,valide:false,modId:null,reps:{s1:'Schéma A : Pression constante\nSchéma C : Puissance'}};afficheRes()})
+ await pg.waitForTimeout(300)
+ const res=await pg.evaluate(()=>{const d=document.getElementById('r-detail');return {num:[...d.querySelectorAll('.num-q')].map(e=>e.innerText),sch:d.querySelectorAll('.par-schema .ps-ligne').length,texte:d.innerText.replace(/\n+/g,' | ')}})
+ console.log('résultat :',JSON.stringify(res.num),res.sch,'schémas')
+ verifie(res.num.join('|')==='Question 1'&&res.sch===3&&/Schéma C \| Ta réponse \| Puissance \| Réponse attendue \| Régulation de puissance/i.test(res.texte),'résultat : question numérotée, réponse en face de chaque schéma')
+ await pg.evaluate(()=>{G.admin=true})
 
  // 3. Relecture
  await pg.evaluate(()=>{__DB.questions.push({id:'s2',quiz_id:'xS',ordre:2,enonce:'Deux schémas.',type_question:'libre',options:[],points:2,reponse_type:'Schéma A : Accumulateur',medias:[{t:'img',p:'x1.png',n:'Schéma A',rep:1},{t:'img',p:'x2.png',n:'Schéma B',rep:1}]});previsualiserQuiz('xS')})
  await pg.waitForTimeout(600)
  const rel=await pg.evaluate(()=>document.getElementById('modal-previsu').innerText.replace(/\n+/g,' | '))
- verifie(/Une réponse par schéma/.test(rel)&&/Schéma B \| Attendu : Load Sensing/.test(rel),'relecture : réponse attendue par schéma')
+ verifie(/Une réponse par schéma/.test(rel)&&/Schéma B \| Réponse attendue \| Load Sensing/i.test(rel)&&!/Réponse de l’aspirant/i.test(rel),'relecture : réponse attendue en face de chaque schéma, sans case aspirant')
+ const numR=await pg.evaluate(()=>[...document.querySelectorAll('#modal-previsu .num-q')].map(e=>e.innerText))
+ verifie(numR.join('|')==='Question 1|Question 2','relecture : questions numérotées')
  verifie(/réponse attendue manquante pour un schéma/.test(rel),'relecture : alerte si un schéma n a pas de réponse attendue')
  await pg.evaluate(()=>document.querySelectorAll('[id^="modal-"]').forEach(m=>m.remove()))
 
