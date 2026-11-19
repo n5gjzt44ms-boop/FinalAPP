@@ -112,6 +112,7 @@ WHERE tgname IN ('trg_copie_vide_rattrapage','trg_verrou_tentative');
 - Comparer les modules avec `Number()` (`module_inscrit` contre `module_id`).
 - `input type=file` : il doit couvrir toute la zone cliquable. Éviter `display:none`, capricieux sur iPhone.
 - `GUIDES` est recopié dans 3 blocs `<script>` (deux sont ignorés car ils ont un `src`) : modifier les trois.
+- Champs `datetime-local` (créneau d'examen) : les remplir avec `versChampDate()` (heure de l'appareil), jamais avec `toISOString()`, qui donne l'heure UTC. L'éditeur montrait le créneau 1 h trop tôt et le reculait d'1 h à chaque enregistrement (corrigé le 19/11).
 - La base renvoie au plus 1000 lignes par demande, sans erreur. Pour lire toutes les copies, passer par `lireTout()` (506 copies le 18/11).
 - `tentatives.aspirant_id` pointe vers `auth.users`, pas vers `profils` : une lecture `tentatives?select=…,profils(…)` échoue (400). Lire les profils à part.
 - Une requête Supabase sans `.then()` ni `await` ne part jamais (`derniere_connexion` restait vide pour tout le monde).

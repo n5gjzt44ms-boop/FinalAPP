@@ -1012,7 +1012,7 @@ body.dark .ins.ok .ins-ico,body.dark .fete-insigne .ins-ico{color:#141414}
                 </select>
               </div>
               <div><label class="field-label">Type</label>
-                <select class="fselect" id="mq-mode-type">
+                <select class="fselect" id="mq-mode-type" onchange="majCreneauCreation();sauverBrouillon()">
                   <option value="entrainement">Exercice (repassable)</option>
                   <option value="examen">Examen (créneau fixé)</option>
                 </select>
@@ -1020,8 +1020,8 @@ body.dark .ins.ok .ins-ico,body.dark .fete-insigne .ins-ico{color:#141414}
             </div>
             <div id="mq-creneau-wrap" style="display:none;background:var(--bg);border-radius:10px;padding:.9rem;margin-bottom:.9rem;border:1px solid var(--bord)">
               <div class="field-row">
-                <div><label class="field-label">Début</label><input type="datetime-local" class="finput" id="mq-debut"/></div>
-                <div><label class="field-label">Fin</label><input type="datetime-local" class="finput" id="mq-fin"/></div>
+                <div><label class="field-label">Début</label><input type="datetime-local" class="finput" id="mq-debut" onchange="sauverBrouillon()"/></div>
+                <div><label class="field-label">Fin</label><input type="datetime-local" class="finput" id="mq-fin" onchange="sauverBrouillon()"/></div>
               </div>
             </div>
             <div id="mq-questions-list"></div>
@@ -1228,7 +1228,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.11.18-1606'
+const VERSION_APP = '2026.11.19-1100'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -4629,6 +4629,27 @@ async function chargerBrouillons(){
     }).join('')
 }
 
+// Valeur d'un champ datetime-local (heure de l'appareil) a partir d'une date ISO.
+// Jamais toISOString() : il donne l'heure UTC (1 h de moins en hiver en France),
+// et le creneau reculait d'une heure a chaque enregistrement dans l'editeur.
+function versChampDate(iso){
+  if(!iso) return ''
+  const d=new Date(iso);if(isNaN(d.getTime())) return ''
+  const z=function(n){return String(n).padStart(2,'0')}
+  return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+'T'+z(d.getHours())+':'+z(d.getMinutes())
+}
+// Creer un quiz : le creneau n'apparait que pour un examen
+function majCreneauCreation(){
+  const t=$('mq-mode-type'),cw=document.getElementById('mq-creneau-wrap')
+  if(t&&cw) cw.style.display=t.value==='examen'?'':'none'
+}
+function viderCreneauCreation(){
+  if($('mq-mode-type')) $('mq-mode-type').value='entrainement'
+  if($('mq-debut')) $('mq-debut').value=''
+  if($('mq-fin')) $('mq-fin').value=''
+  majCreneauCreation()
+}
+
 async function reprendreBrouillon(id){
   const b=_brouillonsListe.find(function(x){return x.id===id})
   if(!b){toast('Brouillon introuvable','err');return}
@@ -4638,12 +4659,11 @@ async function reprendreBrouillon(id){
   if($('mq-mod')&&b.module_id) $('mq-mod').value=b.module_id
   if($('mq-vis')&&b.visibilite) $('mq-vis').value=b.visibilite
   if($('mq-mode-type')){
-    $('mq-mode-type').value=b.mode_examen?'examen':'exercice'
-    const cw=document.getElementById('mq-creneau-wrap')
-    if(cw) cw.style.display=b.mode_examen?'':'none'
+    $('mq-mode-type').value=b.mode_examen?'examen':'entrainement'
+    majCreneauCreation()
   }
-  if($('mq-debut')) $('mq-debut').value=b.date_debut?new Date(b.date_debut).toISOString().slice(0,16):''
-  if($('mq-fin')) $('mq-fin').value=b.date_fin?new Date(b.date_fin).toISOString().slice(0,16):''
+  if($('mq-debut')) $('mq-debut').value=versChampDate(b.date_debut)
+  if($('mq-fin')) $('mq-fin').value=versChampDate(b.date_fin)
   mqQuestions=b.questions||[]
   renderQuestions()
   chargerBrouillons()
@@ -4664,6 +4684,7 @@ function nouveauBrouillon(){
   clearTimeout(_sauveTimer)
   _brouillonId=null;mqQuestions=[]
   if($('mq-titre')) $('mq-titre').value=''
+  viderCreneauCreation()
   renderQuestions();chargerBrouillons()
   const ind=document.getElementById('mq-sauve-etat');if(ind) ind.textContent=''
 }
@@ -5219,7 +5240,7 @@ async function pubQuizManuel() {
     btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer le quiz'
     return
   }
-  toast(estPublie?'Quiz publié pour tout le monde !':'Quiz créé en privé (admins seulement)','ok');mqQuestions=[];$('mq-titre').value='';await effacerBrouillon();renderQuestions();loadQuizAdmin()
+  toast(estPublie?'Quiz publié pour tout le monde !':'Quiz créé en privé (admins seulement)','ok');mqQuestions=[];$('mq-titre').value='';viderCreneauCreation();await effacerBrouillon();renderQuestions();loadQuizAdmin()
   btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Créer le quiz'
 }
 
@@ -8333,7 +8354,7 @@ async function editerQuiz(quizId) {
     hd.appendChild(hdTop)
     // Zone type + dates
     const hdBottom=document.createElement('div'); hdBottom.style.cssText='padding:.8rem 1.2rem;background:var(--bg);display:flex;flex-wrap:wrap;gap:.6rem;align-items:center'
-    const fmtDate=function(iso){if(!iso)return '';const d=new Date(iso);return d.toISOString().slice(0,16);}
+    const fmtDate=versChampDate
     hdBottom.innerHTML='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%">'
       +'<label style="font-size:.72rem;font-weight:700;color:var(--t2);white-space:nowrap">Type :</label>'
       +'<select id="eq-mode" onchange="eqToggleDates()" style="padding:5px 10px;border:1.5px solid var(--bord2);border-radius:8px;background:var(--card);color:var(--t1);font-size:.8rem;font-family:var(--ff)">'
@@ -8383,15 +8404,21 @@ async function editerQuiz(quizId) {
     const dateFinEl=document.getElementById('eq-date-fin')
     const dateDebutVal=dateDebutEl&&dateDebutEl.value?new Date(dateDebutEl.value).toISOString():null
     const dateFinVal=dateFinEl&&dateFinEl.value?new Date(dateFinEl.value).toISOString():null
+    if(isExamen&&(!dateDebutVal||!dateFinVal||new Date(dateFinVal)<=new Date(dateDebutVal))){
+      toast(!dateDebutVal||!dateFinVal?'Examen : indique le début et la fin du créneau':'La fin du créneau doit être après le début','err')
+      btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Enregistrer';return
+    }
     const visEl=document.getElementById('eq-vis')
     const estPublie=visEl?visEl.value==='publie':quiz.actif
-    await db.from('quiz').update({
+    const majQuiz=await db.from('quiz').update({
       titre:titre,
       mode_examen:isExamen,
       actif:estPublie,
       date_debut:isExamen?dateDebutVal:null,
       date_fin:isExamen?dateFinVal:null
-    }).eq('id',qzId)
+    }).eq('id',qzId).select('id')
+    // La base peut refuser sans erreur (0 ligne) : on le dit au lieu d'annoncer un succes
+    const quizRefuse=!!majQuiz.error||!(majQuiz.data||[]).length
     const qsToSave=questions.map(function(q,i){
       const enonce=(document.getElementById('eq-e-'+i)&&document.getElementById('eq-e-'+i).value||'').trim()
       const expl=(document.getElementById('eq-ex-'+i)&&document.getElementById('eq-ex-'+i).value||'').trim()
@@ -8462,7 +8489,9 @@ async function editerQuiz(quizId) {
     }
     await db.from('quiz').update({total_points:qsToSave.reduce(function(a,q){return a+q.points},0)}).eq('id',qzId)
     document.getElementById('modal-edit-quiz').remove()
-    toast('Quiz mis à jour !','ok');loadQuizAdmin()
+    if(quizRefuse) toast('Questions enregistrées, mais le titre, le type ou le créneau ont été refusés par la base','err')
+    else toast('Quiz mis à jour !','ok')
+    loadQuizAdmin()
   }
   render()
 }
