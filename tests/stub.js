@@ -36,11 +36,15 @@ P.in=function(k,v){this.f.push(r=>v.indexOf(r[k])>=0);return this}
 P.is=function(k,v){this.f.push(r=>r[k]===v||(v===null&&r[k]===undefined));return this}
 P.single=function(){this.one=true;return this};P.maybeSingle=P.single
 P.then=function(res,rej){
-  let rows=(DB[this.t]||[]).filter(r=>this.f.every(f=>f(r)))
+  // Vue questions_eleve : les questions sans les bonnes reponses
+  const base=this.t==='questions_eleve'?DB.questions.map(q=>{const o=Object.assign({},q);delete o.bonne_reponse;delete o.bonnes_reponses;delete o.reponse_type;delete o.reponse_medias;return o}):(DB[this.t]||[])
+  let rows=base.filter(r=>this.f.every(f=>f(r)))
   if(this.t==='tentatives') rows=rows.map(r=>Object.assign({},r,{quiz:DB.quiz.find(q=>q.id===r.quiz_id)||null}))
   const out=this.one?{data:rows[0]||null,error:null}:{data:rows,error:null,count:rows.length}
   return Promise.resolve(out).then(res,rej)}
 const db={from:t=>new Q(t),
+ // corrige_quiz : bonnes reponses d'un quiz (les droits sont verifies par la vraie base)
+ rpc:(nom,args)=>Promise.resolve(nom==='corrige_quiz'?{data:DB.questions.filter(q=>q.quiz_id===(args||{}).p_quiz).map(q=>({id:q.id,bonne_reponse:q.bonne_reponse,bonnes_reponses:q.bonnes_reponses,reponse_type:q.reponse_type,reponse_medias:q.reponse_medias})),error:null}:{data:null,error:null}),
  auth:{getSession:async()=>({data:{session:{user:U}}}),getUser:async()=>({data:{user:U}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({})},
  storage:{from:()=>({createSignedUrl:async()=>({data:{signedUrl:'about:blank'}}),upload:async()=>({}),remove:async()=>({})})}}
 window.supabase={createClient:()=>db}

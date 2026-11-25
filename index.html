@@ -1229,7 +1229,7 @@ async function chargerConfigModules(){ /* plus de reglage : valeur fixe */ }
 
 // Version du fichier : permet de verifier que le telephone a bien
 // la derniere mise en ligne et non une copie gardee en cache.
-const VERSION_APP = '2026.11.19-1530'
+const VERSION_APP = '2026.11.25-0906'
 
 // ─── REGLE UNIQUE : la theorie d'un module est validee si ──────────────────
 //   - le module est coche « acquis hors plateforme » (modules_valides), ou
@@ -1489,7 +1489,7 @@ async function reprendreCopie(){
   if(await miseAJourAvantExamen(b.quizId,true)) return
   const [rq,rqs]=b.quizId===ESSAI_ID?[{data:quizEssai()},{data:questionsEssai()}]:await Promise.all([
     avecReprises(function(){return db.from('quiz').select('*').eq('id',b.quizId).single()}),
-    avecReprises(function(){return db.from('questions').select('*').eq('quiz_id',b.quizId).order('ordre')})
+    lireQuestions(b.quizId,b.examen)
   ])
   // Panne reseau : la copie reste sur le telephone, on ne l'efface surtout pas
   if((rq.error&&rq.error.code!=='PGRST116')||rqs.error){toast('Pas de réseau : ta copie reste gardée sur ce téléphone','err');return}
@@ -1671,11 +1671,21 @@ async function register() {
       }
     }
   }
+  // Lien d'invitation : choix Gacheur ou Ancien. La liste des roles n'a pas
+  // d'option « admin » : lue telle quelle, elle donnait un role vide.
+  const bandeauAdmin=document.getElementById('banner-admin')
+  const special=document.querySelector('input[name="r-role-special"]:checked')
+  if(special&&bandeauAdmin&&!bandeauAdmin.classList.contains('hidden')) role=special.value
   if(!domaineValide(email)){msgLogin('Adresse e-mail invalide.');return}
   if(pwd.length<8){msgLogin('Mot de passe : 8 caractères minimum.');return}
   const btn=$('btn-register');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader spin"></i> Création...'
   const metier=(document.getElementById('r-metier')||{}).value||'mecanicien'
-  const {error}=await db.auth.signUp({email,password:pwd,options:{data:{prenom,nom,role,metier}}})
+  // Lien d'invitation gacheur (?admin=...) : la base le verifie a l'inscription
+  // (sql/securite_roles.sql). Sans lien valable, le compte est cree en aspirant.
+  const jetonAdmin=role==='admin'?(new URLSearchParams(location.search).get('admin')||''):''
+  const donnees={prenom,nom,role,metier}
+  if(jetonAdmin) donnees.admin_token=jetonAdmin
+  const {error}=await db.auth.signUp({email,password:pwd,options:{data:donnees}})
   if(error){msgLogin(error.message);btn.disabled=false;btn.innerHTML='<i class="ti ti-user-plus"></i> Créer mon compte';return}
   const {error:le}=await db.auth.signInWithPassword({email,password:pwd})
   if(!le){
@@ -1683,8 +1693,15 @@ async function register() {
     const {data:{user}}=await db.auth.getUser()
     if(user){
       const maj={metier:metier}
-      if(role==='ancien'||role==='admin'||role==='compagnon'||role==='apprenti') maj.role=role
+      if(role==='ancien'||role==='compagnon'||role==='apprenti') maj.role=role
       try{await db.from('profils').update(maj).eq('id',user.id)}catch(e){}
+      // Role gacheur : accorde par la base seulement avec un lien d'invitation valable
+      if(role==='admin'){
+        try{
+          const {data:p}=await db.from('profils').select('role').eq('id',user.id).single()
+          if(p&&p.role!=='admin') alert("Ton compte est créé, mais le lien d'invitation gâcheur n'est plus valable (déjà utilisé ou expiré).\n\nDemande un nouveau lien à un gâcheur superviseur.")
+        }catch(e){}
+      }
     }
     await initApp();return
   }
@@ -3795,7 +3812,9 @@ async function commencer(qid,coursVus) {
       return
     }
   }
-  const [{data:q},{data:qs}]=await Promise.all([db.from('quiz').select('*').eq('id',qid).single(),db.from('questions').select('*').eq('quiz_id',qid).order('ordre')])
+  const {data:q}=await db.from('quiz').select('*').eq('id',qid).single()
+  const {data:qs}=await lireQuestions(qid,!!(q&&q.mode_examen))
+  if(!qs||!qs.length){toast(q&&q.mode_examen?'Examen pas encore ouvert ou introuvable':'Questions introuvables','err');return}
   G.quizActif=q;G.questions=qs||[];G.reponses={};G.fichiersLibres={};G.dessins={};G.etape=0;G.choix=null;G.confirme=false
   G.finExamen=calculerFinExamen(q)
   G.debutCopie=Date.now()
@@ -4053,6 +4072,28 @@ async function lireTout(requete){
   }
   return {data:tout,error:null}
 }
+// Questions d'un quiz. Pour un EXAMEN, un non-gacheur lit la vue questions_eleve,
+// sans les bonnes reponses : la base ne les lui donne plus
+// (sql/reponses_cachees_*.sql). Repli sur la table tant que la vue n'existe pas.
+// La note d'une copie est calculee par la base (declencheur noter_copie).
+async function lireQuestions(quizId,examen){
+  if(examen&&!G.admin){
+    const r=await avecReprises(function(){return db.from('questions_eleve').select('*').eq('quiz_id',quizId).order('ordre')})
+    if(!r.error||!/questions_eleve|does not exist|schema cache|relation/i.test(r.error.message||'')) return r
+  }
+  return avecReprises(function(){return db.from('questions').select('*').eq('quiz_id',quizId).order('ordre')})
+}
+// Bonnes reponses d'un examen pour l'ecran de resultat : la base ne les donne
+// qu'au gacheur, ou a l'aspirant dont la copie est corrigee et le creneau fini.
+async function ajouterCorrige(questions,quizId){
+  try{
+    const r=await avecReprises(function(){return db.rpc('corrige_quiz',{p_quiz:quizId})},2,15000)
+    if(!r||r.error||!Array.isArray(r.data)||!r.data.length) return false
+    const parId={};r.data.forEach(function(x){parId[x.id]=x})
+    questions.forEach(function(q){const c=parId[q.id];if(c){q.bonne_reponse=c.bonne_reponse;q.bonnes_reponses=c.bonnes_reponses;q.reponse_type=c.reponse_type;q.reponse_medias=c.reponse_medias}})
+    return true
+  }catch(e){return false}
+}
 // Session expiree (onglet reste ouvert, ordinateur en veille) : la base repond 401
 function erreurSession(r){
   const e=r&&r.error
@@ -4125,7 +4166,7 @@ async function envoyerCopie() {
   try{await allegerPiecesJointes()}catch(e){}
   // Examen d'essai : verification seulement, rien n'est ecrit en base
   if(G.quizActif&&G.quizActif.essai) return finEssai()
-  const rqr=await avecReprises(function(){return db.from('questions').select('*').eq('quiz_id',G.quizActif.id)})
+  const rqr=await lireQuestions(G.quizActif.id,!!G.quizActif.mode_examen)
   const qr=rqr.data
   if(!qr?.length){afficherEchecEnvoi(rqr.error||{message:'questions introuvables'});return}
   // Tout EXAMEN est soumis a la validation d'un gacheur, meme en QCM pur :
@@ -4254,8 +4295,11 @@ function calculerScore20(s,t){if(!t||t===0)return 0;return Math.round((s/t)*20)}
 async function voirRes(tentId) {
   const {data:t}=await db.from('tentatives').select('*, quiz(module_id,titre,total_points,mode_examen,date_fin)').eq('id',tentId).single()
   if(!t){toast('Copie introuvable','err');return}
-  const {data:qs}=await db.from('questions').select('*').eq('quiz_id',t.quiz_id).order('ordre')
-  G.tentResult={tent:t,questions:qs||[],parComp:t.resultats_par_competence||{},score:(t.note_admin!==null&&t.note_admin!==undefined)?t.note_admin:t.score,valide:t.valide,aDesLibres:(qs||[]).some(q=>q.type_question==='libre'),modId:t.quiz?.module_id,reps:t.reponses||{},examen:!!(t.quiz&&t.quiz.mode_examen),finCreneau:(t.quiz&&t.quiz.date_fin)||null}
+  const estExamen=!!(t.quiz&&t.quiz.mode_examen)
+  const {data:qs}=await lireQuestions(t.quiz_id,estExamen)
+  // Examen vu par un aspirant : bonnes reponses seulement si la base les donne
+  const sansCorrige=estExamen&&!G.admin&&!(await ajouterCorrige(qs||[],t.quiz_id))
+  G.tentResult={sansCorrige:sansCorrige,tent:t,questions:qs||[],parComp:t.resultats_par_competence||{},score:(t.note_admin!==null&&t.note_admin!==undefined)?t.note_admin:t.score,valide:t.valide,aDesLibres:(qs||[]).some(q=>q.type_question==='libre'),modId:t.quiz?.module_id,reps:t.reponses||{},examen:!!(t.quiz&&t.quiz.mode_examen),finCreneau:(t.quiz&&t.quiz.date_fin)||null}
   nav('resultats');afficheRes()
 }
 
@@ -4392,7 +4436,7 @@ function afficheRes() {
   // Examen vu par l'aspirant : aucune correction tant que la copie n'est pas
   // corrigee ou que le creneau est encore ouvert (d'autres passent l'examen).
   const finCreneau=G.tentResult.finCreneau?new Date(G.tentResult.finCreneau).getTime():0
-  const masquerCorrige=estExamen&&!G.admin&&(enAttente||(finCreneau>0&&Date.now()<finCreneau))
+  const masquerCorrige=estExamen&&!G.admin&&(enAttente||(finCreneau>0&&Date.now()<finCreneau)||!!G.tentResult.sansCorrige)
   const c=$('r-circle')
   c.style.borderColor=enAttente?'var(--amber)':valide?'var(--v)':'var(--r)'
   // La note s'affiche au gacheur, et a l'aspirant pour un exercice seulement :
@@ -6566,10 +6610,10 @@ function afficherAspirants(){
 
 async function debloquer(tentId,nom){if(!confirm('Débloquer une 2e tentative pour '+nom+' ?'))return;const {data:t}=await db.from('tentatives').select('*').eq('id',tentId).single();if(!t)return;const ok=await archiverEtRetirerCopie(t);if(!ok){toast('Tentative NON débloquée : note non archivée ou droits insuffisants','err');return};toast('Tentative débloquée','ok');loadAspirants()}
 
-async function genLienAdmin(){const {data:{user}}=await db.auth.getUser();const token=crypto.randomUUID();await db.from('admin_tokens').insert({token,created_by:user.id,expires_at:new Date(Date.now()+7*24*60*60*1000).toISOString()});const lienAdmin=location.origin+location.pathname+'?admin='+token
+async function genLienAdmin(){const {data:{user}}=await db.auth.getUser();const token=crypto.randomUUID();const {error:errJeton}=await db.from('admin_tokens').insert({token,created_by:user.id,expires_at:new Date(Date.now()+7*24*60*60*1000).toISOString()});if(errJeton){toast('Lien non créé : '+(errJeton.message||'refusé'),'err');return};const lienAdmin=location.origin+location.pathname+'?admin='+token
   window._dernierLien=lienAdmin
   if($('lien-code')) $('lien-code').textContent=lienAdmin
-  sh('lien-result')}
+  sh('lien-result');toast('Lien valable 7 jours, pour une seule personne','ok')}
 function genLienAncien(){
   const lien=location.origin+location.pathname+'?ancien=1'
   window._dernierLien=lien
